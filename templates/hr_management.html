@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HR Management - Collective</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f8f9fa;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      /* Top Bar */
+      .top-bar {
+        background-color: #fff;
+        border-bottom: 1px solid #ddd;
+        padding: 10px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .top-bar a.btn {
+        text-decoration: none;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+      }
+      .brand img {
+        height: 40px;
+        margin-right: 10px;
+      }
+      .brand .black {
+        font-size: 1.6rem;
+        font-weight: bold;
+        color: #000;
+      }
+      .brand .red {
+        font-size: 1.6rem;
+        font-weight: bold;
+        color: red;
+      }
+      .top-bar .btn-logout {
+        background-color: #ff4d4d;
+        color: #fff;
+        border: none;
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        border-radius: 5px;
+      }
+      .top-bar .btn-logout:hover {
+        background-color: #ff1a1a;
+      }
+      /* Main Section */
+      .main-section {
+        max-width: 700px;
+        margin: 80px auto;
+        background-color: #fff;
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        flex: 1;
+      }
+      .main-section h1 {
+        font-size: 2rem;
+        margin-bottom: 15px;
+      }
+      .main-section p {
+        font-size: 1.1rem;
+        color: #6c757d;
+        margin-bottom: 25px;
+      }
+      .main-section a.btn {
+        margin: 10px;
+      }
+      /* Footer */
+      footer {
+        background-color: #343a40;
+        padding: 15px;
+        text-align: center;
+        color: #fff;
+        margin-top: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <a
+        href="{{ url_for('general_routes.dashboard') }}"
+        class="btn btn-sm btn-dark"
+      >
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+      </a>
+      <div class="brand">
+        <img
+          src="{{ url_for('static', filename='images/logo.png') }}"
+          alt="Collective Logo"
+        />
+        <div>
+          <span class="black">Collect</span><span class="red">ive</span>
+        </div>
+      </div>
+      <a
+        href="{{ url_for('auth_routes.logout') }}"
+        class="btn btn-sm btn-logout"
+      >
+        <i class="fas fa-sign-out-alt"></i> Logout
+      </a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-section">
+      <h1>Welcome to HR Management</h1>
+      <p>
+        This is the HR Management page. You can manage HR functionalities and
+        view related data here.
+      </p>
+      <!-- Navigation Buttons -->
+      <a
+        href="{{ url_for('admin_routes.admin_dashboard') }}"
+        class="btn btn-success"
+      >
+        <i class="fas fa-user-cog"></i> Admin Dashboard
+      </a>
+      <a
+        href="{{ url_for('management_routes.compare_users') }}"
+        class="btn btn-primary"
+      >
+        <i class="fas fa-exchange-alt"></i> Compare Users
+      </a>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <p class="mb-0">© 2024 Collective Intranet</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

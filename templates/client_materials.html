@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Materials - Collective</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background: #f7f9fc;
+        }
+        .container {
+            margin-top: 50px;
+            padding: 30px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        .client-materials-list li {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Client Materials</h1>
+        <ul class="client-materials-list">
+            <!-- Dynamic client materials go here -->
+            {% for material in client_materials %}
+                <li><strong>{{ material.title }}:</strong> {{ material.description }} - 
+                    <a href="{{ url_for('static', filename='client_materials/' + material.filename) }}" target="_blank">View</a>
+                </li>
+            {% else %}
+                <li>No client materials available at this time.</li>
+            {% endfor %}
+        </ul>
+        <a href="{{ url_for('general_routes.dashboard') }}" class="btn btn-primary">Back to Home</a>
+    </div>
+</body>
+</html>

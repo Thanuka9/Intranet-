@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Assign Task - Collective</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/task_assign.css') }}"
+    />
+  </head>
+  <body>
+    <!-- Header with Back Button and Branding -->
+    <header
+      class="header d-flex justify-content-between align-items-center shadow-sm p-3"
+    >
+      <a
+        href="{{ url_for('task_routes.view_tasks') }}"
+        class="btn btn-secondary btn-back"
+        >← Back to Tasks</a
+      >
+      <div class="header-logo d-flex align-items-center">
+        <img
+          src="{{ url_for('static', filename='images/logo.png') }}"
+          alt="Collective Logo"
+          class="logo-img"
+        />
+        <h1 class="ms-2 fw-bold text-dark mb-0" style="font-size: 1.5rem">
+          COLLECTIVE
+        </h1>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mt-5 assign-task-page">
+      <div class="card shadow-lg p-4">
+        <h2 class="mb-4 text-dark">Assign New Task</h2>
+        <form
+          method="POST"
+          enctype="multipart/form-data"
+          action="{{ url_for('task_routes.assign_task') }}"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+          <!-- Task Title -->
+          <div class="form-group mb-4">
+            <label for="title" class="form-label fw-semibold">Task Title</label>
+            <input
+              type="text"
+              class="form-control form-control-lg"
+              id="title"
+              name="title"
+              placeholder="Enter task title"
+              required
+            />
+          </div>
+
+          <!-- Task Description -->
+          <div class="form-group mb-4">
+            <label for="description" class="form-label fw-semibold"
+              >Task Description</label
+            >
+            <textarea
+              class="form-control form-control-lg"
+              id="description"
+              name="description"
+              rows="3"
+              placeholder="Describe the task"
+              required
+            ></textarea>
+          </div>
+
+          <!-- Task Priority -->
+          <div class="form-group mb-4">
+            <label for="priority" class="form-label fw-semibold"
+              >Priority</label
+            >
+            <select
+              class="form-select form-select-lg"
+              id="priority"
+              name="priority"
+            >
+              <option value="Low">Low</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="High">High</option>
+            </select>
+          </div>
+
+          <!-- Due Date -->
+          <div class="form-group mb-4">
+            <label for="due_date" class="form-label fw-semibold"
+              >Due Date</label
+            >
+            <input
+              type="date"
+              class="form-control form-control-lg"
+              id="due_date"
+              name="due_date"
+              required
+            />
+          </div>
+
+          <!-- Internal/External Task Assignment Toggle -->
+          <div class="form-group mb-4">
+            <label for="task_type" class="form-label fw-semibold"
+              >Assign To</label
+            >
+            <select
+              class="form-select form-select-lg"
+              id="task_type"
+              name="task_type"
+              onchange="toggleAssignees()"
+            >
+              <option value="internal" selected>Internal (Client Team)</option>
+              <option value="external">External (Other Users)</option>
+            </select>
+          </div>
+
+          <!-- Internal Assignees -->
+          <div class="form-group mb-4" id="internal_assignees">
+            <label for="assignees" class="form-label fw-semibold"
+              >Assign to Team Members</label
+            >
+            <select
+              multiple
+              class="form-select form-select-lg"
+              id="assignees"
+              name="assignees"
+            >
+              {% for member in team_members %}
+              <option value="{{ member.id }}">
+                {{ member.first_name }} {{ member.last_name }}
+              </option>
+              {% endfor %}
+            </select>
+            <div class="form-text">
+              Hold Ctrl (or Cmd on Mac) to select multiple members
+            </div>
+          </div>
+
+          <!-- External Assignees -->
+          <div
+            class="form-group mb-4"
+            id="external_assignees"
+            style="display: none"
+          >
+            <label for="external_assignees" class="form-label fw-semibold">
+              Assign to External Users
+            </label>
+            <select
+              multiple
+              class="form-select form-select-lg"
+              id="external_assignees"
+              name="external_assignees"
+            >
+              {% for user in external_users %}
+              <option value="{{ user.id }}">
+                {{ user.first_name }} {{ user.last_name }}
+              </option>
+              {% endfor %}
+            </select>
+            <div class="form-text">
+              Hold Ctrl (or Cmd on Mac) to select multiple members
+            </div>
+          </div>
+
+          <!-- Task Document Upload -->
+          <div class="form-group mb-4">
+            <label for="attachments" class="form-label fw-semibold"
+              >Attachments (optional)</label
+            >
+            <input
+              type="file"
+              class="form-control form-control-lg"
+              id="attachments"
+              name="attachments"
+              multiple
+              accept=".pdf, .png, .jpg, .jpeg, .docx, .xlsx"
+            />
+            <div class="form-text">
+              Allowed formats: pdf, png, jpg, jpeg, docx, xlsx. Max size: 100MB
+              total.
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" class="btn btn-primary btn-lg w-100">
+            Assign Task
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center bg-light text-secondary py-3 mt-5">
+      <p>© 2024 Collective Intranet</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- JavaScript for Dynamic Form Controls and File Size Validation -->
+    <script>
+      const allowedExtensions = ["pdf", "png", "jpg", "jpeg", "docx", "xlsx"];
+      const maxTotalFileSize = 100 * 1024 * 1024; // 100MB in bytes
+      const fileInput = document.getElementById("attachments");
+
+      function toggleAssignees() {
+        const taskType = document.getElementById("task_type").value;
+        const internalAssignees = document.getElementById("internal_assignees");
+        const externalAssignees = document.getElementById("external_assignees");
+        if (taskType === "internal") {
+          internalAssignees.style.display = "block";
+          externalAssignees.style.display = "none";
+        } else {
+          internalAssignees.style.display = "none";
+          externalAssignees.style.display = "block";
+        }
+      }
+
+      fileInput.addEventListener("change", function () {
+        let totalSize = 0;
+        const files = Array.from(this.files);
+        const invalidFiles = [];
+
+        files.forEach((file) => {
+          const fileExtension = file.name.split(".").pop().toLowerCase();
+          if (!allowedExtensions.includes(fileExtension)) {
+            invalidFiles.push(file.name);
+          }
+          totalSize += file.size;
+        });
+
+        if (invalidFiles.length > 0) {
+          alert(`Invalid file(s): ${invalidFiles.join(", ")}`);
+          this.value = ""; // Reset input
+        } else if (totalSize > maxTotalFileSize) {
+          alert(`Total file size exceeds the limit of 100MB.`);
+          this.value = ""; // Reset input
+        }
+      });
+
+      // Initialize display on page load
+      toggleAssignees();
+    </script>
+  </body>
+</html>

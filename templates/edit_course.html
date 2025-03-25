@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Edit Course</title>
+  </head>
+  <body>
+    <h1>Edit Course</h1>
+    <form
+      method="POST"
+      enctype="multipart/form-data"
+      action="{{ url_for('admin_routes.edit_course', course_id=course.id) }}"
+    >
+      <label for="title">Course Title:</label>
+      <input
+        type="text"
+        id="title"
+        name="title"
+        value="{{ course.title }}"
+        required
+      />
+
+      <label for="description">Description:</label>
+      <textarea id="description" name="description" required>
+{{ course.description }}</textarea
+      >
+
+      <label for="course_time">Course Time (hours):</label>
+      <input
+        type="number"
+        id="course_time"
+        name="course_time"
+        value="{{ course.course_time }}"
+        required
+      />
+
+      <label for="max_time">Max Time (days):</label>
+      <input
+        type="number"
+        id="max_time"
+        name="max_time"
+        value="{{ course.max_time }}"
+        required
+      />
+
+      <label for="new_files">Upload New Files:</label>
+      <input type="file" id="new_files" name="new_files" multiple />
+
+      <button type="submit">Save Changes</button>
+      <a href="{{ url_for('admin_routes.admin_dashboard') }}">Cancel</a>
+    </form>
+  </body>
+</html>

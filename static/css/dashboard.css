@@ -1,0 +1,192 @@
+/* Background and Font Styling */
+body {
+    background-image: url('/static/images/background.jpg');
+    background-size: cover;
+    background-position: center;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    color: #333;
+}
+
+.container-fluid {
+    padding: 20px 50px;
+}
+
+/* Logo and Title Section */
+.logo-title {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: white;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.logo-title img {
+    margin-right: 10px;
+    width: 60px;
+    height: auto;
+}
+
+.logo-title h1 {
+    font-size: 48px;
+    font-weight: bold;
+}
+
+.logo-title .red {
+    color: #D32F2F;
+}
+
+/* Navigation Bar */
+nav {
+    background-color: #343a40;
+    color: white;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+}
+
+.nav-center {
+    display: flex;
+    justify-content: center;
+    flex: 1;
+}
+
+nav a {
+    color: white;
+    margin: 0 15px;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+nav a:hover {
+    color: #D32F2F;
+    text-decoration: underline;
+}
+
+/* Logout Button */
+.btn-logout {
+    background-color: #ff4d4d;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 5px;
+    border: none;
+    font-size: 16px;
+    font-weight: 500;
+    transition: background-color 0.3s, color 0.3s, box-shadow 0.3s;
+    text-align: center;
+}
+
+.btn-logout:hover {
+    background-color: #e60000;
+    color: white;
+    box-shadow: 0px 4px 10px rgba(230, 0, 0, 0.4);
+}
+
+/* Jumbotron for User Welcome */
+.jumbotron {
+    background-color: #f1f5f9;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.jumbotron:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.jumbotron h1 {
+    font-size: 32px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.jumbotron p {
+    font-size: 18px;
+    color: #555;
+}
+
+/* Dashboard Sections */
+.tasks-section,
+.exam-section,
+.calendar-section,
+.announcements-section {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.tasks-section:hover,
+.exam-section:hover,
+.calendar-section:hover,
+.announcements-section:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.tasks-section h3,
+.exam-section h3,
+.calendar-section h3,
+.announcements-section h3 {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #343a40;
+}
+
+/* Progress Bar Styling */
+.progress-bar {
+    background-color: #28a745;
+    transition: width 1s ease-in-out;
+}
+
+/* List Styling in Calendar and Announcements Sections */
+.calendar-section ul,
+.announcements-section ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.calendar-section ul li,
+.announcements-section ul li {
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+/* Footer Styling */
+footer {
+    margin-top: 30px;
+    text-align: center;
+    padding: 10px;
+    background-color: #f1f1f1;
+    font-size: 14px;
+    color: #666;
+}
+
+/* Button Styling */
+.btn-primary {
+    background-color: #007bff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    color: #fff;
+    font-weight: 500;
+    transition: background-color 0.3s;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}

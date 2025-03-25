@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upload Exam</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #e0eafc, #cfdef3);
+        padding: 0;
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      .top-bar {
+        background-color: #fff;
+        padding: 10px 20px;
+        border-bottom: 1px solid #ddd;
+        display: flex;
+        align-items: center;
+      }
+      .top-bar img {
+        height: 40px;
+        margin-right: 10px;
+      }
+      .brand {
+        font-size: 1.5rem;
+        font-weight: bold;
+      }
+      .brand .black {
+        color: black;
+      }
+      .brand .red {
+        color: red;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 40px auto;
+        background-color: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        text-align: center;
+        color: #007bff;
+        margin-bottom: 30px;
+      }
+      label {
+        font-weight: bold;
+      }
+      input,
+      select {
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        width: 100%;
+      }
+      .question {
+        margin-top: 20px;
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+      }
+      .add-question-btn,
+      .remove-question-btn {
+        padding: 8px 12px;
+        border: none;
+        border-radius: 5px;
+        font-weight: bold;
+        margin-top: 10px;
+      }
+      .add-question-btn {
+        background-color: #28a745;
+        color: white;
+      }
+      .add-question-btn:hover {
+        background-color: #218838;
+      }
+      .remove-question-btn {
+        background-color: #dc3545;
+        color: white;
+      }
+      .remove-question-btn:hover {
+        background-color: #c82333;
+      }
+      .btn-submit {
+        background-color: #007bff;
+        color: white;
+        width: 100%;
+        margin-top: 20px;
+      }
+      .btn-submit:hover {
+        background-color: #0056b3;
+      }
+      footer {
+        background-color: #343a40;
+        color: white;
+        text-align: center;
+        padding: 15px 0;
+        margin-top: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="top-bar">
+      <img src="/static/images/logo.png" alt="Logo" />
+      <div class="brand">
+        <span class="black">Collect</span><span class="red">ive</span>
+      </div>
+    </div>
+
+    <div class="container">
+      <a
+        href="{{ url_for('study_material_routes.study_materials') }}"
+        class="btn btn-secondary mb-3"
+      >
+        <i class="fas fa-arrow-left"></i> Back
+      </a>
+      <h1><i class="fas fa-file-alt"></i> Upload Exam</h1>
+      <form
+        id="uploadExamForm"
+        method="POST"
+        action="{{ url_for('exams_routes.create_exam') }}"
+      >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <label for="title">Exam Title</label>
+        <input
+          type="text"
+          id="title"
+          name="title"
+          placeholder="Enter exam title"
+          required
+        />
+
+        <label for="duration">Exam Duration (in minutes)</label>
+        <input
+          type="number"
+          id="duration"
+          name="duration"
+          placeholder="Enter exam duration"
+          min="1"
+          required
+        />
+
+        <label for="minimum_designation_level">Minimum Designation Level</label>
+        <select
+          id="minimum_designation_level"
+          name="minimum_designation_level"
+          required
+        >
+          <option value="">Select Designation Level</option>
+        </select>
+
+        <label for="level_id">Exam Level</label>
+        <select id="level_id" name="level_id" required>
+          <option value="">Select Level</option>
+        </select>
+
+        <label for="course_id">Course</label>
+        <select id="course_id" name="course_id" required>
+          <option value="">Select Course</option>
+        </select>
+
+        <label for="category_id">Category</label>
+        <select id="category_id" name="category_id" required>
+          <option value="">Select Category</option>
+        </select>
+
+        <div class="question-container" id="questionsContainer">
+          <h4 class="mt-4">Questions</h4>
+        </div>
+
+        <button type="button" class="add-question-btn" id="addQuestionBtn">
+          <i class="fas fa-plus"></i> Add Question
+        </button>
+
+        <button type="submit" class="btn btn-submit">
+          <i class="fas fa-upload"></i> Upload Exam
+        </button>
+      </form>
+    </div>
+
+    <footer>
+      <p class="mb-0">© 2024 Collective Intranet</p>
+    </footer>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("{{ url_for('exams_routes.get_exam_dropdowns') }}")
+          .then((response) => response.json())
+          .then((data) => {
+            const levelSelect = document.getElementById("level_id");
+            const categorySelect = document.getElementById("category_id");
+            const designationSelect = document.getElementById(
+              "minimum_designation_level"
+            );
+            const courseSelect = document.getElementById("course_id");
+
+            data.levels.forEach((level) => {
+              const option = document.createElement("option");
+              option.value = level.id;
+              option.text = "Level " + level.level_number;
+              levelSelect.appendChild(option);
+            });
+
+            data.categories.forEach((category) => {
+              const option = document.createElement("option");
+              option.value = category.id;
+              option.text = category.name;
+              categorySelect.appendChild(option);
+            });
+
+            data.designations.forEach((designation) => {
+              const option = document.createElement("option");
+              option.value = designation.id;
+              option.text = designation.title;
+              designationSelect.appendChild(option);
+            });
+
+            data.courses.forEach((course) => {
+              const option = document.createElement("option");
+              option.value = course.id;
+              option.text = course.title;
+              courseSelect.appendChild(option);
+            });
+
+            // Add Question logic
+            const questionsContainer =
+              document.getElementById("questionsContainer");
+            const addQuestionBtn = document.getElementById("addQuestionBtn");
+            let questionCount = 0;
+
+            addQuestionBtn.addEventListener("click", () => {
+              questionCount++;
+              const questionDiv = document.createElement("div");
+              questionDiv.classList.add("question");
+              questionDiv.setAttribute("data-question-id", questionCount);
+
+              questionDiv.innerHTML = `
+                <label>Question ${questionCount}</label>
+                <input type="text" name="questions[${questionCount}][question_text]" placeholder="Enter question text" required>
+
+                <label>Choices (comma-separated)</label>
+                <input type="text" name="questions[${questionCount}][choices]" placeholder="Enter choices" required>
+
+                <label>Correct Answer</label>
+                <input type="text" name="questions[${questionCount}][correct_answer]" placeholder="Enter correct answer" required>
+
+                <label>Category</label>
+                <select name="questions[${questionCount}][category_id]" required>
+                  <option value="">Select Category</option>
+                  ${data.categories
+                    .map(
+                      (cat) => `<option value="${cat.id}">${cat.name}</option>`
+                    )
+                    .join("")}
+                </select>
+
+                <button type="button" class="remove-question-btn">Remove Question</button>
+              `;
+
+              questionDiv
+                .querySelector(".remove-question-btn")
+                .addEventListener("click", () => {
+                  questionsContainer.removeChild(questionDiv);
+                });
+
+              questionsContainer.appendChild(questionDiv);
+            });
+          })
+          .catch((error) => {
+            console.error("Error fetching dropdowns:", error);
+          });
+      });
+    </script>
+  </body>
+</html>

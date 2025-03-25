@@ -1,0 +1,146 @@
+/* Background Styling */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+body {
+    background-image: url('/static/images/background.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* Form Container with Shadow and Animation */
+.form-container {
+    background-color: #ffffff;
+    padding: 40px 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    animation: fadeIn 0.6s ease-out;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Fade-in Animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Logo Title Styling */
+.logo-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.logo-title h1 {
+    font-size: 28px;
+    font-weight: bold;
+    margin-left: 10px;
+}
+
+.logo-title .black-part { color: #333; }
+.logo-title .red-part { color: #D32F2F; }
+
+/* Heading Style */
+h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+/* Input Fields */
+.form-group label {
+    font-weight: 500;
+    color: #666;
+}
+
+.form-control {
+    height: 45px;
+    font-size: 16px;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    background-color: #f9f9f9;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #007bff;
+    background-color: #fff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.25);
+}
+
+/* Button Styles */
+.btn-verify {
+    width: 100%;
+    max-width: 200px;
+    padding: 12px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 15px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-verify:hover {
+    background-color: #0056b3;
+}
+
+.btn-back {
+    width: 100%;
+    max-width: 200px;
+    padding: 12px;
+    background-color: #6c757d;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 12px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-back:hover {
+    background-color: #495057;
+}
+
+/* Resend Link */
+.resend-link {
+    color: #007bff;
+    font-weight: 600;
+    text-decoration: none;
+    display: block;
+    margin-top: 10px;
+    transition: color 0.3s ease;
+}
+
+.resend-link:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+/* Footer */
+.footer {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 25px;
+    font-weight: 500;
+}

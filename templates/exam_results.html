@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Exam Results</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f8f9fa;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      .top-bar {
+        background-color: #ffffff;
+        border-bottom: 1px solid #ddd;
+        padding: 10px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .top-bar img {
+        height: 40px;
+        margin-left: 10px;
+      }
+      .brand {
+        font-size: 1.6rem;
+        font-weight: bold;
+      }
+      .brand .black {
+        color: #000;
+      }
+      .brand .red {
+        color: red;
+      }
+      .container {
+        max-width: 950px;
+        margin: 30px auto;
+        background: #ffffff;
+        padding: 40px 35px;
+        border-radius: 15px;
+        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+      }
+      h1 {
+        font-size: 2.2rem;
+        color: #007bff;
+        margin-bottom: 30px;
+        text-align: center;
+      }
+      .summary {
+        font-size: 1.2rem;
+        margin-bottom: 25px;
+        text-align: center;
+      }
+      .table {
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .table thead {
+        background-color: #007bff;
+        color: white;
+      }
+      .table tbody tr:nth-child(even) {
+        background-color: #f2f2f2;
+      }
+      .table td,
+      .table th {
+        text-align: center;
+        vertical-align: middle;
+        padding: 12px;
+      }
+      .badge-pass {
+        background-color: #28a745;
+        padding: 5px 10px;
+        border-radius: 6px;
+        font-size: 0.9rem;
+      }
+      .badge-fail {
+        background-color: #dc3545;
+        padding: 5px 10px;
+        border-radius: 6px;
+        font-size: 0.9rem;
+      }
+      .action-buttons {
+        text-align: center;
+        margin-top: 30px;
+      }
+      .action-buttons a {
+        text-decoration: none;
+        padding: 12px 25px;
+        background-color: #007bff;
+        color: #ffffff;
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        display: inline-block;
+        margin: 10px;
+        box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2);
+      }
+      .action-buttons a:hover {
+        background-color: #0056b3;
+      }
+      .action-buttons a.secondary {
+        background-color: #6c757d;
+      }
+      .action-buttons a.secondary:hover {
+        background-color: #5a6268;
+      }
+      footer {
+        background-color: #343a40;
+        color: #ffffff;
+        text-align: center;
+        padding: 15px 0;
+        margin-top: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <a
+        href="{{ url_for('exams_routes.list_exams') }}"
+        class="btn btn-secondary"
+      >
+        <i class="fas fa-arrow-left"></i> Back
+      </a>
+      <div class="d-flex align-items-center">
+        <img src="/static/images/logo.png" alt="Logo" />
+        <div class="brand">
+          <span class="black">Collect</span><span class="red">ive</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <h1><i class="fas fa-poll"></i> Exam Results</h1>
+
+      <div class="summary">
+        <p>Total Exams Attempted: <strong>{{ total_attempts }}</strong></p>
+        <p>Exams Passed: <strong>{{ passed_count }}</strong></p>
+      </div>
+
+      {% if results %}
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+          <thead>
+            <tr>
+              <th>Exam Title</th>
+              <th>Category</th>
+              <th>Score (%)</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in results %}
+            <tr>
+              <td>{{ r.exam_title }}</td>
+              <td>{{ r.category }}</td>
+              <td>{{ r.score }}%</td>
+              <td>{{ r.date }}</td>
+              <td>
+                {% if r.passed %}
+                <span class="badge text-white badge-pass">Passed</span>
+                {% else %}
+                <span class="badge text-white badge-fail">Failed</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="alert alert-warning text-center">No exam results found.</div>
+      {% endif %}
+
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <a href="{{ url_for('exams_routes.list_exams') }}">
+          <i class="fas fa-list"></i> Back to Exams
+        </a>
+        <a href="{{ url_for('general_routes.dashboard') }}" class="secondary">
+          <i class="fas fa-home"></i> Go to Dashboard
+        </a>
+      </div>
+    </div>
+
+    <footer>
+      <p class="mb-0">© 2024 Collective Intranet</p>
+    </footer>
+
+    <!-- Idle Timer -->
+    <script>
+      const idleThreshold = 15 * 60 * 1000;
+      let idleTime = 0;
+      function resetIdleTime() {
+        idleTime = 0;
+      }
+      function checkIdleTime() {
+        idleTime += 1000;
+        if (idleTime >= idleThreshold) {
+          window.location.href = "{{ url_for('auth_routes.logout') }}";
+        }
+      }
+      document.addEventListener("mousemove", resetIdleTime);
+      document.addEventListener("keydown", resetIdleTime);
+      document.addEventListener("click", resetIdleTime);
+      setInterval(checkIdleTime, 1000);
+    </script>
+  </body>
+</html>

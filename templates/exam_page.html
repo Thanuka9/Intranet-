@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Exam: {{ exam.title or 'Unknown Exam' }}</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      body {
+        font-family: "Segoe UI", sans-serif;
+        background-color: #f8f9fa;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      .top-bar {
+        background-color: #ffffff;
+        border-bottom: 1px solid #ddd;
+        padding: 10px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .top-bar img {
+        height: 40px;
+        margin-right: 10px;
+      }
+      .brand {
+        font-size: 1.5rem;
+        font-weight: 600;
+      }
+      .brand .black {
+        color: #000;
+      }
+      .brand .red {
+        color: red;
+      }
+      .container {
+        max-width: 900px;
+        margin: 30px auto;
+        background: #ffffff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        flex: 1;
+      }
+      .header-card {
+        border-bottom: 2px solid #dee2e6;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+      }
+      .header-card h1 {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        text-align: center;
+        color: #343a40;
+      }
+      .header-card p {
+        margin: 0;
+        text-align: center;
+        color: #6c757d;
+      }
+      .timer {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #dc3545;
+        text-align: center;
+        margin-top: 10px;
+      }
+      .question {
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+      }
+      .question h3 {
+        margin-bottom: 15px;
+        color: #343a40;
+      }
+      .question ul {
+        list-style-type: none;
+        padding-left: 0;
+      }
+      .question li {
+        margin-bottom: 10px;
+      }
+      .actions {
+        text-align: center;
+        margin-top: 30px;
+      }
+      .submit-btn {
+        padding: 10px 20px;
+        font-size: 1rem;
+        background-color: #007bff;
+        color: #ffffff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+      .submit-btn:hover {
+        background-color: #0056b3;
+      }
+      footer {
+        background-color: #343a40;
+        color: #ffffff;
+        text-align: center;
+        padding: 15px 0;
+        margin-top: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="top-bar">
+      <div class="d-flex align-items-center">
+        <img src="/static/images/logo.png" alt="Logo" />
+        <div class="brand">
+          <span class="black">Collect</span><span class="red">ive</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="header-card">
+        <h1>
+          <i class="fas fa-clipboard-list"></i> Exam: {{ exam.title or 'Unknown
+          Exam' }}
+        </h1>
+        <p><strong>Duration:</strong> {{ exam.duration }} minutes</p>
+        <div class="timer" id="timer">Time Remaining: --:--</div>
+      </div>
+
+      <form
+        id="examForm"
+        action="{{ url_for('exams_routes.submit_exam', exam_id=exam.id) }}"
+        method="POST"
+      >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="start_time" value="{{ start_time }}" />
+        <input
+          type="hidden"
+          name="served_questions"
+          value="{{ questions|map(attribute='id')|join(',') }}"
+        />
+
+        {% for question in questions %}
+        <div class="question">
+          <h3>
+            <i class="fas fa-question-circle"></i> Q{{ loop.index }}: {{
+            question.text }}
+          </h3>
+          <ul>
+            {% for choice in question.choices %}
+            <li>
+              <label>
+                <input
+                  type="radio"
+                  name="answers[{{ question.id }}]"
+                  value="{{ choice|trim }}"
+                  required
+                />
+                {{ choice|trim }}
+              </label>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endfor %}
+
+        <div class="actions">
+          <button type="submit" class="submit-btn" aria-label="Submit exam">
+            <i class="fas fa-paper-plane"></i> Submit Exam
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <footer>
+      <p>© 2025 Collective Intranet</p>
+    </footer>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const timerElement = document.getElementById("timer");
+        const examDuration = {{ exam.duration * 60 }};
+        let remainingTime = examDuration;
+        let submitted = false;
+
+        const updateTimer = () => {
+          const minutes = Math.floor(remainingTime / 60);
+          const seconds = remainingTime % 60;
+          timerElement.textContent = `Time Remaining: ${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+
+          if (remainingTime <= 0 && !submitted) {
+            submitted = true;
+            clearInterval(timerInterval);
+            alert("Time's up! Your exam will be automatically submitted.");
+            document.getElementById("examForm").submit();
+          }
+          remainingTime--;
+        };
+
+        const timerInterval = setInterval(updateTimer, 1000);
+        updateTimer();
+
+        const form = document.getElementById("examForm");
+        const submitButton = form.querySelector(".submit-btn");
+
+        form.addEventListener("submit", (e) => {
+          if (submitted) {
+            e.preventDefault();
+            return;
+          }
+
+          const radioGroups = {};
+          form.querySelectorAll('input[type="radio"]').forEach((radio) => {
+            const name = radio.name;
+            radioGroups[name] = radioGroups[name] || [];
+            radioGroups[name].push(radio);
+          });
+
+          const unansweredCount = Object.values(radioGroups).filter(
+            (group) => !group.some((radio) => radio.checked)
+          ).length;
+
+          if (unansweredCount > 0) {
+            if (!confirm(`You have ${unansweredCount} unanswered question${unansweredCount > 1 ? "s" : ""}. Do you want to submit anyway?`)) {
+              e.preventDefault();
+              return;
+            }
+          }
+
+          submitted = true;
+          submitButton.disabled = true;
+        });
+
+        document.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+          alert("Right-click is disabled during the exam.");
+        });
+
+        document.addEventListener("keydown", (e) => {
+          if (e.ctrlKey && ["c", "v", "x", "u"].includes(e.key.toLowerCase())) {
+            e.preventDefault();
+            alert("This shortcut is disabled during the exam.");
+          }
+        });
+
+        window.addEventListener("beforeunload", (e) => {
+          if (!submitted) {
+            e.preventDefault();
+            e.returnValue = "Your progress will be lost if you leave this page.";
+          }
+        });
+      });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

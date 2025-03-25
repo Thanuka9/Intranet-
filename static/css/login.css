@@ -1,0 +1,101 @@
+/* login.css */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+body, html {
+    height: 100%;
+    margin: 0;
+    font-family: 'Roboto', sans-serif;
+}
+
+.bg-image {
+    background-image: url('/static/images/background.jpg');
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-container {
+    background-color: #fff;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+}
+
+.logo-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.logo-title img {
+    margin-right: 10px;
+    width: 40px;
+}
+
+.logo-title h1 {
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.logo-title .red {
+    color: #D32F2F;
+}
+
+.form-group {
+    text-align: left;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.form-control {
+    height: 50px;
+    font-size: 18px;
+}
+
+.password-field {
+    position: relative;
+}
+
+.toggle-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 20px;
+}
+
+.animated-button {
+    height: 50px;
+    font-size: 18px;
+    width: 100%;
+    border-radius: 25px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.animated-button:hover {
+    transform: scale(1.05);
+}
+
+.forgot-password {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.back-btn {
+    width: 100%;
+    margin-top: 20px;
+}
+
+footer {
+    margin-top: 20px;
+    font-size: 14px;
+    color: #999;
+    text-align: center;
+}

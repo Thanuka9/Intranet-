@@ -1,0 +1,109 @@
+/* Card styling */
+.card {
+    min-height: 600px;
+    background-color: #ffffff;
+    border-radius: 12px; /* Slightly increased border radius for modern design */
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Enhanced shadow for better visibility */
+    text-align: center; /* Ensures uniform alignment of content */
+}
+
+/* Profile picture styling */
+.profile-picture {
+    width: 150px; /* Fixed width */
+    height: 150px; /* Fixed height */
+    object-fit: cover; /* Ensure image is cropped properly */
+    border-radius: 50%; /* Circular profile picture */
+    margin: 0 auto 15px; /* Center-align and add spacing below */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); /* Subtle shadow for profile picture */
+}
+
+/* Responsive adjustments for profile picture */
+@media (max-width: 768px) {
+    .profile-picture {
+        width: 120px;
+        height: 120px;
+    }
+}
+
+/* Calendar grid styling */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* 7 columns for days of the week */
+    gap: 8px; /* Space between days */
+    text-align: center;
+}
+
+.calendar-day {
+    padding: 12px;
+    font-size: 14px;
+    border-radius: 6px; /* Slightly larger rounding */
+    background-color: #f9f9f9;
+    position: relative;
+    transition: background-color 0.3s, transform 0.2s;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* Subtle shadow for better visibility */
+}
+
+.calendar-day:hover {
+    background-color: #d4edda; /* Light green for hover effect */
+    transform: scale(1.05);
+}
+
+.holiday {
+    background-color: #f8d7da; /* Light red background for holidays */
+    color: #721c24; /* Dark red text */
+    font-weight: bold;
+}
+
+/* Tooltip styling */
+.calendar-day .tooltip-text {
+    visibility: hidden;
+    width: 140px; /* Increased width for better readability */
+    background-color: #333; /* Slightly darker background */
+    color: #fff;
+    text-align: center;
+    border-radius: 4px;
+    padding: 8px;
+    position: absolute;
+    z-index: 1;
+    bottom: 100%; /* Above the calendar day */
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.2s ease-in-out;
+}
+
+.calendar-day:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(-50%) translateY(-5px); /* Slight animation for tooltip */
+}
+
+/* General container adjustments */
+.container {
+    max-width: 1200px; /* Restrict maximum width for better readability */
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Footer styling */
+footer {
+    background-color: #f8f9fa;
+    padding: 20px;
+    text-align: center;
+    font-size: 14px;
+    color: #6c757d;
+    border-top: 1px solid #e9ecef; /* Subtle border at the top */
+}
+
+/* Media query for responsiveness */
+@media (max-width: 768px) {
+    .card {
+        min-height: auto; /* Allow flexibility for smaller screens */
+        padding: 15px;
+    }
+    .calendar-grid {
+        gap: 6px; /* Reduce spacing for smaller screens */
+    }
+}

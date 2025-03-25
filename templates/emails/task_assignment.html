@@ -1,0 +1,130 @@
+<!-- templates/emails/task_assignment.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>New Task Assigned</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .email-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background-color: #007bff;
+            padding: 20px;
+            text-align: center;
+        }
+        .header img {
+            height: 50px;
+            vertical-align: middle;
+        }
+        .header h1 {
+            display: inline-block;
+            margin: 0 0 0 10px;
+            font-size: 24px;
+            color: #ffffff;
+            vertical-align: middle;
+        }
+        .content {
+            padding: 20px;
+        }
+        .content h2 {
+            color: #d9534f;
+            font-size: 22px;
+            margin-top: 0;
+        }
+        .content p {
+            font-size: 16px;
+            line-height: 1.5;
+            color: #333;
+        }
+        .content ul {
+            list-style-type: none;
+            padding: 0;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        .content ul li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .content ul li:last-child {
+            border-bottom: none;
+        }
+        .content ul li strong {
+            color: #333;
+        }
+        .button-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #ffffff;
+            background-color: #007bff;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 15px;
+            text-align: center;
+            font-size: 14px;
+            color: #888;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header with logo and title -->
+        <div class="header">
+            <img src="{{ logo_url }}" alt="Collective Logo">
+            <h1>Collective Intranet</h1>
+        </div>
+
+        <!-- Content section with task details -->
+        <div class="content">
+            <h2>New Task Assigned</h2>
+            <p>Hello {{ user.first_name }},</p>
+            <p>You have been assigned a new task. Here are the details:</p>
+            <ul>
+                <li><strong>Title:</strong> {{ task.title }}</li>
+                <li><strong>Description:</strong> {{ task.description }}</li>
+                <li><strong>Due Date:</strong> {{ task.due_date.strftime('%Y-%m-%d') }}</li>
+                <li><strong>Priority:</strong> {{ task.priority }}</li>
+                <li><strong>Assigned by:</strong> {{ task.assigned_by_user.first_name }} {{ task.assigned_by_user.last_name }}</li>
+            </ul>
+
+            <div class="button-container">
+                <a href="{{ url_for('task_routes.view_task', task_id=task.id, _external=True) }}" class="button">View Task Details</a>
+            </div>
+
+            <p>Please log in to the Collective Intranet system for more details and to take action on your assigned tasks.</p>
+            <p>Best regards,<br>Collective Intranet Team</p>
+        </div>
+
+        <!-- Footer with copyright notice -->
+        <div class="footer">
+            Collective Intranet System © 2024
+        </div>
+    </div>
+</body>
+</html>

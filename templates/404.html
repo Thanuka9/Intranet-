@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Not Found</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Oops! Page Not Found</h1>
+    </header>
+    <main>
+        <p>The page you're looking for doesn't exist or has been moved.</p>
+        <a href="{{ url_for('root') }}" class="home-button">Go to Homepage</a>
+    </main>
+    <footer>
+        <p>© 2024 Collective Intranet</p>
+    </footer>
+</body>
+</html>

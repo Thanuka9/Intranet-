@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register - COLLECTIVE</title>
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <!-- Font Awesome for Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      /* Basic Reset */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(
+          135deg,
+          rgba(224, 234, 252, 0.8),
+          rgba(207, 222, 243, 0.8)
+        );
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Top Bar */
+      .top-bar {
+        background-color: #ffffff;
+        border-bottom: 1px solid #ddd;
+        padding: 8px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .brand-section {
+        display: flex;
+        align-items: center;
+      }
+      .brand-section img {
+        height: 40px;
+        margin-right: 8px;
+      }
+      .brand-section h1 {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 0;
+      }
+      .black-part {
+        color: #000;
+      }
+      .red-part {
+        color: rgba(186, 30, 36, 1); /* The specified red color */
+      }
+      .btn-back {
+        background-color: #6c757d;
+        color: #fff;
+        border: none;
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        border-radius: 4px;
+        text-decoration: none;
+      }
+      .btn-back:hover {
+        background-color: #5a6268;
+      }
+
+      /* Main Container */
+      main {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 30px 15px;
+      }
+
+      /* Registration Card */
+      .register-card {
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        max-width: 550px;
+        width: 100%;
+        padding: 30px;
+        animation: fadeIn 0.4s ease;
+      }
+      .register-card h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        font-weight: bold;
+        color: rgba(186, 30, 36, 1);
+      }
+
+      /* Flash Message */
+      #errorAlert {
+        margin-bottom: 20px;
+      }
+
+      /* Buttons */
+      .btn-register {
+        width: 100%;
+        padding: 12px;
+        font-size: 1rem;
+        border-radius: 6px;
+        margin-top: 10px;
+      }
+      .btn-cancel {
+        width: 100%;
+        margin-top: 10px;
+        font-size: 1rem;
+        border-radius: 6px;
+      }
+
+      /* Footer */
+      footer {
+        background-color: #343a40;
+        color: #fff;
+        text-align: center;
+        padding: 12px 0;
+        font-size: 0.9rem;
+      }
+
+      /* Simple fade-in animation */
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(15px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <a href="{{ url_for('general_routes.home') }}" class="btn-back">
+        <i class="fas fa-arrow-left"></i> Back
+      </a>
+      <div class="brand-section">
+        <img
+          src="{{ url_for('static', filename='images/logo.png') }}"
+          alt="Company Logo"
+        />
+        <h1>
+          <span class="black-part">COLLECT</span
+          ><span class="red-part">IVE</span>
+        </h1>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <main>
+      <div class="register-card">
+        <h2>Register</h2>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %} {% if messages %}
+        <div class="alert alert-danger" id="errorAlert">
+          <ul class="mb-0">
+            {% for message in messages %}
+            <li>{{ message }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %} {% endwith %}
+
+        <!-- Registration Form -->
+        <form
+          action="{{ url_for('auth_routes.register') }}"
+          method="POST"
+          onsubmit="return validateForm()"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+          <!-- First Name -->
+          <div class="form-group mb-3">
+            <label for="first_name"><strong>First Name</strong></label>
+            <input
+              type="text"
+              class="form-control"
+              id="first_name"
+              name="first_name"
+              required
+            />
+          </div>
+
+          <!-- Last Name -->
+          <div class="form-group mb-3">
+            <label for="last_name"><strong>Last Name</strong></label>
+            <input
+              type="text"
+              class="form-control"
+              id="last_name"
+              name="last_name"
+              required
+            />
+          </div>
+
+          <!-- Email -->
+          <div class="form-group mb-3">
+            <label for="employee_email"><strong>Employee Email</strong></label>
+            <input
+              type="email"
+              class="form-control"
+              id="employee_email"
+              name="employee_email"
+              required
+            />
+          </div>
+
+          <!-- Password -->
+          <div class="form-group mb-3">
+            <label for="password"><strong>Password</strong></label>
+            <input
+              type="password"
+              class="form-control"
+              id="password"
+              name="password"
+              required
+            />
+            <small class="text-muted"
+              >Must contain at least 1 uppercase letter, 1 symbol, 1 number, and
+              be 8+ characters long.</small
+            >
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="form-group mb-3">
+            <label for="confirm_password"
+              ><strong>Confirm Password</strong></label
+            >
+            <input
+              type="password"
+              class="form-control"
+              id="confirm_password"
+              name="confirm_password"
+              required
+            />
+          </div>
+
+          <!-- Clients -->
+          <div class="form-group mb-3">
+            <label for="client"><strong>Clients</strong></label>
+            <select
+              class="form-control"
+              id="client"
+              name="clients"
+              multiple
+              required
+            >
+              <option value="MTW">MTW</option>
+              <option value="HA">HA</option>
+              <option value="HT">HT</option>
+              <option value="TSH">TSH</option>
+              <option value="Core PT">Core PT</option>
+              <option value="Castle Imaging">Castle Imaging</option>
+              <option value="Fort Worth Pain Centre">
+                Fort Worth Pain Centre
+              </option>
+              <option value="AHHC">AHHC</option>
+              <option value="QFD">QFD</option>
+              <option value="Assure">Assure</option>
+              <option value="US Neuro">US Neuro</option>
+              <option value="Neuro Alert">Neuro Alert</option>
+              <option value="IONM Help">IONM Help</option>
+              <option value="TXPH">TXPH</option>
+              <option value="TPC">TPC</option>
+            </select>
+            <small class="text-muted"
+              >Hold down Ctrl (Windows) or Command (Mac) to select multiple
+              options.</small
+            >
+          </div>
+
+          <!-- Designation -->
+          <div class="form-group mb-3">
+            <label for="designation"><strong>Designation</strong></label>
+            <select
+              class="form-control"
+              id="designation"
+              name="designation"
+              required
+            >
+              <option value="" disabled selected>Select Designation</option>
+              <option value="1">Trainee</option>
+              <option value="2">Specialist</option>
+              <option value="3">Senior Specialist</option>
+              <option value="4">Assistant Team Lead</option>
+              <option value="5">Deputy Team Lead</option>
+              <option value="6">Team Lead</option>
+              <option value="7">Senior Team Lead</option>
+              <option value="8">Assistant Manager</option>
+              <option value="9">Manager</option>
+              <option value="10">Senior Manager</option>
+              <option value="11">Human Resource</option>
+              <option value="12">Process Improvement</option>
+              <option value="13">Software Engineer</option>
+              <option value="14">Director</option>
+            </select>
+          </div>
+
+          <!-- Employee ID -->
+          <div class="form-group mb-3">
+            <label for="employee_id"><strong>Employee ID</strong></label>
+            <input
+              type="text"
+              class="form-control"
+              id="employee_id"
+              name="employee_id"
+              required
+            />
+          </div>
+
+          <!-- Join Date -->
+          <div class="form-group mb-3">
+            <label for="join_date"><strong>Join Date</strong></label>
+            <input
+              type="date"
+              class="form-control"
+              id="join_date"
+              name="join_date"
+              required
+            />
+          </div>
+
+          <!-- Simple Captcha (Math) -->
+          <div class="form-group mb-3">
+            <label><strong>Captcha</strong></label>
+            <p
+              id="captchaQuestion"
+              style="
+                font-weight: bold;
+                background-color: #f1f1f1;
+                padding: 8px;
+                border-radius: 4px;
+              "
+            >
+              <!-- Will be generated by JS -->
+            </p>
+            <input
+              type="text"
+              class="form-control"
+              id="captchaAnswer"
+              name="captchaAnswer"
+              placeholder="Enter the answer"
+              required
+            />
+          </div>
+
+          <!-- Buttons -->
+          <button type="submit" class="btn btn-primary btn-register">
+            Register
+          </button>
+          <a
+            href="{{ url_for('general_routes.home') }}"
+            class="btn btn-secondary btn-cancel"
+          >
+            Cancel
+          </a>
+        </form>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+      <p class="mb-0">© 2024 Collective Intranet</p>
+    </footer>
+
+    <!-- JS for form validation & captcha -->
+    <script>
+      let captchaCorrectAnswer = 0;
+
+      // Generate a simple math captcha
+      function generateCaptcha() {
+        const a = Math.floor(Math.random() * 10) + 1; // random from 1..10
+        const b = Math.floor(Math.random() * 10) + 1; // random from 1..10
+        document.getElementById(
+          "captchaQuestion"
+        ).textContent = `What is ${a} + ${b}?`;
+        captchaCorrectAnswer = a + b;
+      }
+
+      // Validate entire form (password & captcha)
+      function validateForm() {
+        // 1) Password check
+        const password = document.getElementById("password").value;
+        const confirmPassword =
+          document.getElementById("confirm_password").value;
+        if (password !== confirmPassword) {
+          alert("Passwords do not match.");
+          return false;
+        }
+        const passwordPattern =
+          /^(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$/;
+        if (!passwordPattern.test(password)) {
+          alert(
+            "Password must be at least 8 characters long and contain 1 uppercase letter, 1 symbol, and 1 number."
+          );
+          return false;
+        }
+
+        // 2) Captcha check
+        const userCaptcha = parseInt(
+          document.getElementById("captchaAnswer").value,
+          10
+        );
+        if (userCaptcha !== captchaCorrectAnswer) {
+          alert("Captcha answer is incorrect. Please try again.");
+          // Refresh captcha
+          generateCaptcha();
+          return false;
+        }
+        return true;
+      }
+
+      // On page load, generate the captcha & fade out error messages
+      document.addEventListener("DOMContentLoaded", function () {
+        generateCaptcha();
+        const errorAlert = document.getElementById("errorAlert");
+        if (errorAlert) {
+          setTimeout(() => {
+            errorAlert.style.transition = "opacity 0.5s";
+            errorAlert.style.opacity = "0";
+          }, 3000);
+        }
+      });
+    </script>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  </body>
+</html>

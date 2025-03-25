@@ -1,0 +1,2480 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Exam Paper 1 - Billing & Coding</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        font-family: "Segoe UI", sans-serif;
+        background: #f2f6fa;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 30px;
+        background-color: #fff;
+        border-bottom: 1px solid #ddd;
+      }
+      .top-bar img {
+        height: 40px;
+        margin-right: 10px;
+      }
+      .brand {
+        font-size: 1.5rem;
+        font-weight: 600;
+      }
+      .brand .black { color: #000; }
+      .brand .red { color: red; }
+      .main-container {
+        max-width: 900px;
+        margin: 30px auto;
+        background: #fff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        flex: 1;
+        animation: fadeIn 0.5s ease-in-out;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .header h1 {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        color: #007bff;
+      }
+      .timer {
+        font-size: 1.2rem;
+        color: #dc3545;
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .question-container {
+        display: none;
+      }
+      .question-container.active {
+        display: block;
+        animation: fadeIn 0.4s ease-in-out;
+      }
+      .question {
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+      }
+      .question h3 {
+        margin-bottom: 10px;
+      }
+      .navigation {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+      }
+      .navigation button {
+        padding: 10px 20px;
+        font-size: 1rem;
+      }
+      .actions {
+        text-align: center;
+        margin-top: 30px;
+      }
+      .actions button,
+      .actions a {
+        margin: 5px;
+      }
+      footer {
+        background: #343a40;
+        color: #fff;
+        text-align: center;
+        padding: 15px 0;
+        margin-top: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="top-bar">
+      <a href="{{ url_for('exams_routes.list_exams') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back
+      </a>
+      <div class="d-flex align-items-center">
+        <img src="/static/images/logo.png" alt="Logo" />
+        <div class="brand">
+          <span class="black">Collect</span><span class="red">ive</span>
+        </div>
+      </div>
+    </div>
+    </div>
+    <div class="container">
+      <!-- Header Section -->
+      <div class="header">
+        <h1>Exam Paper 2 - Billing &amp; Coding</h1>
+        <p><strong>Time Allowed:</strong> 45 minutes</p>
+        <div class="timer" id="timer">Time Remaining: 45:00</div>
+        <p>
+          Instructions: Answer all 40 questions. Use the Next/Previous buttons
+          to navigate. You may review and change your answers before submitting.
+        </p>
+      </div>
+
+      <!-- Exam Form -->
+      <form
+        id="examForm"
+        action="{{ url_for('special_exams_routes.submit_paper2') }}"
+        method="POST"
+      >
+        <!-- Hidden Fields -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="start_time" value="{{ start_time }}" />
+        <input type="hidden" id="timeSpentInput" name="time_spent" />
+
+        <!-- Question Containers -->
+        <div id="questionWrapper">
+          <!-- Question 1 -->
+          <div class="question-container active" data-question-index="0">
+            <div class="question">
+              <h3>1. Which of the following is an example of BPO?</h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[1]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) A company hiring additional staff for in-house
+                  operations</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[1]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) A company launching a new marketing campaign</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[1]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) A company outsourcing its customer support services</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[1]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) A company expanding its office space</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 2 -->
+          <div class="question-container" data-question-index="1">
+            <div class="question">
+              <h3>
+                2. Which of the following is an example of a commercial payor in
+                the United States?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[2]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">a) Medicaid</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[2]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">b) Medicare</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[2]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">c) Tricare</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[2]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">d) Humana</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 3 -->
+          <div class="question-container" data-question-index="2">
+            <div class="question">
+              <h3>
+                3. Which of the following is NOT a part of the RCM process?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[3]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) Providing medical treatment</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[3]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) Verifying insurance coverage</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[3]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) Scheduling appointments</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[3]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) Billing patients and insurers</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 4 -->
+          <div class="question-container" data-question-index="3">
+            <div class="question">
+              <h3>
+                4. Who is responsible for purchasing workers' compensation
+                insurance?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[4]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">a) The employee</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[4]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">b) The government</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[4]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">c) The employer</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[4]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) Health insurance companies</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 5 -->
+          <div class="question-container" data-question-index="4">
+            <div class="question">
+              <h3>5. Which is the first step in RCM process?</h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[5]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) Scheduling appointments</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[5]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) Verifying insurance coverage</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[5]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">c) Billing patients</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[5]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">d) Collecting payments</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 6 -->
+          <div class="question-container" data-question-index="5">
+            <div class="question">
+              <h3>
+                6. Which of the following would be considered a responsibility
+                of a "patient"?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[6]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) Diagnosing medical conditions</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[6]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) Following the healthcare provider's treatment</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[6]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) Managing hospital operations</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[6]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) Prescribing medications</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 7 -->
+          <div class="question-container" data-question-index="6">
+            <div class="question">
+              <h3>
+                7. If a child is covered under their parent's health insurance
+                plan, the subscriber is:
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[7]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">a) The child</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[7]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) The parent who holds the insurance policy</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[7]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) The healthcare provider</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[7]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">d) The insurance company</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 8 -->
+          <div class="question-container" data-question-index="7">
+            <div class="question">
+              <h3>
+                8. Claims aged up to 30 days from the Date of Service (DOS) are
+                placed in which bucket?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[8]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">a) 60-Day Bucket</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[8]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">b) 90-Day Bucket</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[8]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">c) 30-Day Bucket</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[8]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">d) 120-Day Bucket</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 9 -->
+          <div class="question-container" data-question-index="8">
+            <div class="question">
+              <h3>
+                9. Which status indicates that the insurance company has refused
+                to make a payment for the claim?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[9]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">a) Paid</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[9]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">b) In Process</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[9]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">c) Pending</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[9]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">d) Denied</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 10 -->
+          <div class="question-container" data-question-index="9">
+            <div class="question">
+              <h3>
+                10. Which of the following factors can cause changes in fee
+                schedule rates?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[10]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">a) Provider experience</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[10]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">b) Patient demographics</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[10]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">c) Hospital size</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[10]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">d) Provider type</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 11 -->
+          <div class="question-container" data-question-index="10">
+            <div class="question">
+              <h3>11. Which of the following is an example of a CARC code?</h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[11]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">a) CPT1001</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[11]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">b) CO16</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[11]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">c) 99214</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[11]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">d) NPI123456</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 12 -->
+          <div class="question-container" data-question-index="11">
+            <div class="question">
+              <h3>
+                12. Which of the following statements is true regarding patient
+                responsibility?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[12]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) It is determined before calculating the allowable
+                  amount</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[12]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) It includes only co-payments</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[12]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) It is the portion of the allowable amount the patient must
+                  cover</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[12]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) It is the amount covered by insurance</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 13 -->
+          <div class="question-container" data-question-index="12">
+            <div class="question">
+              <h3>13. How is the total payment amount calculated?</h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[13]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) Total Payment = Allowable - Patient Responsibility</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[13]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) Total Payment = Charge Amount - Write-off</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[13]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) Total Payment = Allowable + Patient Responsibility</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[13]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) Total Payment = Charge Amount - Paid</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 14 -->
+          <div class="question-container" data-question-index="13">
+            <div class="question">
+              <h3>14. How is the allowable amount determined?</h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[14]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) It is a random value set by the provider</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[14]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) It is the amount the patient decides to pay</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[14]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) It is equal to the charge amount</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[14]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) It is based on the insurance company's Fee Schedule</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 15 -->
+          <div class="question-container" data-question-index="14">
+            <div class="question">
+              <h3>
+                15. Which of the following statements about manual payment
+                posting is true?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[15]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) It requires more human effort, leading to a higher
+                  potential for error</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[15]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) It involves automated matching payments to patient
+                  accounts</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[15]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) It is generally faster than electronic posting</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[15]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) It is more accurate than electronic posting</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 16 -->
+          <div class="question-container" data-question-index="15">
+            <div class="question">
+              <h3>
+                16. Which of the following best describes the process of posting
+                adjustments in medical billing?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[16]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) Posting a refund to a patient’s account</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[16]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) Writing off amounts that are not covered by the insurance
+                  company</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[16]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) Adding a co-pay amount to the patient’s account</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[16]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) Verifying the eligibility of the patient’s
+                  insurance</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 17 -->
+          <div class="question-container" data-question-index="16">
+            <div class="question">
+              <h3>
+                17. Where can claims get rejected during the billing process?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[17]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) Only by the insurance carrier</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[17]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) Only by the clearinghouse</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[17]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) By the system, clearinghouse, or insurance carrier</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[17]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) Only by the billing team</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 18 -->
+          <div class="question-container" data-question-index="17">
+            <div class="question">
+              <h3>18. Which of the following best describes the NPI?</h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[18]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) A unique code used for patient identification</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[18]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) A unique identification for healthcare providers</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[18]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) A unique identifier for insurance companies</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[18]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) A code used to identify medical facilities</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 19 -->
+          <div class="question-container" data-question-index="18">
+            <div class="question">
+              <h3>19. What does Medicare Part B cover?</h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[19]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) Inpatient hospital stays</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[19]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) Outpatient care and doctors' services</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[19]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">c) Prescription drugs</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[19]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) Skilled nursing facility care</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 20 -->
+          <div class="question-container" data-question-index="19">
+            <div class="question">
+              <h3>
+                20. What does the Effective Date of an insurance policy
+                indicate?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[20]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) The date when the patient policy was terminated</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[20]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) The date when the policy became active</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[20]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) The date when the insurance company issued the
+                  policy</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[20]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) The date when the last premium was paid</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 21 -->
+          <div class="question-container" data-question-index="20">
+            <div class="question">
+              <h3>
+                21. What does the abbreviation "DX" refer to in medical billing?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[21]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">a) Diagnostic Procedures</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[21]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">b) Diagnosis Code</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[21]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">c) Doctor’s Examination</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[21]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">d) Digital X-ray</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 22 -->
+          <div class="question-container" data-question-index="21">
+            <div class="question">
+              <h3>
+                22. If a patient has a $6,000 out-of-pocket maximum and has
+                already paid $6,000 in medical expenses, how much will they owe
+                for additional medical services that year?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[22]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">a) $6,000</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[22]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">b) $3,000</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[22]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">c) $0</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[22]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">d) $100 per visit</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 23 -->
+          <div class="question-container" data-question-index="22">
+            <div class="question">
+              <h3>23. A participating provider is also known as:</h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[23]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) An out-of-network provider</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[23]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) An in-network provider</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[23]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) A non-participating provider</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[23]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) A private-pay provider</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 24 -->
+          <div class="question-container" data-question-index="23">
+            <div class="question">
+              <h3>
+                24. In below, who is not referred to as a "provider" in RCM?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[24]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) Emergency Medicine Specialists</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[24]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">b) Oncologists</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[24]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">c) Ophthalmologists</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[24]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">d) Pharmacists</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 25 -->
+          <div class="question-container" data-question-index="24">
+            <div class="question">
+              <h3>
+                25. Which of the following is NOT covered by Medicare Part B?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[25]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) Outpatient doctor visits</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[25]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">b) Preventive screenings</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[25]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) Inpatient hospital stays</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[25]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">d) Medical supplies</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 26 -->
+          <div class="question-container" data-question-index="25">
+            <div class="question">
+              <h3>26. What is a diagnosis code?</h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[26]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) A code used to describe medical procedures</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[26]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) A code used to describe a patient's medical
+                  condition</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[26]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) A code used to track patient demographics</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[26]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) A code used for insurance payment processing</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 27 -->
+          <div class="question-container" data-question-index="26">
+            <div class="question">
+              <h3>
+                27. Which of the following is a government health insurance
+                program designed for elderly citizens and certain disabled
+                individuals?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[27]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">a) Medicaid</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[27]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">b) Medicare</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[27]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">c) Tricare</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[27]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">d) Veterans Affairs</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 28 -->
+          <div class="question-container" data-question-index="27">
+            <div class="question">
+              <h3>
+                28. If a spouse is covered under their partner’s insurance
+                policy, the spouse is referred to as the:
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[28]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">a) Subscriber</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[28]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">b) Guarantor</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[28]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">c) Dependent</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[28]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">d) Provider</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 29 -->
+          <div class="question-container" data-question-index="28">
+            <div class="question">
+              <h3>
+                29. Which of the following statements is true about an
+                out-of-pocket maximum?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[29]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">a) It resets every month</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[29]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) It resets every year when the policy is renewed</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[29]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) It does not apply to hospital visits</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[29]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) It only applies to emergency services</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 30 -->
+          <div class="question-container" data-question-index="29">
+            <div class="question">
+              <h3>
+                30. If a patient has a $2000 yearly deductible and each doctor’s
+                visit costs $100, how many visits must the patient pay for
+                out-of-pocket before insurance starts covering the cost?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[30]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">a) 10 visits</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[30]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">b) 15 visits</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[30]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">c) 20 visits</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[30]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">d) 25 visits</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 31 -->
+          <div class="question-container" data-question-index="30">
+            <div class="question">
+              <h3>31. What is Practice Management Software in RCM?</h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[31]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) A software used for capturing patient demographics,
+                  scheduling appointments, billing, and generating
+                  reports.</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[31]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) A system that replaces healthcare providers’
+                  superbill</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[31]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) A tool used only for medical research.</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[31]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) A software that stores only patient insurance details and
+                  scheduling appointments.</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 32 -->
+          <div class="question-container" data-question-index="31">
+            <div class="question">
+              <h3>32. What does Medicare Part A cover?</h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[32]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) Routine doctor visits, physical therapy and hospice
+                  care</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[32]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) Inpatient hospital stays, skilled nursing facility care,
+                  hospice care</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[32]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) Only outpatient medical services</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[32]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) Prescription drugs and vision care</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 33 -->
+          <div class="question-container" data-question-index="32">
+            <div class="question">
+              <h3>
+                33. Why is it important to verify benefits before providing
+                services?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[33]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) To increase the patient’s premium rates</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[33]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) To receive payment from the patient</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[33]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) To ensure that the patient's insurance is active</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[33]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) To automatically waive any patient responsibilities</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 34 -->
+          <div class="question-container" data-question-index="33">
+            <div class="question">
+              <h3>34. What is a deductible in health insurance?</h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[34]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) The amount patients pay for covered health care services
+                  before the patients’ insurance plan starts to pay</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[34]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) The total cost of medical services covered by
+                  insurance</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[34]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) The amount an insurance company pays to a provider before
+                  the patients’ insurance plan starts to pay</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[34]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) A fixed fee paid by patients for each visit</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 35 -->
+          <div class="question-container" data-question-index="34">
+            <div class="question">
+              <h3>
+                35. Which of the following is NOT a method of performing VOB?
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[35]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">a) Online verification</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[35]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">b) E-mails</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[35]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">c) Insurance calls</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[35]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">d) E-eligibility</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 36 -->
+          <div class="question-container" data-question-index="35">
+            <div class="question">
+              <h3>36. What is an Out-of-Pocket Maximum?</h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[36]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) The maximum amount a patient must pay for medical services
+                  in a given year</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[36]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) The total amount covered by the insurance provider</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[36]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) The deductible a patient must pay for each visit</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[36]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) The fixed amount paid by the insurance company for each
+                  claim in a given year</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 37 -->
+          <div class="question-container" data-question-index="36">
+            <div class="question">
+              <h3>37. Why is Provider Enrollment important in healthcare?</h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[37]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) It is required for all healthcare providers to receive
+                  training</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[37]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) It enables providers to set their insurance premiums for
+                  the services they provide</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[37]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) It ensures that patients automatically receive care
+                  without charge</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[37]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) It allows healthcare providers to be reimbursed by
+                  insurance companies for the services they provide</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 38 -->
+          <div class="question-container" data-question-index="37">
+            <div class="question">
+              <h3>38. What is a referral in healthcare?</h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[38]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) A list of all services available at a healthcare
+                  facility</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[38]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) The process of sending a patient to another practitioner
+                  for consultation</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[38]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) The process of recommending a treatment plan to a
+                  patient.</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[38]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) A procedure where patients choose their healthcare
+                  provider directly</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 39 -->
+          <div class="question-container" data-question-index="38">
+            <div class="question">
+              <h3>39. What does HIPAA require from healthcare providers?</h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[39]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >a) To report all patient illnesses to the government</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[39]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >b) To keep patient health information confidential and
+                  secure</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[39]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >c) To share patient records with insurance companies
+                  freely</label
+                >
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[39]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label"
+                  >d) To disclose all medical data to third parties</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 40 -->
+          <div class="question-container" data-question-index="39">
+            <div class="question">
+              <h3>
+                40. A claim was billed to BCBS with a billed amount of $1500. As
+                per the patient's insurance plan, the allowable is $1200. The
+                patient has a Copay of $100 and the patient has 20%
+                co-insurance. Calculate the following: Insurance paid amount and
+                Total patient responsibility amount.
+              </h3>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[40]"
+                  value="a"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">a) $860 and $340</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[40]"
+                  value="b"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">b) $1500 and $860</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[40]"
+                  value="c"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">c) $1200 and $100</label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="radio"
+                  name="answers[40]"
+                  value="d"
+                  class="form-check-input"
+                  required
+                />
+                <label class="form-check-label">d) $100 and $340</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="navigation">
+          <button
+            type="button"
+            id="prevBtn"
+            class="btn btn-secondary"
+            onclick="prevQuestion()"
+            disabled
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            id="nextBtn"
+            class="btn btn-secondary"
+            onclick="nextQuestion()"
+          >
+            Next
+          </button>
+        </div>
+
+        <!-- Submission Button -->
+        <div class="actions">
+          <button
+            type="submit"
+            id="submitBtn"
+            class="btn btn-primary"
+            style="display: none"
+          >
+            Submit Exam Paper 2
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <footer>© 2024Collective Intranet</footer>
+
+    <!-- JavaScript for Timer, Navigation, and Anti-Cheating -->
+    <script>
+      const timerElement = document.getElementById("timer");
+      let remainingTime = 45 * 60;
+      let examSubmitted = false;
+      let tabSwitchCount = 0;
+
+      function updateTimer() {
+        const minutes = Math.floor(remainingTime / 60);
+        const seconds = remainingTime % 60;
+        timerElement.textContent = `Time Remaining: ${minutes
+          .toString()
+          .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+
+        if (remainingTime <= 0 && !examSubmitted) {
+          examSubmitted = true;
+          alert("Time's up! Your exam will be automatically submitted.");
+          document.getElementById("examForm").submit();
+        }
+        remainingTime--;
+      }
+
+      setInterval(updateTimer, 1000);
+      updateTimer();
+
+      const questions = document.querySelectorAll(".question-container");
+      let currentQuestionIndex = 0;
+
+      function showQuestion(index) {
+        questions.forEach((q, i) => q.classList.toggle("active", i === index));
+        document.getElementById("prevBtn").disabled = index === 0;
+        document.getElementById("nextBtn").style.display =
+          index === questions.length - 1 ? "none" : "inline-block";
+        document.getElementById("submitBtn").style.display =
+          index === questions.length - 1 ? "inline-block" : "none";
+      }
+
+      function nextQuestion() {
+        if (!isQuestionAnswered(currentQuestionIndex)) {
+          alert("Please select an answer before continuing.");
+          return;
+        }
+        if (currentQuestionIndex < questions.length - 1) {
+          currentQuestionIndex++;
+          showQuestion(currentQuestionIndex);
+        }
+      }
+
+      function prevQuestion() {
+        if (currentQuestionIndex > 0) {
+          currentQuestionIndex--;
+          showQuestion(currentQuestionIndex);
+        }
+      }
+
+      function isQuestionAnswered(index) {
+        const radios = document.querySelectorAll(
+          `.question-container[data-question-index='${index}'] input[type='radio']`
+        );
+        return Array.from(radios).some((r) => r.checked);
+      }
+
+      showQuestion(currentQuestionIndex);
+
+      document
+        .getElementById("examForm")
+        .addEventListener("submit", function (e) {
+          for (let i = 0; i < questions.length; i++) {
+            if (!isQuestionAnswered(i)) {
+              e.preventDefault();
+              currentQuestionIndex = i;
+              showQuestion(i);
+              alert(`Please answer Question ${i + 1}.`);
+              return;
+            }
+          }
+          const timeSpent = 45 * 60 - remainingTime;
+          document.getElementById("timeSpentInput").value = timeSpent;
+          examSubmitted = true;
+        });
+
+      // Disable copy, cut, paste, right-click
+      document.addEventListener("copy", (e) => e.preventDefault());
+      document.addEventListener("cut", (e) => e.preventDefault());
+      document.addEventListener("paste", (e) => e.preventDefault());
+      document.addEventListener("contextmenu", (e) => e.preventDefault());
+
+      // Detect tab switching
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden && !examSubmitted) {
+          tabSwitchCount++;
+          if (tabSwitchCount === 1) {
+            alert(
+              "Warning: You have switched tabs. Switching again will disqualify you."
+            );
+          } else if (tabSwitchCount >= 2) {
+            alert(
+              "You have been disqualified for switching tabs multiple times. Exam will be submitted."
+            );
+            examSubmitted = true;
+            document.getElementById("examForm").submit();
+          }
+        }
+      });
+    </script>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

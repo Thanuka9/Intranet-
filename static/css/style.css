@@ -1,0 +1,122 @@
+/* Importing Roboto Font */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+/* Global Styling */
+body, html {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: 'Roboto', sans-serif;
+}
+
+/* Background Image */
+.bg-image {
+    background-image: url('/static/images/background.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* Centered Container Styling without Shadow */
+.bg-light {
+    background-color: rgba(255, 255, 255, 1); /* Solid white background */
+    padding: 2rem;
+    border-radius: 10px;
+}
+
+/* Logo Styling with Hover Animation */
+.logo-title img.logo {
+    width: 80px;
+    height: auto;
+    transition: transform 0.3s ease;
+}
+
+.logo-title img.logo:hover {
+    transform: scale(1.1); /* Slight zoom on hover */
+}
+
+/* Welcome Text Styling with Animation */
+.welcome-text {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #333;
+    animation: fadeIn 1s ease-in-out; /* Fade-in animation */
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Red Text Styling for "IVE" */
+.red-text {
+    color: #d32f2f; /* Red color for "IVE" */
+}
+
+/* Button Gradient and Hover Effects */
+.btn-primary {
+    background: linear-gradient(45deg, #007bff, #0056b3); /* Gradient for Login button */
+    border: none;
+    transition: background-color 0.3s ease;
+    border-radius: 25px;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-success {
+    background: linear-gradient(45deg, #28a745, #1e7e34); /* Gradient for Register button */
+    border: none;
+    transition: background-color 0.3s ease;
+    border-radius: 25px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Button Pulse Effect */
+.btn-primary::after, .btn-success::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.btn-primary:hover::after, .btn-success:hover::after {
+    opacity: 1; /* Light pulse effect on hover */
+}
+
+/* Footer Styling */
+.footer p {
+    margin-top: 1.5rem;
+    font-size: 0.75rem; /* Smaller footer text */
+    color: #777; /* Lighter gray */
+}
+
+/* Social Media Icons */
+.social-icons {
+    display: flex;
+    justify-content: center;
+    gap: 20px; /* Increase space between icons */
+    margin-top: 1rem;
+}
+
+.social-icon {
+    color: #333; /* Default icon color */
+    font-size: 2rem; /* Increase icon size */
+    transition: color 0.3s;
+}
+
+.social-icon:hover {
+    color: #ff6f20; /* Hover color */
+}

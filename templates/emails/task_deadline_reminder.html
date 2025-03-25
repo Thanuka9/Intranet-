@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task Deadline Reminder</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f7f9;
+        color: #333;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      h2 {
+        color: #d9534f;
+      }
+      .button {
+        display: inline-block;
+        padding: 10px 20px;
+        margin-top: 20px;
+        color: #fff;
+        background-color: #007bff;
+        text-decoration: none;
+        border-radius: 4px;
+      }
+      .footer {
+        margin-top: 20px;
+        font-size: 12px;
+        color: #777;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Reminder: Task Deadline Approaching - {{ task.title }}</h2>
+      <p>Dear {{ task.assigned_by_user.name }},</p>
+      <p>
+        This is a reminder that the deadline for the following task is
+        approaching:
+      </p>
+
+      <ul>
+        <li><strong>Title:</strong> {{ task.title }}</li>
+        <li><strong>Description:</strong> {{ task.description }}</li>
+        <li>
+          <strong>Due Date:</strong> {{ task.due_date.strftime('%Y-%m-%d') }}
+        </li>
+        <li><strong>Priority:</strong> {{ task.priority }}</li>
+      </ul>
+
+      <p>
+        Please make sure to complete it by the due date. If you have any
+        questions, feel free to reach out to your team lead or the task
+        assigner.
+      </p>
+
+      <a href="{{ task_url }}" class="button">View Task</a>
+
+      <div class="footer">
+        <p>This is an automated message. Please do not reply.</p>
+        <p>Collective Intranet System © 2024</p>
+      </div>
+    </div>
+  </body>
+</html>
