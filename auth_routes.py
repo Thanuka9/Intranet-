@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from extensions import db, mail
-from models import User, log_failed_login_attempt
+from models import User, Department, Designation, Client, Role, log_failed_login_attempt
 from flask_login import login_user, logout_user, login_required
 from flask_mail import Message
 import logging
@@ -14,45 +14,72 @@ s = URLSafeTimedSerializer("YourSecretKey")
 
 @auth_routes.route('/register', methods=['GET', 'POST'])
 def register():
-    if request.method == 'POST':
-        first_name = request.form['first_name']
-        last_name = request.form['last_name']
-        employee_email = request.form['employee_email']
-        password = request.form['password']
-        client = request.form['client']
-        designation = request.form['designation']
-        employee_id = request.form['employee_id']
-        join_date = request.form['join_date']
+    # Query the DB for dynamic form data on GET
+    departments  = Department.query.all()
+    designations = Designation.query.all()
+    clients      = Client.query.all()
 
+    if request.method == 'POST':
+        # Extract form data
+        first_name     = request.form['first_name']
+        last_name      = request.form['last_name']
+        employee_email = request.form['employee_email']
+        password       = request.form['password']
+        designation_id = request.form['designation']
+        department_id  = request.form['department']
+        employee_id    = request.form['employee_id']
+        join_date      = request.form['join_date']
+
+        # For multi-select, pull ints
+        client_ids = request.form.getlist('clients', type=int)
+
+        # Validate allowed email domain
         allowed_domain = "@collectivercm.com"
         if not employee_email.endswith(allowed_domain):
             flash("Only @collectivercm.com domain emails are allowed.", "error")
             return redirect(url_for('auth_routes.register'))
 
+        # Check if email is already registered
         if User.query.filter_by(employee_email=employee_email).first():
-            flash('Email is already registered.', 'error')
+            flash("Email is already registered.", "error")
             return redirect(url_for('auth_routes.register'))
 
+        # Create a new User
         new_user = User(
-            first_name=first_name,
-            last_name=last_name,
-            employee_email=employee_email,
-            client=client,
-            designation=designation,
-            employee_id=employee_id,
-            join_date=join_date,
-            is_verified=False
+            first_name     = first_name,
+            last_name      = last_name,
+            employee_email = employee_email,
+            employee_id    = employee_id,
+            join_date      = join_date,
+            department_id  = department_id,
+            designation_id = designation_id,
+            is_verified    = False
         )
         new_user.set_password(password)
+
+        # Assign selected clients in one go
+        new_user.clients = Client.query.filter(Client.id.in_(client_ids)).all()
+
+        # Assign default role "member"
+        member_role = Role.query.filter_by(name='member').first()
+        if member_role:
+            new_user.roles.append(member_role)
 
         db.session.add(new_user)
         db.session.commit()
 
         send_verification_email(new_user)
-        flash('Registration successful! Please verify your email to log in.', 'success')
+        flash("Registration successful! Please verify your email to log in.", "success")
         return redirect(url_for('auth_routes.login'))
 
-    return render_template('register.html')
+    # GET: render the registration form
+    return render_template(
+        'register.html',
+        departments=departments,
+        designations=designations,
+        clients=clients
+    )
+
 
 def send_verification_email(user):
     token = user.verification_token
@@ -61,17 +88,19 @@ def send_verification_email(user):
     msg.body = f'Click the link to verify your email: {verification_url}'
     mail.send(msg)
 
+
 @auth_routes.route('/verify/<token>')
 def verify_email(token):
     user = User.query.filter_by(verification_token=token).first_or_404()
     if user.is_verified:
-        flash('Your account is already verified.', 'info')
+        flash("Your account is already verified.", "info")
     else:
         user.is_verified = True
         user.verification_token = None
         db.session.commit()
-        flash('Your account has been verified! You can now log in.', 'success')
+        flash("Your account has been verified! You can now log in.", "success")
     return redirect(url_for('auth_routes.login'))
+
 
 @auth_routes.route('/login', methods=['GET', 'POST'])
 def login():

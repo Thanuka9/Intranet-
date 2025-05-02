@@ -5,17 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>User Profile - Collective</title>
     <!-- Bootstrap CSS -->
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
-    />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" />
     <!-- Font Awesome Icons -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <style>
-      /* Overall Layout */
+      /* Base Styles */
       body {
         background: #f4f6f9;
         margin: 0;
@@ -23,8 +17,12 @@
         display: flex;
         flex-direction: column;
         min-height: 100vh;
+        animation: fadeIn 1s ease-in-out;
       }
-
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
       /* Top Bar */
       .top-bar {
         background-color: #ffffff;
@@ -42,12 +40,8 @@
         font-size: 1.6rem;
         font-weight: bold;
       }
-      .brand .black {
-        color: #000;
-      }
-      .brand .red {
-        color: #ba1e24; /* Updated accent color */
-      }
+      .brand .black { color: #000; }
+      .brand .red { color: #ba1e24; }
       .btn-back {
         background-color: #6c757d;
         color: #ffffff;
@@ -57,21 +51,16 @@
         align-items: center;
         gap: 5px;
       }
-      .btn-back:hover {
-        background-color: #5a6268;
-      }
-
+      .btn-back:hover { background-color: #5a6268; }
+      
       /* Main Container */
-      .container {
-        flex: 1;
-        margin-top: 30px;
-        margin-bottom: 30px;
+      .container { flex: 1; margin-top: 30px; margin-bottom: 30px; }
+      .row.g-4 { animation: slideUp 0.8s ease-out; }
+      @keyframes slideUp {
+        from { transform: translateY(30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
       }
-      .equal-height {
-        display: flex;
-        flex-direction: column;
-      }
-
+      
       /* Cards */
       .card {
         background-color: #ffffff;
@@ -80,11 +69,8 @@
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
         transition: transform 0.3s, box-shadow 0.3s;
       }
-      .card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
-      }
-
+      .card:hover { transform: translateY(-3px); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1); }
+      
       /* Profile Picture */
       .profile-pic {
         width: 150px;
@@ -94,32 +80,57 @@
         margin: 0 auto;
         display: block;
       }
-
-      /* Basic Info */
-      .card-body h5 {
-        font-weight: 600;
-        margin-bottom: 15px;
+      
+      /* Card Body (Text) */
+      .card-body h5 { font-weight: 600; margin-bottom: 15px; }
+      .card-body p { margin-bottom: 6px; }
+      
+      /* Form Styles */
+      .form-group { margin-bottom: 20px; }
+      input, select {
+        padding: 14px;
+        font-size: 1rem;
+        background-color: #f9f9f9;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        transition: border-color 0.3s, box-shadow 0.3s;
       }
-      .card-body p {
-        margin-bottom: 6px;
+      input:focus, select:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 8px rgba(40,167,69,0.3);
       }
-
-      /* Chart Type Selector */
-      .chart-selector {
-        width: 70%;
-        margin: 0 auto;
-        font-size: 0.9rem;
+      label { font-size: 1.1rem; font-weight: bold; }
+      .form-section { margin-bottom: 30px; border-bottom: 1px solid #ddd; padding-bottom: 20px; }
+      button, .btn-secondary {
+        padding: 12px 20px; font-size: 1rem; border-radius: 5px;
       }
-
-      /* Calendar */
+      button {
+        background-color: #28a745;
+        color: white;
+        transition: background-color 0.3s;
+      }
+      button:hover { background-color: #218838; }
+      .btn-secondary { background-color: #6c757d; color: white; }
+      .btn-secondary:hover { background-color: #5a6268; }
+      
+      /* Calendar Styles */
       .calendar-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        margin-bottom: 10px;
       }
-      .calendar-header .btn {
-        font-size: 0.8rem;
+      .calendar-grid-headings {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        font-weight: bold;
+        padding: 5px 0;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        margin-bottom: 5px;
       }
+      .calendar-grid-headings div { padding: 5px 0; }
       .calendar-grid {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
@@ -139,10 +150,7 @@
         justify-content: center;
         align-items: center;
       }
-      .calendar-day:hover {
-        background-color: #ffecec;
-        transform: scale(1.03);
-      }
+      .calendar-day:hover { background-color: #ffecec; transform: scale(1.03); }
       .holiday {
         background-color: #ffd9d9;
         color: #d9534f;
@@ -164,20 +172,15 @@
         opacity: 0;
         transition: opacity 0.3s;
       }
-      .calendar-day:hover .tooltip-text {
-        visibility: visible;
-        opacity: 1;
-      }
-
+      .calendar-day:hover .tooltip-text { visibility: visible; opacity: 1; }
+      
       /* Modal Buttons */
       .btn-warning {
         background-color: #ba1e24 !important;
         border: none;
       }
-      .btn-warning:hover {
-        background-color: #a0171e !important;
-      }
-
+      .btn-warning:hover { background-color: #a0171e !important; }
+      
       /* Footer */
       footer {
         background-color: #343a40;
@@ -186,114 +189,92 @@
         color: white;
         margin-top: auto;
       }
-      footer p {
-        margin: 0;
-      }
-
-      /* Mobile Responsiveness */
+      footer p { margin: 0; }
+      
+      /* Responsive */
       @media (max-width: 768px) {
-        .equal-height {
-          margin-bottom: 20px;
-        }
-        .card {
-          margin-bottom: 20px;
-        }
+        .equal-height { margin-bottom: 20px; }
+        .card { margin-bottom: 20px; }
       }
     </style>
   </head>
   <body>
     <!-- Top Bar -->
     <div class="top-bar">
-      <a
-        href="{{ url_for('general_routes.dashboard') }}"
-        class="btn btn-sm btn-back"
-      >
+      <a href="{{ url_for('general_routes.dashboard') }}" class="btn btn-sm btn-back">
         <i class="fas fa-arrow-left"></i> Back to Dashboard
       </a>
       <div class="d-flex align-items-center">
-        <img
-          src="{{ url_for('static', filename='images/logo.png') }}"
-          alt="Collective Logo"
-        />
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Collective Logo" />
         <div class="brand">
           <span class="black">Collect</span><span class="red">ive</span>
         </div>
       </div>
     </div>
-
-    <!-- Main Content -->
-    <div class="container">
+    
+    <!-- Main Container -->
+    <div class="container my-4">
       <div class="row g-4">
-        <!-- Profile Information -->
+        <!-- Profile Information Card -->
         <div class="col-lg-4 col-md-6 mb-4 text-center equal-height">
           <div class="card h-100">
             <div class="card-body">
               <!-- Profile Picture -->
-              <img
-                src="{{
-                  url_for('profile_routes.serve_profile_picture', user_id=user.id)
-                  or url_for('static', filename='images/default-profile.png')
-                }}"
-                alt="Profile Picture"
-                class="profile-pic"
-              />
+              {% if profile_picture %}
+                <img src="{{ url_for('profile_routes.serve_profile_picture', user_id=user.id) }}" alt="Profile Picture" class="profile-pic" />
+              {% else %}
+                <img src="{{ url_for('static', filename='images/default-profile.png') }}" alt="Default Profile Picture" class="profile-pic" />
+              {% endif %}
               <!-- Edit Profile Button -->
-              <a
-                href="{{ url_for('profile_routes.edit_profile') }}"
-                class="btn btn-primary mt-3 mb-3"
-              >
+              <a href="{{ url_for('profile_routes.edit_profile') }}" class="btn btn-primary mt-3 mb-3">
                 <i class="fas fa-edit"></i> Edit Profile
               </a>
               <!-- Basic Information -->
               <h5><i class="fas fa-user-circle"></i> Basic Information</h5>
-              <p>
-                <strong>Name:</strong> {{ user.first_name }} {{ user.last_name
-                }}
-              </p>
-              <p>
-                <strong>Phone:</strong> {{ user.phone_number or 'Not Provided'
-                }}
-              </p>
-              <p>
-                <strong>Designation:</strong>
-                {{ user.designation.title if user.designation else 'Not
-                Assigned' }}
-              </p>
+              <p><strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}</p>
+              <p><strong>Phone:</strong> {{ user.phone_number or 'Not Provided' }}</p>
+              <p><strong>Designation:</strong> {{ designation_title }}</p>
               <p><strong>Employee ID:</strong> {{ user.employee_id }}</p>
               <p><strong>Email:</strong> {{ user.employee_email }}</p>
+              <p><strong>Department:</strong> {{ user_department }}</p>
             </div>
           </div>
         </div>
-
-        <!-- Performance Overview with Chart Type Selector -->
+        
+        <!-- Performance Overview Card -->
         <div class="col-lg-4 col-md-6 mb-4 text-center equal-height">
           <div class="card h-100">
             <div class="card-body">
-              <h5 class="mb-3">
-                <i class="fas fa-chart-line"></i> Your Performance Overview
-              </h5>
-              <select id="chartTypeSelector" class="form-select chart-selector">
+              <h5 class="mb-3"><i class="fas fa-chart-line"></i> Your Performance Overview</h5>
+              <!-- Level Selection Form -->
+              <form id="levelSelectForm" method="get" action="{{ url_for('profile_routes.profile') }}">
+                <div class="mb-3">
+                  <label for="examLevel" class="form-label"><i class="fas fa-layer-group"></i> Select Exam Level</label>
+                  <select id="examLevel" name="level" class="form-select">
+                    {% for lvl in levels %}
+                      <option value="{{ lvl.level_number }}" {% if lvl.level_number == selected_level %} selected {% endif %}>
+                        Level {{ lvl.level_number }} - {{ lvl.title }}
+                      </option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </form>
+              <!-- Chart Type Selector -->
+              <select id="chartTypeSelector" class="form-select chart-selector mb-3">
                 <option value="radar">Radar Chart</option>
                 <option value="line">Line Chart</option>
               </select>
-              <canvas
-                id="performanceChart"
-                class="mt-3"
-                style="height: 270px"
-              ></canvas>
+              <canvas id="performanceChart" class="mt-3" style="height: 270px"></canvas>
             </div>
           </div>
         </div>
-
-        <!-- Calendar with Events and Holidays -->
+        
+        <!-- Calendar Card -->
         <div class="col-lg-4 col-md-12 mb-4 text-center equal-height">
           <div class="card h-100">
             <div class="card-body">
               <h5><i class="fas fa-calendar-alt"></i> Calendar</h5>
-              <div
-                id="calendarHeader"
-                class="calendar-header d-flex justify-content-between align-items-center my-2"
-              >
+              <div class="calendar-header d-flex justify-content-between align-items-center my-2">
                 <button class="btn btn-sm btn-outline-secondary" id="prevMonth">
                   <i class="fas fa-chevron-left"></i>
                 </button>
@@ -302,118 +283,70 @@
                   <i class="fas fa-chevron-right"></i>
                 </button>
               </div>
-              <div id="calendar" class="calendar-grid mt-3"></div>
-              <button
-                class="btn btn-warning mt-3"
-                data-bs-toggle="modal"
-                data-bs-target="#eventModal"
-              >
+              <!-- Day Headings for Calendar -->
+              <div id="calendarHeadings" class="calendar-grid-headings">
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+                <div>Sun</div>
+              </div>
+              <!-- Calendar Grid -->
+              <div id="calendar" class="calendar-grid"></div>
+              <button class="btn btn-warning mt-3" data-bs-toggle="modal" data-bs-target="#eventModal">
                 <i class="fas fa-plus-circle"></i> Add Event
               </button>
-
-              <h6 class="mt-4 text-start">
-                <i class="fas fa-bullhorn"></i> Upcoming Events
-              </h6>
+              
+              <h6 class="mt-4 text-start"><i class="fas fa-bullhorn"></i> Upcoming Events</h6>
               <ul class="list-group mt-2 text-start">
                 {% for event in calendar_events %}
-                <li
-                  class="list-group-item d-flex justify-content-between align-items-center"
-                  style="background-color: #fffae6"
-                >
-                  <span>
-                    <strong>{{ event.title }}</strong> - {{ event.date }}
-                  </span>
-                  <div>
-                    <button
-                      class="btn btn-sm btn-primary"
-                      data-bs-toggle="modal"
-                      data-bs-target="#editEventModal{{ event.id }}"
-                    >
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <form
-                      action="{{ url_for('profile_routes.delete_event', event_id=event.id) }}"
-                      method="post"
-                      class="d-inline"
-                    >
-                      <input
-                        type="hidden"
-                        name="csrf_token"
-                        value="{{ csrf_token() }}"
-                      />
-                      <button type="submit" class="btn btn-sm btn-danger">
-                        <i class="fas fa-trash-alt"></i>
+                  <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: #fffae6">
+                    <span>
+                      <strong>{{ event.title }}</strong> - {{ event.date }}
+                    </span>
+                    <div>
+                      <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editEventModal{{ event.id }}">
+                        <i class="fas fa-edit"></i>
                       </button>
-                    </form>
-                  </div>
-                </li>
-                <!-- Edit Event Modal -->
-                <div
-                  class="modal fade"
-                  id="editEventModal{{ event.id }}"
-                  tabindex="-1"
-                >
-                  <div class="modal-dialog">
-                    <div class="modal-content">
-                      <div class="modal-header">
-                        <h5><i class="fas fa-edit"></i> Edit Event</h5>
-                        <button
-                          type="button"
-                          class="btn-close"
-                          data-bs-dismiss="modal"
-                        ></button>
-                      </div>
-                      <div class="modal-body">
-                        <form
-                          action="{{ url_for('profile_routes.edit_event', event_id=event.id) }}"
-                          method="post"
-                        >
-                          <input
-                            type="hidden"
-                            name="csrf_token"
-                            value="{{ csrf_token() }}"
-                          />
-                          <div class="mb-3">
-                            <label class="form-label">Event Title</label>
-                            <input
-                              type="text"
-                              class="form-control"
-                              name="event_title"
-                              value="{{ event.title }}"
-                              required
-                            />
-                          </div>
-                          <div class="mb-3">
-                            <label class="form-label">Event Date</label>
-                            <input
-                              type="date"
-                              class="form-control"
-                              name="event_date"
-                              value="{{ event.date }}"
-                              required
-                            />
-                          </div>
-                          <div class="mb-3">
-                            <label class="form-label">Event Description</label>
-                            <textarea
-                              class="form-control"
-                              name="event_description"
-                              rows="3"
-                              required
-                            >
-{{ event.description }}</textarea
-                            >
-                          </div>
-                          <button type="submit" class="btn btn-primary">
-                            Update Event
-                          </button>
-                        </form>
+                      <form action="{{ url_for('profile_routes.delete_event', event_id=event.id) }}" method="post" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash-alt"></i></button>
+                      </form>
+                    </div>
+                  </li>
+                  <!-- Edit Event Modal -->
+                  <div class="modal fade" id="editEventModal{{ event.id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                      <div class="modal-content">
+                        <div class="modal-header">
+                          <h5><i class="fas fa-edit"></i> Edit Event</h5>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                          <form action="{{ url_for('profile_routes.edit_event', event_id=event.id) }}" method="post">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <div class="mb-3">
+                              <label class="form-label">Event Title</label>
+                              <input type="text" class="form-control" name="event_title" value="{{ event.title }}" required />
+                            </div>
+                            <div class="mb-3">
+                              <label class="form-label">Event Date</label>
+                              <input type="date" class="form-control" name="event_date" value="{{ event.date.strftime('%Y-%m-%d') if event.date else '' }}" required />
+                            </div>
+                            <div class="mb-3">
+                              <label class="form-label">Event Description</label>
+                              <textarea class="form-control" name="event_description" rows="3" required>{{ event.description }}</textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Update Event</button>
+                          </form>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
                 {% else %}
-                <li class="list-group-item">No events scheduled</li>
+                  <li class="list-group-item">No events scheduled</li>
                 {% endfor %}
               </ul>
             </div>
@@ -421,55 +354,29 @@
         </div>
       </div>
     </div>
-
+    
     <!-- Add Event Modal -->
     <div class="modal fade" id="eventModal" tabindex="-1">
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
             <h5><i class="fas fa-plus-circle"></i> Add Event</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-            ></button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
-            <form
-              action="{{ url_for('profile_routes.add_event') }}"
-              method="post"
-            >
-              <input
-                type="hidden"
-                name="csrf_token"
-                value="{{ csrf_token() }}"
-              />
+            <form action="{{ url_for('profile_routes.add_event') }}" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
               <div class="mb-3">
                 <label class="form-label">Event Title</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  name="event_title"
-                  required
-                />
+                <input type="text" class="form-control" name="event_title" required />
               </div>
               <div class="mb-3">
                 <label class="form-label">Event Date</label>
-                <input
-                  type="date"
-                  class="form-control"
-                  name="event_date"
-                  required
-                />
+                <input type="date" class="form-control" name="event_date" required />
               </div>
               <div class="mb-3">
                 <label class="form-label">Event Description</label>
-                <textarea
-                  class="form-control"
-                  name="event_description"
-                  rows="3"
-                  required
-                ></textarea>
+                <textarea class="form-control" name="event_description" rows="3" required></textarea>
               </div>
               <button type="submit" class="btn btn-primary">Save Event</button>
             </form>
@@ -477,135 +384,127 @@
         </div>
       </div>
     </div>
-
-    <!-- Chart.js & Bootstrap JS -->
+    
+    <!-- Performance Chart and Calendar Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", function () {
-        // Chart Type Selector
+        // When exam level changes, submit the form to reload the page
+        document.getElementById("examLevel").addEventListener("change", function () {
+          document.getElementById("levelSelectForm").submit();
+        });
+    
+        // Dynamic performance chart data from backend variables
+        var performanceLabels = {{ performance_labels|tojson }};
+        var userPerformance = {{ user_performance|tojson }};
+        var averagePerformance = {{ average_performance|tojson }};
+    
         const chartTypeSelector = document.getElementById("chartTypeSelector");
         let currentChart;
-
+    
         function loadChart(type) {
-          const ctx = document
-            .getElementById("performanceChart")
-            .getContext("2d");
+          const ctx = document.getElementById("performanceChart").getContext("2d");
           if (currentChart) currentChart.destroy();
-
-          const data = {
-            labels: [
-              "Billing",
-              "VOB",
-              "Posting",
-              "Collection",
-              "Denial Management",
-              "Reporting",
-              "RPA",
-            ],
-            datasets: [
-              {
-                label: "Your Stats",
-                data: [90, 80, 85, 70, 95, 75, 90],
-                backgroundColor: "rgba(255, 99, 132, 0.2)",
-                borderColor: "rgba(255, 99, 132, 1)",
-                borderWidth: 2,
-                fill: type !== "line", // For radar, fill the area
-              },
-              {
-                label: "Average Stats",
-                data: [70, 60, 75, 65, 85, 80, 88],
-                backgroundColor: "rgba(54, 162, 235, 0.2)",
-                borderColor: "rgba(54, 162, 235, 1)",
-                borderWidth: 2,
-                fill: type !== "line",
-              },
-            ],
-          };
-
-          currentChart = new Chart(ctx, { type, data });
+    
+          currentChart = new Chart(ctx, {
+            type: type,
+            data: {
+              labels: performanceLabels,
+              datasets: [
+                {
+                  label: "Your Score",
+                  data: userPerformance,
+                  backgroundColor: "rgba(255, 99, 132, 0.2)",
+                  borderColor: "rgba(255, 99, 132, 1)",
+                  borderWidth: 2,
+                  fill: type !== "line"
+                },
+                {
+                  label: "Average Score",
+                  data: averagePerformance,
+                  backgroundColor: "rgba(54, 162, 235, 0.2)",
+                  borderColor: "rgba(54, 162, 235, 1)",
+                  borderWidth: 2,
+                  fill: type !== "line"
+                }
+              ]
+            }
+          });
         }
-
-        // Listen to chart type changes
+    
+        // Listen for chart type selection changes
         chartTypeSelector.addEventListener("change", function () {
           loadChart(this.value);
         });
-
-        // Default chart is Radar
+    
+        // Default chart type is radar
         loadChart("radar");
-
-        // Calendar Logic with Holiday API
+    
+        // Calendar Logic
         const calendarEl = document.getElementById("calendar");
         const currentMonthYearEl = document.getElementById("currentMonthYear");
         let currentDate = new Date();
         let holidays = [];
-
+    
         async function fetchHolidays() {
           try {
-            const response = await fetch(
-              "https://date.nager.at/api/v3/publicholidays/2024/US"
-            );
+            const response = await fetch("https://date.nager.at/api/v3/publicholidays/" + currentDate.getFullYear() + "/US");
             holidays = await response.json();
           } catch (error) {
             console.error("Error fetching holidays:", error);
           }
         }
-
+    
         function renderCalendar() {
           calendarEl.innerHTML = "";
           const month = currentDate.getMonth();
           const year = currentDate.getFullYear();
-          currentMonthYearEl.textContent = `${month + 1}/${year}`;
-
-          const firstDayOfMonth = new Date(year, month, 1).getDay();
+          currentMonthYearEl.textContent = new Date(year, month).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+          
+          // Get day of week for the first day (with Monday as the first day)
+          let firstDay = new Date(year, month, 1).getDay();
+          firstDay = firstDay === 0 ? 6 : firstDay - 1;
+          
           const totalDays = new Date(year, month + 1, 0).getDate();
-
-          // Fill in blank spaces for days before the start of the month
-          for (let i = 0; i < firstDayOfMonth; i++) {
-            const blankDay = document.createElement("div");
-            blankDay.classList.add("calendar-day");
-            calendarEl.appendChild(blankDay);
+          
+          // Fill blank cells before the first day
+          for (let i = 0; i < firstDay; i++) {
+            const blankCell = document.createElement("div");
+            blankCell.classList.add("calendar-day");
+            calendarEl.appendChild(blankCell);
           }
-
-          // Add days for the current month
+          
+          // Add day cells for the month
           for (let day = 1; day <= totalDays; day++) {
-            const dayEl = document.createElement("div");
-            dayEl.classList.add("calendar-day");
-            dayEl.textContent = day;
-
-            // Check for holidays
-            const holidayDate = holidays.find((holiday) => {
-              const holidayDay = new Date(holiday.date).getDate();
-              const holidayMonth = new Date(holiday.date).getMonth();
-              const holidayYear = new Date(holiday.date).getFullYear();
-              return (
-                holidayDay === day &&
-                holidayMonth === month &&
-                holidayYear === year
-              );
+            const dayCell = document.createElement("div");
+            dayCell.classList.add("calendar-day");
+            dayCell.textContent = day;
+    
+            // Check for holidays on this day
+            const holiday = holidays.find((h) => {
+              const holidayDate = new Date(h.date);
+              return holidayDate.getDate() === day && holidayDate.getMonth() === month && holidayDate.getFullYear() === year;
             });
-
-            if (holidayDate) {
-              dayEl.classList.add("holiday");
-              // Tooltip with holiday name
+            if (holiday) {
+              dayCell.classList.add("holiday");
               const tooltip = document.createElement("span");
               tooltip.classList.add("tooltip-text");
-              tooltip.textContent = holidayDate.localName;
-              dayEl.appendChild(tooltip);
+              tooltip.textContent = holiday.localName;
+              dayCell.appendChild(tooltip);
             }
-            calendarEl.appendChild(dayEl);
+            calendarEl.appendChild(dayCell);
           }
-
-          // Ensure the calendar grid is always 6 rows (6 x 7 = 42 cells)
-          const totalCells = firstDayOfMonth + totalDays;
-          const extraCells = 42 - totalCells;
-          for (let i = 0; i < extraCells; i++) {
-            const blankDay = document.createElement("div");
-            blankDay.classList.add("calendar-day");
-            calendarEl.appendChild(blankDay);
+          
+          // Ensure grid has 42 cells (6 rows x 7 days)
+          const totalCells = firstDay + totalDays;
+          for (let i = 0; i < 42 - totalCells; i++) {
+            const blankCell = document.createElement("div");
+            blankCell.classList.add("calendar-day");
+            calendarEl.appendChild(blankCell);
           }
         }
-
+    
         document.getElementById("prevMonth").addEventListener("click", () => {
           currentDate.setMonth(currentDate.getMonth() - 1);
           renderCalendar();
@@ -614,15 +513,14 @@
           currentDate.setMonth(currentDate.getMonth() + 1);
           renderCalendar();
         });
-
-        // Fetch holidays and render the calendar
+    
         fetchHolidays().then(renderCalendar);
       });
     </script>
-
+    
     <!-- Footer -->
     <footer>
-      <p>© 2024 Collective Intranet</p>
+      <p>Collective Intranet© 2024</p>
     </footer>
   </body>
 </html>

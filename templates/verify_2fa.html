@@ -1,56 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Verify 2FA - COLLECTIVE</title>
 
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/verify_2fa.css') }}">
-</head>
-<body>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/verify_2fa.css') }}"
+    />
+  </head>
+  <body>
     <!-- Background -->
     <div class="background-overlay"></div>
 
     <!-- Main Container -->
-    <div class="container d-flex align-items-center justify-content-center vh-100">
-        <div class="form-container animate__animated animate__fadeIn">
-            <!-- Logo and Title -->
-            <div class="logo-title text-center mb-4">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Company Logo" width="50">
-                <h1><span class="black-part">COLLECT</span><span class="red-part">IVE</span></h1>
-            </div>
-
-            <h2 class="text-center mb-3">Verify 2FA</h2>
-
-            <!-- Error Message -->
-            <div id="errorAlert" class="alert alert-danger text-center d-none" role="alert"></div>
-
-            <!-- Verification Form -->
-            <form action="{{ url_for('auth_routes.verify_2fa') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="form-group">
-                    <label for="2fa_code">Verification Code</label>
-                    <input type="text" class="form-control" id="2fa_code" name="2fa_code" required>
-                </div>
-                <button type="submit" class="btn btn-primary btn-verify w-100">Verify</button>
-            </form>
-
-            <!-- Resend Code and Back Buttons -->
-            <div class="text-center mt-3">
-                <button id="resendBtn" class="btn btn-link resend-link" disabled>
-                    Resend 2FA Code (<span id="timer">30</span>)
-                </button>
-                <a href="{{ url_for('auth_routes.login') }}" class="btn btn-secondary btn-back w-100">Back</a>
-            </div>
-
-            <!-- Footer Inside Form -->
-            <div class="footer text-center mt-4">
-                Collective Intranet System © 2024
-            </div>
+    <div
+      class="container d-flex align-items-center justify-content-center vh-100"
+    >
+      <div class="form-container animate__animated animate__fadeIn">
+        <!-- Logo and Title -->
+        <div class="logo-title text-center mb-4">
+          <img
+            src="{{ url_for('static', filename='images/logo.png') }}"
+            alt="Company Logo"
+            width="50"
+          />
+          <h1>
+            <span class="black-part">COLLECT</span
+            ><span class="red-part">IVE</span>
+          </h1>
         </div>
+
+        <h2 class="text-center mb-3">Verify 2FA</h2>
+
+        <!-- Error Message -->
+        <div
+          id="errorAlert"
+          class="alert alert-danger text-center d-none"
+          role="alert"
+        ></div>
+
+        <!-- Verification Form -->
+        <form action="{{ url_for('auth_routes.verify_2fa') }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="form-group">
+            <label for="2fa_code">Verification Code</label>
+            <input
+              type="text"
+              class="form-control"
+              id="2fa_code"
+              name="2fa_code"
+              required
+            />
+          </div>
+          <button type="submit" class="btn btn-primary btn-verify w-100">
+            Verify
+          </button>
+        </form>
+
+        <!-- Resend Code and Back Buttons -->
+        <div class="text-center mt-3">
+          <button id="resendBtn" class="btn btn-link resend-link" disabled>
+            Resend 2FA Code (<span id="timer">30</span>)
+          </button>
+          <a
+            href="{{ url_for('auth_routes.login') }}"
+            class="btn btn-secondary btn-back w-100"
+            >Back</a
+          >
+        </div>
+
+        <!-- Footer Inside Form -->
+        <div class="footer text-center mt-4">Collective Intranet© 2024</div>
+      </div>
     </div>
 
     <!-- jQuery and Bootstrap JS (for Modal functionality) -->
@@ -59,39 +88,41 @@
 
     <!-- Resend Button Timer Script and Error Handling -->
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const flashMessages = JSON.parse('{{ get_flashed_messages(with_categories=true) | tojson | safe }}');
-            const errorAlert = document.getElementById('errorAlert');
+      document.addEventListener("DOMContentLoaded", function () {
+        const flashMessages = JSON.parse(
+          "{{ get_flashed_messages(with_categories=true) | tojson | safe }}"
+        );
+        const errorAlert = document.getElementById("errorAlert");
 
-            // Display error message if present
-            if (flashMessages && Array.isArray(flashMessages)) {
-                flashMessages.forEach(function(message) {
-                    const [category, text] = message;
-                    if (category === 'error') {
-                        errorAlert.textContent = text;
-                        errorAlert.classList.remove('d-none');
-                    }
-                });
+        // Display error message if present
+        if (flashMessages && Array.isArray(flashMessages)) {
+          flashMessages.forEach(function (message) {
+            const [category, text] = message;
+            if (category === "error") {
+              errorAlert.textContent = text;
+              errorAlert.classList.remove("d-none");
             }
+          });
+        }
 
-            // Timer for Resend Button
-            let countdown = 30;
-            const timerElement = document.getElementById('timer');
-            const resendBtn = document.getElementById('resendBtn');
+        // Timer for Resend Button
+        let countdown = 30;
+        const timerElement = document.getElementById("timer");
+        const resendBtn = document.getElementById("resendBtn");
 
-            const interval = setInterval(() => {
-                countdown--;
-                timerElement.textContent = countdown;
-                if (countdown <= 0) {
-                    clearInterval(interval);
-                    resendBtn.disabled = false;
-                    resendBtn.textContent = 'Resend 2FA Code';
-                    resendBtn.onclick = function() {
-                        window.location.href = "{{ url_for('auth_routes.resend_2fa') }}";
-                    };
-                }
-            }, 1000);
-        });
+        const interval = setInterval(() => {
+          countdown--;
+          timerElement.textContent = countdown;
+          if (countdown <= 0) {
+            clearInterval(interval);
+            resendBtn.disabled = false;
+            resendBtn.textContent = "Resend 2FA Code";
+            resendBtn.onclick = function () {
+              window.location.href = "{{ url_for('auth_routes.resend_2fa') }}";
+            };
+          }
+        }, 1000);
+      });
     </script>
-</body>
+  </body>
 </html>

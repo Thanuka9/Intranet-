@@ -1,51 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Welcome to Collective</title>
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
     <!-- Font Awesome for Social Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-</head>
-<body>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div
+      class="container-fluid bg-image min-vh-100 d-flex align-items-center justify-content-center"
+    >
+      <div class="text-center p-5 bg-light rounded shadow-lg opacity-90">
+        <!-- Logo and Title Centered with Reduced Size -->
+        <div class="logo-title text-center mb-4">
+          <img
+            src="{{ url_for('static', filename='images/logo.png') }}"
+            alt="Company Logo"
+            class="logo"
+          />
+        </div>
 
-    <div class="container-fluid bg-image min-vh-100 d-flex align-items-center justify-content-center">
-        <div class="text-center p-5 bg-light rounded shadow-lg opacity-90">
-            <!-- Logo and Title Centered with Reduced Size -->
-            <div class="logo-title text-center mb-4">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Company Logo" class="logo">
-            </div>
-            
-            <!-- Simplified Welcome Text -->
-            <h2 class="welcome-text">Welcome to Collect<span class="red-text">IVE</span></h2>
-            <p>Streamlining Employee Performance, Client Resources, and Continuous Learning.</p>
-            <p>Manage your tasks, access study materials, and track your performance—all in one place.</p>
-            
-            <!-- Centered Buttons -->
-            <div class="btn-group d-flex justify-content-center">
-                <a href="{{ url_for('auth_routes.login') }}" class="btn btn-primary btn-lg mx-2">Login</a>
-                <a href="{{ url_for('auth_routes.register') }}" class="btn btn-success btn-lg mx-2">Register</a>
-            </div>
+        <!-- Simplified Welcome Text -->
+        <h2 class="welcome-text">
+          Welcome to Collect<span class="red-text">IVE</span>
+        </h2>
+        <p>
+          Streamlining Employee Performance, Client Resources, and Continuous
+          Learning.
+        </p>
+        <p>
+          Manage your tasks, access study materials, and track your
+          performance—all in one place.
+        </p>
 
-              <!-- Social Media Icons -->
+        <!-- Centered Buttons -->
+        <div class="btn-group d-flex justify-content-center">
+          <a
+            href="{{ url_for('auth_routes.login') }}"
+            class="btn btn-primary btn-lg mx-2"
+            >Login</a
+          >
+          <a
+            href="{{ url_for('auth_routes.register') }}"
+            class="btn btn-success btn-lg mx-2"
+            >Register</a
+          >
+        </div>
+
+        <!-- Social Media Icons -->
         <div class="social-icons mt-4">
-            <a href="https://www.instagram.com/collectivercm/" target="_blank" class="social-icon"><i class="fab fa-instagram"></i></a>
-            <a href="https://www.linkedin.com/company/collectivecareers?originalSubdomain=lk" target="_blank" class="social-icon"><i class="fab fa-linkedin"></i></a>
-            <a href="https://www.tiktok.com/@collective.rcm?_t=8n1u46ddh3q&_r=1&fbclid=PAZXh0bgNhZW0CMTEAAab0DC507Wso1MHBK5Ysv4jigt93_BBcZZyikoQMEBabLp-nD34mYkYMGzU_aem_lrcC4gEy9ISKEeC4Skl5cg" target="_blank" class="social-icon"><i class="fab fa-tiktok"></i></a>
+          <a
+            href="https://www.instagram.com/collectivercm/"
+            target="_blank"
+            class="social-icon"
+            ><i class="fab fa-instagram"></i
+          ></a>
+          <a
+            href="https://www.linkedin.com/company/collectivecareers?originalSubdomain=lk"
+            target="_blank"
+            class="social-icon"
+            ><i class="fab fa-linkedin"></i
+          ></a>
+          <a
+            href="https://www.tiktok.com/@collective.rcm?_t=8n1u46ddh3q&_r=1&fbclid=PAZXh0bgNhZW0CMTEAAab0DC507Wso1MHBK5Ysv4jigt93_BBcZZyikoQMEBabLp-nD34mYkYMGzU_aem_lrcC4gEy9ISKEeC4Skl5cg"
+            target="_blank"
+            class="social-icon"
+            ><i class="fab fa-tiktok"></i
+          ></a>
         </div>
 
-            <!-- Moved Footer Text Up -->
-            <div class="mt-4">
-                <p class="text-muted">© 2024 Collective Intranet System</p>
-            </div>
+        <!-- Moved Footer Text Up -->
+        <div class="mt-4">
+          <p class="text-muted">Collective Intranet© 2024</p>
         </div>
+      </div>
     </div>
-
-</body>
+  </body>
 </html>

@@ -13,6 +13,7 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
     <style>
+      /* Base Styles */
       body {
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
         background: #f2f6fa;
@@ -21,29 +22,41 @@
         display: flex;
         flex-direction: column;
         min-height: 100vh;
+        animation: fadeIn 1s ease-in-out;
       }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* —— Top Bar (shared) —— */
       .top-bar {
-        background-color: #ffffff;
-        border-bottom: 1px solid #ddd;
-        padding: 10px 20px;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        padding: 12px 24px;
+        background-color: #fff;
+        border-bottom: 1px solid #ddd;
+      }
+      .btn-back {
+        font-size: 1rem;
+        padding: 8px 16px;
       }
       .top-bar img {
         height: 40px;
-        margin-right: 10px;
+        margin-left: 10px;
       }
       .brand {
-        font-size: 1.5rem;
+        font-size: 1.6rem;
         font-weight: bold;
       }
       .brand .black {
-        color: black;
+        color: #000;
       }
       .brand .red {
-        color: red;
+        color: rgba(186, 30, 36, 1);
       }
+
       .container {
         padding: 20px;
         max-width: 900px;
@@ -51,17 +64,27 @@
         background-color: #fff;
         border-radius: 12px;
         box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        animation: slideUp 0.8s ease-out;
       }
-      .form-row {
+      @keyframes slideUp {
+        from { transform: translateY(30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+
+      .form-group {
         margin-bottom: 20px;
       }
-      input,
-      select {
+      input, select {
         padding: 14px;
         font-size: 1rem;
         background-color: #f9f9f9;
         border: 1px solid #ccc;
         border-radius: 5px;
+        transition: border-color 0.3s, box-shadow 0.3s;
+      }
+      input:focus, select:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 8px rgba(40, 167, 69, 0.3);
       }
       label {
         font-size: 1.1rem;
@@ -72,8 +95,8 @@
         border-bottom: 1px solid #ddd;
         padding-bottom: 20px;
       }
-      button,
-      .btn-secondary {
+
+      button, .btn-secondary {
         padding: 12px 20px;
         font-size: 1rem;
         border-radius: 5px;
@@ -81,15 +104,19 @@
       button {
         background-color: #28a745;
         color: white;
+        transition: background-color 0.3s;
+      }
+      button:hover {
+        background-color: #218838;
       }
       .btn-secondary {
         background-color: #6c757d;
         color: white;
       }
-      button:hover,
       .btn-secondary:hover {
-        opacity: 0.9;
+        background-color: #5a6268;
       }
+
       .profile-preview {
         margin-top: 10px;
         max-width: 150px;
@@ -98,9 +125,7 @@
         border: 1px solid #ccc;
         object-fit: cover;
       }
-      #custom-department-section {
-        display: none;
-      }
+
       footer {
         background-color: #343a40;
         color: white;
@@ -111,200 +136,135 @@
     </style>
   </head>
   <body>
-    <div class="top-bar">
+    <!-- Header -->
+    <header class="top-bar">
+      <a href="{{ url_for('profile_routes.profile') }}" class="btn btn-secondary btn-back">
+        <i class="fas fa-arrow-left me-1"></i> Back
+      </a>
       <div class="d-flex align-items-center">
-        <img
-          src="{{ url_for('static', filename='images/logo.png') }}"
-          alt="Collective Logo"
-        />
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Collective Logo" />
         <div class="brand">
           <span class="black">Collect</span><span class="red">ive</span>
         </div>
       </div>
-      <a
-        href="{{ url_for('profile_routes.profile') }}"
-        class="btn btn-sm btn-outline-secondary"
-      >
-        <i class="fas fa-arrow-left"></i> Back
-      </a>
-    </div>
+    </header>
 
+    <!-- Main Container -->
     <div class="container mt-4">
-      <h1><i class="fas fa-user-edit"></i> Edit Profile</h1>
-      <form
-        method="POST"
-        action="{{ url_for('profile_routes.edit_profile') }}"
-        enctype="multipart/form-data"
-      >
+      <h1 class="mb-4"><i class="fas fa-user-edit"></i> Edit Profile</h1>
+      <form method="POST" action="{{ url_for('profile_routes.edit_profile') }}" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
+        <!-- Profile Picture Section -->
         <div class="form-group text-center">
-          <label for="profile_picture">Profile Picture</label>
-          <input
-            type="file"
-            class="form-control-file"
-            id="profile_picture"
-            name="profile_picture"
-          />
+          <label for="profile_picture"><i class="fas fa-image"></i> Profile Picture</label>
+          <input type="file" class="form-control-file" id="profile_picture" name="profile_picture" />
           {% if user.profile_picture %}
-          <img
-            src="{{ url_for('profile_routes.serve_profile_picture', user_id=user.id) }}"
-            alt="Profile Picture"
-            class="profile-preview"
-          />
+            <img src="{{ url_for('profile_routes.serve_profile_picture', user_id=user.id) }}"
+                 alt="Profile Picture" class="profile-preview" />
           {% else %}
-          <p class="text-muted">No profile picture uploaded</p>
+            <p class="text-muted">No profile picture uploaded</p>
           {% endif %}
         </div>
 
+        <!-- Personal Information Section -->
         <div class="form-section">
-          <h4>Personal Information</h4>
+          <h4 class="mb-3"><i class="fas fa-user"></i> Personal Information</h4>
           <div class="form-row">
             <div class="form-group col-md-6">
               <label for="first_name">First Name</label>
-              <input
-                type="text"
-                class="form-control"
-                id="first_name"
-                name="first_name"
-                value="{{ user.first_name }}"
-                required
-              />
+              <input type="text" class="form-control" id="first_name" name="first_name"
+                     value="{{ user.first_name }}" required />
             </div>
             <div class="form-group col-md-6">
               <label for="last_name">Last Name</label>
-              <input
-                type="text"
-                class="form-control"
-                id="last_name"
-                name="last_name"
-                value="{{ user.last_name }}"
-                required
-              />
+              <input type="text" class="form-control" id="last_name" name="last_name"
+                     value="{{ user.last_name }}" required />
             </div>
           </div>
           <div class="form-row">
             <div class="form-group col-md-6">
-              <label for="email">Email</label>
-              <input
-                type="email"
-                class="form-control"
-                id="email"
-                name="email"
-                value="{{ user.employee_email }}"
-                readonly
-              />
+              <label for="employee_email">Email</label>
+              <input type="email" class="form-control" id="employee_email" name="employee_email"
+                     value="{{ user.employee_email }}" readonly />
             </div>
             <div class="form-group col-md-6">
               <label for="phone_number">Phone Number</label>
-              <input
-                type="text"
-                class="form-control"
-                id="phone_number"
-                name="phone_number"
-                value="{{ user.phone_number }}"
-              />
+              <input type="text" class="form-control" id="phone_number" name="phone_number"
+                     value="{{ user.phone_number }}" />
             </div>
           </div>
         </div>
 
+        <!-- Work Information Section -->
         <div class="form-section">
-          <h4>Work Information</h4>
+          <h4 class="mb-3"><i class="fas fa-briefcase"></i> Work Information</h4>
           <div class="form-row">
+            <!-- Department: single select -->
             <div class="form-group col-md-6">
-              <label for="departments">Departments</label>
-              <select
-                class="form-control"
-                id="departments"
-                name="departments"
-                multiple
-              >
-                <option value="Human Resource">Human Resource</option>
-                <option value="Billing">Billing</option>
-                <option value="Posting">Posting</option>
-                <option value="VOB">VOB</option>
-                <option value="Collection">Collection</option>
-                <option value="IQ">IQ</option>
-                <option value="RPA">RPA</option>
-                <option value="IT">IT</option>
-                <option value="PI">PI</option>
-                <option value="Other">Other</option>
+              <label for="department"><i class="fas fa-building"></i> Department</label>
+              <select class="form-control" id="department" name="department" required>
+                <option value="" disabled>Select Department</option>
+                {% for dept in departments %}
+                  <option value="{{ dept.id }}"
+                    {% if user.department and user.department.id == dept.id %}selected{% endif %}>
+                    {{ dept.name }}
+                  </option>
+                {% endfor %}
               </select>
             </div>
-            <div class="form-group col-md-6" id="custom-department-section">
-              <label for="custom_department">Specify Other Department</label>
-              <input type="text" class="form-control mt-2" id="other_department"
-              name="other_department" placeholder="Specify other department" {%
-              if "Other" in user_departments %}value="{{ user.other_department
-              }}"{% endif %} />
+            <!-- Designation: single select -->
+            <div class="form-group col-md-6">
+              <label for="designation_id"><i class="fas fa-id-badge"></i> Designation</label>
+              <select class="form-control" id="designation_id" name="designation_id" required>
+                <option value="" disabled>Select Designation</option>
+                {% for desig in designations %}
+                  <option value="{{ desig.id }}"
+                    {% if user.designation and user.designation.id == desig.id %}selected{% endif %}>
+                    {{ desig.title }}
+                  </option>
+                {% endfor %}
+              </select>
             </div>
           </div>
           <div class="form-row">
+            <!-- Clients: multi-select -->
             <div class="form-group col-md-6">
-              <label for="clients">Clients</label>
-              <input
-                type="text"
-                class="form-control"
-                id="clients"
-                name="clients"
-                value="{{ ', '.join(user_clients) }}"
-                readonly
-              />
+              <label for="clients"><i class="fas fa-user-friends"></i> Clients</label>
+              <select class="form-control" id="clients" name="clients" multiple required>
+                {% for client in clients %}
+                  <option value="{{ client.id }}"
+                    {% if client in user.clients %}selected{% endif %}>
+                    {{ client.name }}
+                  </option>
+                {% endfor %}
+              </select>
+              <small class="text-muted">Hold Ctrl (Win) or Command (Mac) to select multiple</small>
             </div>
+            <!-- Role: read-only -->
             <div class="form-group col-md-6">
-              <label for="role">Designation</label>
-              <input
-                type="text"
-                class="form-control"
-                id="role"
-                name="role"
-                value="{{ user.role }}"
-                readonly
-              />
+              <label for="user_role"><i class="fas fa-user-shield"></i> Role</label>
+              <input type="text" class="form-control" id="user_role" name="user_role"
+                     value="{% if user.roles %}{{ user.roles[0].name }}{% else %}Not Assigned{% endif %}"
+                     readonly />
             </div>
           </div>
         </div>
 
+        <!-- Submit Buttons -->
         <button type="submit" class="btn btn-success">
           <i class="fas fa-save"></i> Save Changes
         </button>
-        <a
-          href="{{ url_for('profile_routes.profile') }}"
-          class="btn btn-secondary"
-        >
+        <a href="{{ url_for('profile_routes.profile') }}" class="btn btn-secondary">
           <i class="fas fa-times"></i> Cancel
         </a>
       </form>
     </div>
 
     <footer>
-      <p class="mb-0">© 2024 Collective Intranet</p>
+      <p class="mb-0">Collective Intranet© 2024</p>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        const departmentsSelect = document.getElementById("departments");
-        const customDepartmentSection = document.getElementById(
-          "custom-department-section"
-        );
-
-        departmentsSelect.addEventListener("change", function () {
-          const isOtherSelected = Array.from(departmentsSelect.options).some(
-            (option) => option.value === "Other" && option.selected
-          );
-          customDepartmentSection.style.display = isOtherSelected
-            ? "block"
-            : "none";
-        });
-
-        const isOtherSelected = Array.from(departmentsSelect.options).some(
-          (option) => option.value === "Other" && option.selected
-        );
-        customDepartmentSection.style.display = isOtherSelected
-          ? "block"
-          : "none";
-      });
-    </script>
   </body>
 </html>

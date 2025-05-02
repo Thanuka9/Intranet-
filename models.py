@@ -19,6 +19,39 @@ user_task_association = Table(
 )
 
 # -------------------------------------
+# Association Table for Roles
+# -------------------------------------
+user_roles = Table(
+    'user_roles', db.Model.metadata,
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
+    Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True)
+)
+
+# -------------------------------------
+# Association Table for user_clients
+# -------------------------------------
+user_clients = Table(
+  'user_clients', db.Model.metadata,
+  Column('user_id',   Integer, ForeignKey('users.id'),   primary_key=True),
+  Column('client_id', Integer, ForeignKey('clients.id'), primary_key=True),
+)
+
+
+# -------------------------------------
+# Role Model
+# -------------------------------------
+class Role(db.Model):
+    __tablename__ = 'roles'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(50), unique=True, nullable=False)
+
+    # Relationship: Users assigned to this role
+    users = relationship("User", secondary=user_roles, back_populates="roles")
+
+    def __repr__(self):
+        return f"<Role(id={self.id}, name='{self.name}')>"
+    
+# -------------------------------------
 # Designation Model (Enhanced)
 # -------------------------------------
 class Designation(db.Model):
@@ -54,7 +87,6 @@ class Category(db.Model):
     exams = relationship("Exam", back_populates="category", cascade="all, delete-orphan")
     user_scores = relationship("UserScore", back_populates="category", cascade="all, delete-orphan")
     questions = relationship("Question", back_populates="category", cascade="all, delete-orphan")
-    # Added relationship so you can access StudyMaterials from Category.
     study_materials = relationship("StudyMaterial", back_populates="category", cascade="all, delete-orphan")
 
     def __repr__(self):
@@ -63,15 +95,30 @@ class Category(db.Model):
 # -------------------------------
 # Client Model
 # -------------------------------
+
 class Client(db.Model):
     __tablename__ = 'clients'
 
-    id = Column(Integer, primary_key=True)
+    id   = Column(Integer, primary_key=True)
     name = Column(String(100), unique=True, nullable=False)
-    users = relationship("User", back_populates="client", cascade="all, delete-orphan")
+
+    # Many-to-many relationship to User
+    users = relationship(
+        "User",
+        secondary=user_clients,
+        back_populates="clients"
+    )
+
+    # One-to-many relationship to Task
+    tasks = relationship(
+        "Task",
+        back_populates="client",
+        cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Client(id={self.id}, name='{self.name}')>"
+
 
 # -------------------------------------
 # Updated StudyMaterial Model
@@ -87,7 +134,7 @@ class StudyMaterial(db.Model):
     total_pages = Column(Integer, nullable=True, default=0)
     # Updated to store file IDs as a list (e.g. ["<mongo_id>|filename", ...])
     files = Column(ARRAY(String), default=[])  
-    restriction_level = Column(Integer, nullable=True)
+    restriction_level = Column(Integer, nullable=True, default=0)
 
     # Foreign Keys
     category_id = Column(Integer, ForeignKey('categories.id'), nullable=True)
@@ -220,7 +267,7 @@ class UserLevelProgress(db.Model):
                 f"status={self.status})>")
 
 # -------------------------------------
-# Updated User Model
+#User Model
 # -------------------------------------
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
@@ -234,29 +281,54 @@ class User(db.Model, UserMixin):
     employee_id = Column(String(20), unique=True, nullable=False)
     join_date = Column(Date, nullable=False)
     profile_picture = Column(LargeBinary, nullable=True)
-    role = Column(String(50), default="member")  # e.g., member, admin
-    departments = Column(Text, nullable=True)
-    is_super_admin = Column(Boolean, default=False)  # Super admin privileges
-    current_level = Column(Integer, default=0)  # Tracks user's active level
 
+
+    # Using a relationship to link to the Department model
+    department_id = Column(Integer, ForeignKey('departments.id'), nullable=True)
+    department = relationship("Department", back_populates="users")
+
+    is_super_admin = Column(Boolean, default=False)  # Super admin privileges
+    current_level = Column(Integer, default=0)  # Tracks the user's current active level
+
+    # ---------------------------------
     # Foreign Key Relationships
+    # ---------------------------------
     designation_id = Column(Integer, ForeignKey('designations.id'), nullable=True)
     designation = relationship("Designation", back_populates="users")
 
-    client_id = Column(Integer, ForeignKey('clients.id'), nullable=True)
-    client = relationship("Client", back_populates="users")
+    clients = relationship(
+    "Client",
+    secondary=user_clients,
+    back_populates="users"
+    )
 
+    # ---------------------------------
     # Progress Tracking Relationships
-    level_progress = db.relationship("UserLevelProgress", back_populates="user", cascade="all, delete-orphan")
-    study_progress = db.relationship("UserProgress", back_populates="user", cascade="all, delete-orphan")
+    # ---------------------------------
+    level_progress = db.relationship(
+        "UserLevelProgress",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    study_progress = db.relationship(
+        "UserProgress",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    scores = db.relationship(
+        "UserScore",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
 
-    # `scores` relationship defined correctly as `user_scores`
-    scores = db.relationship("UserScore", back_populates="user", cascade="all, delete-orphan")
-
-    # Exam and Question Relationships
-    created_exams = relationship("Exam", back_populates="created_by_user", cascade="all, delete-orphan")
-
-    # Task Management Relationships
+    # ---------------------------------
+    # Exam and Task Management
+    # ---------------------------------
+    created_exams = relationship(
+        "Exam",
+        back_populates="created_by_user",
+        cascade="all, delete-orphan"
+    )
     tasks_assigned = relationship(
         "Task",
         foreign_keys='Task.assigned_by',
@@ -269,20 +341,32 @@ class User(db.Model, UserMixin):
         back_populates="assignees"
     )
 
-    # Event Relationships
-    events = relationship("Event", back_populates="user", cascade="all, delete-orphan")
+    # ---------------------------------
+    # Event Management
+    # ---------------------------------
+    events = relationship(
+        "Event",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
 
+    # ---------------------------------
     # Email Verification and 2FA
+    # ---------------------------------
     is_verified = Column(Boolean, default=False)
     verification_token = Column(String(36), unique=True, nullable=True)
     two_fa_code = Column(String(6), nullable=True)
     two_fa_expiration = Column(DateTime, nullable=True)
 
+    # ---------------------------------
     # Password Reset Fields
+    # ---------------------------------
     password_reset_token = Column(String(36), unique=True, nullable=True)
     password_reset_expiration = Column(DateTime, nullable=True)
 
-    # SpecialExamRecord Relationship (one-to-one)
+    # ---------------------------------
+    # SpecialExamRecord Relationship (One-to-One)
+    # ---------------------------------
     special_exam_record = db.relationship(
         "SpecialExamRecord",
         back_populates="user",
@@ -290,40 +374,88 @@ class User(db.Model, UserMixin):
         cascade="all, delete-orphan"
     )
 
-    # Designation-Based Level and Exam Skipping Logic
-    def can_skip_level(self, target_level):
+    # ---------------------------------
+    # Role-based Access Control (RBAC)
+    # ---------------------------------
+    roles = db.relationship("Role", secondary=user_roles, back_populates="users")
+
+    # ---------------------------------
+    # Curent Level
+    # ---------------------------------
+    def get_current_level(self):
+        """
+        Returns the user's current active level.
+        Defaults to 1 if current_level is not set.
+        """
+        return self.current_level if self.current_level else 1
+
+    @property
+    def role(self):
+        """
+        Returns the user's default role.
+        If roles are assigned, returns the first role's name; otherwise defaults to "member".
+        """
+        if self.roles and len(self.roles) > 0:
+            return self.roles[0].name
+        return "member"
+
+    # ---------------------------------
+    # Designation-Based Logic
+    # ---------------------------------
+    def can_skip_level(self, target_level: int) -> bool:
         """
         Check if the user can skip a level based on their designation.
+        :param target_level: Target level to be skipped
+        :return: Boolean indicating if skipping is allowed
         """
         if not self.designation:
-            return False  # No designation assigned, no skipping allowed
+            return False
         return self.designation.starting_level <= target_level
 
-    def can_skip_exam(self, exam):
+    def can_skip_exam(self, exam) -> bool:
         """
-        Check if the user can skip a specific exam based on designation.
+        Check if the user can skip a specific exam based on their designation.
+        :param exam: Exam object to check
+        :return: Boolean indicating if skipping the exam is allowed
         """
         return self.can_skip_level(exam.level.level_number)
 
-    # 2FA Code Generation
-    def generate_2fa_code(self):
+    # ---------------------------------
+    # Two-Factor Authentication
+    # ---------------------------------
+    def generate_2fa_code(self) -> None:
+        """
+        Generate and set a 6-digit 2FA code valid for 5 minutes.
+        """
         self.two_fa_code = str(random.randint(100000, 999999))
         self.two_fa_expiration = datetime.utcnow() + timedelta(minutes=5)
         db.session.commit()
 
+    # ---------------------------------
     # Password Management
-    def set_password(self, password):
-        """Hash and set the user's password."""
+    # ---------------------------------
+    def set_password(self, password: str) -> None:
+        """
+        Hash and set the user's password.
+        :param password: Plain text password
+        """
         self.password_hash = generate_password_hash(password)
 
-    def check_password(self, password):
-        """Verify the user's password."""
+    def check_password(self, password: str) -> bool:
+        """
+        Verify the user's password.
+        :param password: Plain text password
+        :return: Boolean indicating if the password is correct
+        """
         return check_password_hash(self.password_hash, password)
 
+    # ---------------------------------
+    # String Representation for Debugging
+    # ---------------------------------
     def __repr__(self):
         full_name = f"{self.first_name} {self.last_name}"
         return f"<User(id={self.id}, name='{full_name}', level={self.current_level})>"
-    
+
 # -------------------------------
 # Exam Model
 # -------------------------------
@@ -438,25 +570,35 @@ class UserScore(db.Model):
 class Task(db.Model):
     __tablename__ = 'tasks'
 
-    id = Column(Integer, primary_key=True)
-    title = Column(String(100), nullable=False)
-    description = Column(Text, nullable=True)
-    due_date = Column(Date, nullable=False)
-    priority = Column(String(20), default="Medium")
-    status = Column(String(50), default="Getting Things Started...")
-    progress = Column(Integer, default=0)
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    due_date = db.Column(db.Date, nullable=False)
+    priority = db.Column(db.String(20), nullable=False, default="Medium")
+    status = db.Column(db.String(50), nullable=False, default="Getting Things Started...")
+    progress = db.Column(db.Integer, nullable=False, default=0)
 
-    assigned_by = Column(Integer, ForeignKey('users.id'), nullable=False)
-    completed_by = Column(Integer, ForeignKey('users.id'), nullable=True)
+    # Foreign Keys
+    assigned_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    completed_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=True)
 
-    assigned_by_user = relationship("User", foreign_keys=[assigned_by], back_populates="tasks_assigned")
-    completed_by_user = relationship("User", foreign_keys=[completed_by])
+    # Relationships
+    assigned_by_user = db.relationship("User", foreign_keys=[assigned_by], back_populates="tasks_assigned")
+    completed_by_user = db.relationship("User", foreign_keys=[completed_by])
+    client = db.relationship("Client", back_populates="tasks")
 
-    client_id = Column(Integer, ForeignKey('clients.id'), nullable=True)
-    client = relationship("Client")
+    assignees = db.relationship(
+        "User",
+        secondary="user_task_association",
+        back_populates="tasks_received"
+    )
 
-    assignees = relationship("User", secondary=user_task_association, back_populates="tasks_received")
-    documents = relationship("TaskDocument", back_populates="task", cascade="all, delete-orphan")
+    documents = db.relationship(
+        "TaskDocument",
+        back_populates="task",
+        cascade="all, delete-orphan"
+    )
 
     def calculate_progress(self):
         """Calculate progress based on the task's status."""
@@ -601,5 +743,21 @@ class SpecialExamRecord(db.Model):
 
     def __repr__(self):
         return f"<SpecialExamRecord(id={self.id}, user_id={self.user_id})>"
+
+# -------------------------------------
+# Department Model (New)
+# -------------------------------------
+class Department(db.Model):
+    __tablename__ = 'departments'
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), unique=True, nullable=False)
+    
+    # Relationship: Users assigned to this department
+    users = relationship("User", back_populates="department", cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f"<Department(id={self.id}, name='{self.name}')>"
+
 
 

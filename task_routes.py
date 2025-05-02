@@ -1,33 +1,30 @@
-from flask import Blueprint, request, render_template, redirect, url_for, flash, send_file, jsonify
-from flask_login import login_required, current_user
-from models import Task, TaskDocument, User
-from extensions import db
+from flask import (
+    Blueprint, render_template, request, redirect, url_for, flash, send_file, abort, current_app
+)
 from utils.email_utils import send_task_assignment_email, send_task_completion_email
+from flask_login import login_required, current_user
+from extensions import db, scheduler
+from models import User, Designation, Event, Client, UserScore, Task, TaskDocument
+from mongodb_operations import get_profile_picture, save_profile_picture, delete_profile_picture
 from werkzeug.utils import secure_filename
-from sqlalchemy import func
+from io import BytesIO
+import imghdr
+import logging
 import os
-from flask import current_app
 import io
-from datetime import datetime, timedelta
-from flask_apscheduler import APScheduler
-import plotly.express as px
-from plotly.offline import plot
-from plotly.graph_objs import Pie, Bar
+from datetime import datetime, timedelta, timezone
 import pandas as pd
-
+from sqlalchemy import func
 
 # Define Blueprint for task routes
 task_routes = Blueprint('task_routes', __name__, url_prefix="/tasks")
 
-# Set allowed extensions and maximum file sizes
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'docx', 'xlsx'}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB per file
 MAX_EMAIL_FILE_SIZE = 25 * 1024 * 1024  # 25MB per file for email attachments
 MAX_TOTAL_SIZE = 100 * 1024 * 1024  # 100MB total
 
-scheduler = APScheduler()
 
-# Status to progress mapping
 STATUS_PROGRESS_MAP = {
     "Getting Things Started...": 10,
     "Setting Up the Path...": 25,
@@ -39,11 +36,9 @@ STATUS_PROGRESS_MAP = {
 }
 
 def allowed_file(filename):
-    """Helper function to check if the file has an allowed extension."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def save_task_document(file, task_id):
-    """Save uploaded file as a TaskDocument linked to a task."""
     filename = secure_filename(file.filename)
     file_data = file.read()
     if len(file_data) > MAX_FILE_SIZE:
@@ -58,42 +53,101 @@ def save_task_document(file, task_id):
     db.session.add(task_document)
     return True
 
+from extensions import scheduler, db
+from models import Task
+import logging
+
 def delete_completed_task(task_id):
-    task = Task.query.get(task_id)
-    if task and task.status == 'Complete! Ready to Go!':
+    # APScheduler jobs run outside of any request, so we need an app context
+    app = scheduler.app  # flask_apscheduler stores your app here
+    with app.app_context():
+        task = Task.query.get(task_id)
+        if not task:
+            logging.info(f"[delete_completed_task] Task {task_id} not found.")
+            return
+        if task.status != 'Complete! Ready to Go!':
+            logging.info(f"[delete_completed_task] Task {task_id} status is '{task.status}', skipping delete.")
+            return
+
         db.session.delete(task)
-        db.session.commit() 
+        db.session.commit()
+        logging.info(f"[delete_completed_task] Deleted completed task {task_id}.")
+
+def auto_delete_completed_tasks(client_id):
+    """
+    Automatically delete tasks for the given client that are complete.
+    If client_id is None, this function does nothing.
+    """
+    if client_id is None:
+        return
+    tasks_to_delete = Task.query.filter_by(client_id=client_id, status='Complete! Ready to Go!').all()
+    for task in tasks_to_delete:
+        db.session.delete(task)
+    db.session.commit()
 
 @task_routes.route('/', strict_slashes=False)
 @login_required
 def view_tasks():
-    # Define roles that can view all internal tasks
-    elevated_roles = ['Team Lead', 'Senior Team Lead', 'Assistant Manager', 'Manager', 'Senior Manager', 'Human Resource']
+    """
+    View tasks for the current user.
+    If the user has any clients, we auto-delete completed tasks for each of them.
+    Internal tasks are those whose task.client_id is in the user's clients.
+    External tasks are those with a NULL client_id.
+    """
+    # collect all of current_user's client IDs
+    client_ids = [c.id for c in current_user.clients]
 
+    # auto‐delete completed tasks for each client
+    for cid in client_ids:
+        auto_delete_completed_tasks(cid)
+
+    q = request.args.get('q', '').strip()
+
+    elevated_roles = [
+        'Team Lead', 'Senior Team Lead', 'Assistant Manager', 'Manager',
+        'Senior Manager', 'Human Resource'
+    ]
+
+    # build base query for internal tasks
     if current_user.role in elevated_roles:
-        # Elevated roles see all tasks for their client
-        internal_tasks = Task.query.filter_by(client_id=current_user.client_id).order_by(Task.due_date.asc()).all()
+        # elevated: see all tasks for these clients
+        if client_ids:
+            base = Task.query.filter(Task.client_id.in_(client_ids))
+        else:
+            base = Task.query.filter_by(client_id=None)  # no clients → none internal
     else:
-        # Regular users see only tasks assigned to them within their client
-        internal_tasks = Task.query.filter(
-            Task.assignees.contains(current_user),
-            Task.client_id == current_user.client_id
-        ).order_by(Task.due_date.asc()).all()
+        # non-elevated: only tasks assigned to me and for my clients
+        if client_ids:
+            base = Task.query.filter(
+                Task.assignees.contains(current_user),
+                Task.client_id.in_(client_ids)
+            )
+        else:
+            base = Task.query.filter(
+                Task.assignees.contains(current_user),
+                Task.client_id.is_(None)
+            )
 
-    # External tasks visible to the current user
-    external_tasks = Task.query.filter(
-        Task.assignees.contains(current_user)
-    ).filter(
-        Task.client_id != current_user.client_id
-    ).order_by(Task.due_date.asc()).all()
+    # apply search
+    if q:
+        base = base.filter(Task.title.ilike(f'%{q}%'))
 
-    # Tasks assigned by the current user
-    tasks_assigned_by_you = Task.query.filter_by(assigned_by=current_user.id).order_by(Task.due_date.asc()).all()
+    internal_tasks = base.order_by(Task.due_date.asc()).all()
 
-    # Log the context to debug
-    current_app.logger.info(f"Internal Tasks: {internal_tasks}")
-    current_app.logger.info(f"External Tasks: {external_tasks}")
-    current_app.logger.info(f"Tasks Assigned by You: {tasks_assigned_by_you}")
+    # external tasks: those assigned to me and client_id is NULL
+    ext = Task.query.filter(
+        Task.assignees.contains(current_user),
+        Task.client_id.is_(None)
+    )
+    if q:
+        ext = ext.filter(Task.title.ilike(f'%{q}%'))
+    external_tasks = ext.order_by(Task.due_date.asc()).all()
+
+    # tasks I assigned
+    by_you = Task.query.filter_by(assigned_by=current_user.id)
+    if q:
+        by_you = by_you.filter(Task.title.ilike(f'%{q}%'))
+    tasks_assigned_by_you = by_you.order_by(Task.due_date.asc()).all()
 
     return render_template(
         'tasks.html',
@@ -103,75 +157,83 @@ def view_tasks():
         back_url=url_for('general_routes.dashboard')
     )
 
+
 @task_routes.route('/task/assign', methods=['GET', 'POST'])
 @login_required
 def assign_task():
-    """Assign a new task."""
+    """
+    Assign a new task to internal or external users.
+    Internal tasks pick up the first client in current_user.clients.
+    External tasks have client_id=NULL.
+    """
     if request.method == 'POST':
-        # Retrieve form data
-        title = request.form['title']
+        # 1) Gather form data
+        title       = request.form['title']
         description = request.form['description']
-        due_date = request.form['due_date']
-        priority = request.form.get('priority', 'Medium')
-        task_type = request.form.get('task_type', 'internal')
+        due_date    = request.form['due_date']
+        priority    = request.form.get('priority', 'Medium')
+        task_type   = request.form.get('task_type', 'internal')
+        client_id   = current_user.clients[0].id if current_user.clients else None
 
-        # Create a new Task instance
+        # 2) Create & add the Task
         task = Task(
-            title=title,
-            description=description,
-            due_date=due_date,
-            priority=priority,
-            assigned_by=current_user.id,
-            client_id=current_user.client_id if task_type == 'internal' else None,
-            status="Getting Things Started...",
-            progress=STATUS_PROGRESS_MAP["Getting Things Started..."]
+            title       = title,
+            description = description,
+            due_date    = due_date,
+            priority    = priority,
+            assigned_by = current_user.id,
+            client_id   = (client_id if task_type == 'internal' else None),
+            status      = "Getting Things Started...",
+            progress    = STATUS_PROGRESS_MAP["Getting Things Started..."]
         )
         db.session.add(task)
 
+        # 3) Flush so task.id is populated
         try:
-            db.session.commit()
+            db.session.flush()
         except Exception as e:
             db.session.rollback()
-            flash(f"Error creating task: {e}", "danger")
+            flash(f"Error allocating Task ID: {e}", "danger")
             return redirect(url_for('task_routes.assign_task'))
 
-        # Assign to internal or external users
-        if task_type == 'internal':
-            assignees = request.form.getlist('assignees')
-            for user_id in assignees:
-                user = User.query.get(user_id)
-                if user:
-                    task.assignees.append(user)
-                    send_task_assignment_email(user, task)
-        elif task_type == 'external':
-            external_assignees = request.form.getlist('external_assignees')
-            for user_id in external_assignees:
-                user = User.query.get(user_id)
-                if user:
-                    task.assignees.append(user)
-                    send_task_assignment_email(user, task)
+        # 4) Save attachments (5MB max each)
+        for f in request.files.getlist('attachments'):
+            if f and allowed_file(f.filename):
+                if not save_task_document(f, task.id):
+                    db.session.rollback()
+                    flash("One of your attachments exceeded 5MB and was rejected.", "danger")
+                    return redirect(url_for('task_routes.assign_task'))
 
-        # Handle file attachments
-        if 'attachments' in request.files:
-            for file in request.files.getlist('attachments'):
-                if file and allowed_file(file.filename):
-                    if not save_task_document(file, task.id):
-                        db.session.rollback()
-                        flash("File upload failed due to size restrictions.", "danger")
-                        return redirect(url_for('task_routes.assign_task'))
+        # 5) Link assignees
+        key = 'assignees' if task_type == 'internal' else 'external_assignees'
+        for uid in request.form.getlist(key):
+            user = User.query.get(uid)
+            if user:
+                task.assignees.append(user)
 
+        # 6) Commit everything in one go
         try:
             db.session.commit()
-            flash("Task successfully assigned.", "success")
         except Exception as e:
             db.session.rollback()
             flash(f"Error saving task and attachments: {e}", "danger")
+            return redirect(url_for('task_routes.assign_task'))
 
+        # 7) Send assignment emails (attachments now exist in DB!)
+        for user in task.assignees:
+            send_task_assignment_email(user, task)
+
+        flash("Task assigned and notifications sent.", "success")
         return redirect(url_for('task_routes.view_tasks'))
 
-    # Fetch team members and external users
-    team_members = User.query.filter_by(client_id=current_user.client_id).all()
-    external_users = User.query.filter(User.client_id != current_user.client_id).all()
+    # GET: build team / external lists
+    client_ids = [c.id for c in current_user.clients]
+    if client_ids:
+        team_members   = User.query.join(User.clients).filter(Client.id.in_(client_ids)).all()
+        external_users = User.query.filter(~User.clients.any(Client.id.in_(client_ids))).all()
+    else:
+        team_members   = []
+        external_users = User.query.all()
 
     return render_template(
         'assign_task.html',
@@ -180,73 +242,82 @@ def assign_task():
         back_url=url_for('task_routes.view_tasks')
     )
 
+
 @task_routes.route('/task/<int:task_id>', methods=['GET', 'POST'])
 @login_required
 def view_task(task_id):
-    """View and update task details."""
-    # Fetch the task or return 404 if not found
+    """
+    View or update a single task.
+    If an assignee marks it complete, we send a completion email
+    and schedule deletion 24 h later.
+    """
     task = Task.query.get_or_404(task_id)
 
-    # Ensure the current user has access to view or update the task
+    # Permission check
     if current_user not in task.assignees and task.assigned_by != current_user.id:
-        flash("Access denied. You do not have permission to view this task.", "danger")
+        flash("Access denied.", "danger")
         return redirect(url_for('task_routes.view_tasks'))
 
     if request.method == 'POST' and current_user in task.assignees:
         try:
-            # Update the task status and progress
-            new_status = request.form.get('status', task.status)
-            task.status = new_status
-            task.progress = STATUS_PROGRESS_MAP.get(new_status, task.progress)
+            # 1) Update status & progress
+            new_status      = request.form.get('status', task.status)
+            task.status     = new_status
+            task.progress   = STATUS_PROGRESS_MAP.get(new_status, task.progress)
 
-            # Handle email attachments
-            email_attachments = request.files.getlist('email_attachments')
+            # 2) Collect any 2nd-step attachments for the completion email
             email_files = []
-
-            for file in email_attachments:
-                if file and allowed_file(file.filename):
-                    file.seek(0, os.SEEK_END)
-                    if file.tell() > MAX_EMAIL_FILE_SIZE:
-                        flash("Each email attachment must be under 25MB.", "danger")
+            for f in request.files.getlist('email_attachments'):
+                if f and allowed_file(f.filename):
+                    f.seek(0, os.SEEK_END)
+                    if f.tell() > MAX_EMAIL_FILE_SIZE:
+                        flash("Each email attachment must be under 25 MB.", "danger")
                         return redirect(url_for('task_routes.view_task', task_id=task_id))
-                    file.seek(0)  # Reset file pointer after size check
+                    f.seek(0)
                     email_files.append({
-                        "filename": secure_filename(file.filename),
-                        "filetype": file.content_type,
-                        "data": file.read()
+                        "filename": secure_filename(f.filename),
+                        "filetype": f.content_type,
+                        "data": f.read()
                     })
 
-            # Handle task completion logic
+            # 3) If marking complete...
             if task.progress == 100:
-                task.status = 'Complete! Ready to Go!'
-                task.completed_by = current_user.id  # Track who completed the task
-                db.session.commit()  # Commit changes before sending the email
-                
-                # Send email to the user who assigned the task
-                send_task_completion_email(task.assigned_by_user, task, new_documents=email_files)
-                
-                # Schedule task deletion after 1 day
+                task.status       = 'Complete! Ready to Go!'
+                task.completed_by = current_user.id
+                db.session.commit()
+
+                # 3a) Notify the assigner
+                send_task_completion_email(
+                    task.assigned_by_user,
+                    task,
+                    new_documents=email_files
+                )
+
+                # 3b) Schedule deletion 24 h from now (UTC)
+                run_at = datetime.now(timezone.utc) + timedelta(days=1)
                 scheduler.add_job(
-                    id=f'delete_task_{task_id}',
+                    id=f'delete_task_{task.id}',
                     func=delete_completed_task,
                     trigger='date',
-                    run_date=datetime.now() + timedelta(days=1),
-                    args=[task_id]
+                    run_date=run_at,
+                    args=[task.id],
+                    replace_existing=True
                 )
-                flash("Task marked as completed and email sent to the assigner.", "success")
 
-            # Commit other changes
-            db.session.commit()
-            flash("Task updated successfully.", "success")
+                flash("Task marked complete; your assigner has been notified.", "success")
+            else:
+                # 4) Intermediate status update
+                db.session.commit()
+                flash("Task status updated.", "success")
 
         except Exception as e:
             db.session.rollback()
             flash(f"Error updating task: {e}", "danger")
-            current_app.logger.error(f"Error updating task {task_id}: {e}", exc_info=True)
+            current_app.logger.error(f"view_task POST error: {e}", exc_info=True)
 
         return redirect(url_for('task_routes.view_tasks'))
 
-    # Render the task details page
+    # GET: render the task page
     return render_template(
         'view_task.html',
         task=task,
@@ -258,6 +329,9 @@ def view_task(task_id):
 @task_routes.route('/task/<int:task_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_task(task_id):
+    """
+    Edit an existing task (title, description, due date, priority, attachments).
+    """
     task = Task.query.get_or_404(task_id)
     if task.assigned_by != current_user.id and not current_user.is_manager():
         flash("Access denied to edit this task", "danger")
@@ -308,6 +382,9 @@ def edit_task(task_id):
 @task_routes.route('/task/<int:task_id>/delete', methods=['POST'])
 @login_required
 def delete_task(task_id):
+    """
+    Delete a task if the current user is authorized (assigned_by or manager).
+    """
     task = Task.query.get_or_404(task_id)
     if task.assigned_by != current_user.id and not current_user.is_manager():
         flash("Access denied to delete this task", "danger")
@@ -316,18 +393,18 @@ def delete_task(task_id):
     db.session.delete(task)
     db.session.commit()
     flash("Task deleted successfully", "success")
-    
     return redirect(url_for('task_routes.view_tasks'))
 
 @task_routes.route('/task/<int:task_id>/attachment/<int:attachment_id>/download')
 @login_required
 def download_attachment(task_id, attachment_id):
+    """
+    Download an attachment for a given task.
+    """
     document = TaskDocument.query.filter_by(id=attachment_id, task_id=task_id).first()
-
     if not document:
         flash("Attachment not found", "danger")
         return redirect(url_for('task_routes.view_task', task_id=task_id))
-
     return send_file(
         io.BytesIO(document.data),
         mimetype=document.filetype,
@@ -338,46 +415,66 @@ def download_attachment(task_id, attachment_id):
 @task_routes.route('/analytics_dashboard')
 @login_required
 def analytics_dashboard():
-    """Render analytics dashboard with charts."""
-    client_id = current_user.client_id
+    """
+    Display analytics for tasks. Aggregates all tasks where the user is either
+    an assignee or the assigner, then builds:
+      - a Plotly donut chart of Completed vs Incomplete
+      - a status_data list for Chart.js
+    """
+    # Base query: any task involving this user
+    tasks = Task.query.filter(
+        (Task.assignees.contains(current_user)) |
+        (Task.assigned_by == current_user.id)
+    )
 
-    # Query data for analytics
-    total_tasks = Task.query.filter_by(client_id=client_id).count()
-    completed_tasks = Task.query.filter_by(client_id=client_id, status='Complete! Ready to Go!').count()
-    overdue_tasks = Task.query.filter(
-        Task.client_id == client_id,
+    total_tasks     = tasks.count()
+    completed_tasks = tasks.filter_by(status='Complete! Ready to Go!').count()
+    overdue_tasks   = tasks.filter(
         Task.due_date < datetime.now(),
         Task.status != 'Complete! Ready to Go!'
     ).count()
 
-    # Priority data
-    task_by_priority = db.session.query(
-        Task.priority, func.count(Task.id)
-    ).filter_by(client_id=client_id).group_by(Task.priority).all()
+    # --- 1) Build a Plotly donut for completion rate ---
+    incomplete_tasks = total_tasks - completed_tasks
 
-    # Status data
+    import plotly.express as px
+    from plotly.offline import plot
+
+    completion_df = {
+        "Status": ["Completed", "Incomplete"],
+        "Count":  [completed_tasks, incomplete_tasks]
+    }
+    completion_fig = px.pie(
+        completion_df,
+        names="Status",
+        values="Count",
+        hole=0.4,
+        title="Completion Rate"
+    )
+    completion_chart = plot(
+        completion_fig,
+        output_type="div",
+        include_plotlyjs='cdn'
+    )
+
+    # --- 2) Prepare status_data for Chart.js ---
     task_by_status = db.session.query(
         Task.status, func.count(Task.id)
-    ).filter_by(client_id=client_id).group_by(Task.status).all()
+    ).filter(
+        (Task.assignees.contains(current_user)) |
+        (Task.assigned_by == current_user.id)
+    ).group_by(Task.status).all()
 
-    # Convert to DataFrame
-    priority_df = pd.DataFrame(task_by_priority, columns=["Priority", "Count"]) if task_by_priority else pd.DataFrame(columns=["Priority", "Count"])
-    status_df = pd.DataFrame(task_by_status, columns=["Status", "Count"]) if task_by_status else pd.DataFrame(columns=["Status", "Count"])
-
-    # Generate Figures
-    try:
-        priority_fig = px.pie(priority_df, names="Priority", values="Count", title="Tasks by Priority") if not priority_df.empty else {}
-        status_fig = px.bar(status_df, x="Status", y="Count", title="Tasks by Status") if not status_df.empty else {}
-
-    except Exception as e:
-        current_app.logger.error(f"Error generating figures: {e}")
-        priority_fig, status_fig = {}, {}
+    status_data = [
+        {"status": status, "count": count}
+        for status, count in task_by_status
+    ]
 
     return render_template(
         'analytics.html',
         total_tasks=total_tasks,
         completed_tasks=completed_tasks,
         overdue_tasks=overdue_tasks,
-        priority_fig=priority_fig if priority_fig else None,
-        status_fig=status_fig if status_fig else None,
+        completion_chart=completion_chart,
+        status_data=status_data,
     )

@@ -8,41 +8,74 @@
       body {
         font-family: Arial, sans-serif;
         background-color: #f4f7f9;
-        color: #333;
+        margin: 0;
+        padding: 0;
       }
       .container {
         max-width: 600px;
-        margin: 0 auto;
+        margin: 40px auto;
         background-color: #ffffff;
-        padding: 20px;
+        padding: 20px 30px;
         border-radius: 8px;
-        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       }
       h2 {
         color: #d9534f;
+        font-size: 24px;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+      p {
+        font-size: 14px;
+        line-height: 1.6;
+        margin: 10px 0;
+      }
+      ul {
+        padding: 0;
+        list-style: none;
+        margin: 10px 0;
+      }
+      li {
+        margin: 5px 0;
+      }
+      strong {
+        color: #333;
       }
       .button {
         display: inline-block;
-        padding: 10px 20px;
+        padding: 12px 24px;
         margin-top: 20px;
         color: #fff;
         background-color: #007bff;
         text-decoration: none;
         border-radius: 4px;
+        font-size: 14px;
+      }
+      .button:hover {
+        background-color: #0056b3;
       }
       .footer {
         margin-top: 20px;
         font-size: 12px;
         color: #777;
+        text-align: center;
       }
     </style>
   </head>
   <body>
     <div class="container">
+      <!-- Title -->
       <h2>Task Due Soon: {{ task.title }}</h2>
-      <p>Dear {{ user.name }},</p>
-      <p>This is a reminder that the following task is due soon:</p>
 
+      <!-- Greeting -->
+      <p>Hi {{ recipient.first_name }},</p>
+
+      <p>
+        Just a quick reminder that the following task is coming up on its due
+        date. Please make sure it’s wrapped up in time:
+      </p>
+
+      <!-- Task Details -->
       <ul>
         <li><strong>Title:</strong> {{ task.title }}</li>
         <li><strong>Description:</strong> {{ task.description }}</li>
@@ -52,17 +85,15 @@
         <li><strong>Priority:</strong> {{ task.priority }}</li>
       </ul>
 
-      <p>
-        Please make sure to complete it by the due date. If you have any
-        questions, feel free to reach out to your team lead or the task
-        assigner.
+      <!-- Action Button -->
+      <p style="text-align: center">
+        <a href="{{ task_url }}" class="button">View Task Details</a>
       </p>
 
-      <a href="{{ task_url }}" class="button">View Task</a>
-
+      <!-- Footer -->
       <div class="footer">
-        <p>This is an automated message. Please do not reply.</p>
-        <p>Collective Intranet System © 2024</p>
+        <p>This is an automated reminder. No reply is needed.</p>
+        <p>© 2025 Collective Intranet System</p>
       </div>
     </div>
   </body>

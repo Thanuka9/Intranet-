@@ -4,12 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Register - COLLECTIVE</title>
-    <!-- Bootstrap CSS -->
+    <!-- Bootstrap 5 CSS -->
     <link
       rel="stylesheet"
-      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
     />
-    <!-- Font Awesome for Icons -->
+    <!-- Font Awesome (Optional) -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
@@ -21,7 +21,6 @@
         padding: 0;
         box-sizing: border-box;
       }
-
       body {
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
         background: linear-gradient(
@@ -33,7 +32,6 @@
         display: flex;
         flex-direction: column;
       }
-
       /* Top Bar */
       .top-bar {
         background-color: #ffffff;
@@ -60,7 +58,7 @@
         color: #000;
       }
       .red-part {
-        color: rgba(186, 30, 36, 1); /* The specified red color */
+        color: rgba(186, 30, 36, 1);
       }
       .btn-back {
         background-color: #6c757d;
@@ -74,7 +72,6 @@
       .btn-back:hover {
         background-color: #5a6268;
       }
-
       /* Main Container */
       main {
         flex: 1;
@@ -83,7 +80,6 @@
         justify-content: center;
         padding: 30px 15px;
       }
-
       /* Registration Card */
       .register-card {
         background-color: #fff;
@@ -100,12 +96,10 @@
         font-weight: bold;
         color: rgba(186, 30, 36, 1);
       }
-
       /* Flash Message */
       #errorAlert {
         margin-bottom: 20px;
       }
-
       /* Buttons */
       .btn-register {
         width: 100%;
@@ -120,7 +114,6 @@
         font-size: 1rem;
         border-radius: 6px;
       }
-
       /* Footer */
       footer {
         background-color: #343a40;
@@ -129,7 +122,6 @@
         padding: 12px 0;
         font-size: 0.9rem;
       }
-
       /* Simple fade-in animation */
       @keyframes fadeIn {
         from {
@@ -165,7 +157,6 @@
     <main>
       <div class="register-card">
         <h2>Register</h2>
-
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages() %} {% if messages %}
         <div class="alert alert-danger" id="errorAlert">
@@ -186,8 +177,10 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
           <!-- First Name -->
-          <div class="form-group mb-3">
-            <label for="first_name"><strong>First Name</strong></label>
+          <div class="mb-3">
+            <label for="first_name" class="form-label"
+              ><strong>First Name</strong></label
+            >
             <input
               type="text"
               class="form-control"
@@ -198,8 +191,10 @@
           </div>
 
           <!-- Last Name -->
-          <div class="form-group mb-3">
-            <label for="last_name"><strong>Last Name</strong></label>
+          <div class="mb-3">
+            <label for="last_name" class="form-label"
+              ><strong>Last Name</strong></label
+            >
             <input
               type="text"
               class="form-control"
@@ -209,9 +204,11 @@
             />
           </div>
 
-          <!-- Email -->
-          <div class="form-group mb-3">
-            <label for="employee_email"><strong>Employee Email</strong></label>
+          <!-- Employee Email -->
+          <div class="mb-3">
+            <label for="employee_email" class="form-label"
+              ><strong>Employee Email</strong></label
+            >
             <input
               type="email"
               class="form-control"
@@ -222,8 +219,10 @@
           </div>
 
           <!-- Password -->
-          <div class="form-group mb-3">
-            <label for="password"><strong>Password</strong></label>
+          <div class="mb-3">
+            <label for="password" class="form-label"
+              ><strong>Password</strong></label
+            >
             <input
               type="password"
               class="form-control"
@@ -231,15 +230,15 @@
               name="password"
               required
             />
-            <small class="text-muted"
-              >Must contain at least 1 uppercase letter, 1 symbol, 1 number, and
-              be 8+ characters long.</small
-            >
+            <small class="text-muted">
+              Must be at least 8 characters long, with 1 uppercase letter, 1
+              symbol, and 1 number.
+            </small>
           </div>
 
           <!-- Confirm Password -->
-          <div class="form-group mb-3">
-            <label for="confirm_password"
+          <div class="mb-3">
+            <label for="confirm_password" class="form-label"
               ><strong>Confirm Password</strong></label
             >
             <input
@@ -251,43 +250,29 @@
             />
           </div>
 
-          <!-- Clients -->
-          <div class="form-group mb-3">
-            <label for="client"><strong>Clients</strong></label>
+          <!-- Department (Dynamic from DB) -->
+          <div class="mb-3">
+            <label for="department" class="form-label"
+              ><strong>Department</strong></label
+            >
             <select
               class="form-control"
-              id="client"
-              name="clients"
-              multiple
+              id="department"
+              name="department"
               required
             >
-              <option value="MTW">MTW</option>
-              <option value="HA">HA</option>
-              <option value="HT">HT</option>
-              <option value="TSH">TSH</option>
-              <option value="Core PT">Core PT</option>
-              <option value="Castle Imaging">Castle Imaging</option>
-              <option value="Fort Worth Pain Centre">
-                Fort Worth Pain Centre
-              </option>
-              <option value="AHHC">AHHC</option>
-              <option value="QFD">QFD</option>
-              <option value="Assure">Assure</option>
-              <option value="US Neuro">US Neuro</option>
-              <option value="Neuro Alert">Neuro Alert</option>
-              <option value="IONM Help">IONM Help</option>
-              <option value="TXPH">TXPH</option>
-              <option value="TPC">TPC</option>
+              <option value="" disabled selected>Select Department</option>
+              {% for dept in departments %}
+              <option value="{{ dept.id }}">{{ dept.name }}</option>
+              {% endfor %}
             </select>
-            <small class="text-muted"
-              >Hold down Ctrl (Windows) or Command (Mac) to select multiple
-              options.</small
-            >
           </div>
 
-          <!-- Designation -->
-          <div class="form-group mb-3">
-            <label for="designation"><strong>Designation</strong></label>
+          <!-- Designation (Dynamic from DB) -->
+          <div class="mb-3">
+            <label for="designation" class="form-label"
+              ><strong>Designation</strong></label
+            >
             <select
               class="form-control"
               id="designation"
@@ -295,26 +280,39 @@
               required
             >
               <option value="" disabled selected>Select Designation</option>
-              <option value="1">Trainee</option>
-              <option value="2">Specialist</option>
-              <option value="3">Senior Specialist</option>
-              <option value="4">Assistant Team Lead</option>
-              <option value="5">Deputy Team Lead</option>
-              <option value="6">Team Lead</option>
-              <option value="7">Senior Team Lead</option>
-              <option value="8">Assistant Manager</option>
-              <option value="9">Manager</option>
-              <option value="10">Senior Manager</option>
-              <option value="11">Human Resource</option>
-              <option value="12">Process Improvement</option>
-              <option value="13">Software Engineer</option>
-              <option value="14">Director</option>
+              {% for desig in designations %}
+              <option value="{{ desig.id }}">{{ desig.title }}</option>
+              {% endfor %}
             </select>
           </div>
 
+          <!-- Clients (Dynamic Multi-select from DB) -->
+          <div class="mb-3">
+            <label for="client" class="form-label"
+              ><strong>Clients</strong></label
+            >
+            <select
+              class="form-control"
+              id="client"
+              name="clients"
+              multiple
+              required
+            >
+              {% for client in clients %}
+              <option value="{{ client.id }}">{{ client.name }}</option>
+              {% endfor %}
+            </select>
+            <small class="text-muted">
+              Hold down Ctrl (Windows) or Command (Mac) to select multiple
+              options.
+            </small>
+          </div>
+
           <!-- Employee ID -->
-          <div class="form-group mb-3">
-            <label for="employee_id"><strong>Employee ID</strong></label>
+          <div class="mb-3">
+            <label for="employee_id" class="form-label"
+              ><strong>Employee ID</strong></label
+            >
             <input
               type="text"
               class="form-control"
@@ -325,8 +323,10 @@
           </div>
 
           <!-- Join Date -->
-          <div class="form-group mb-3">
-            <label for="join_date"><strong>Join Date</strong></label>
+          <div class="mb-3">
+            <label for="join_date" class="form-label"
+              ><strong>Join Date</strong></label
+            >
             <input
               type="date"
               class="form-control"
@@ -337,8 +337,8 @@
           </div>
 
           <!-- Simple Captcha (Math) -->
-          <div class="form-group mb-3">
-            <label><strong>Captcha</strong></label>
+          <div class="mb-3">
+            <label class="form-label"><strong>Captcha</strong></label>
             <p
               id="captchaQuestion"
               style="
@@ -348,7 +348,7 @@
                 border-radius: 4px;
               "
             >
-              <!-- Will be generated by JS -->
+              <!-- Generated by JS -->
             </p>
             <input
               type="text"
@@ -360,15 +360,15 @@
             />
           </div>
 
-          <!-- Buttons -->
+          <!-- Register & Cancel Buttons -->
           <button type="submit" class="btn btn-primary btn-register">
-            Register
+            <i class="fas fa-user-plus"></i> Register
           </button>
           <a
             href="{{ url_for('general_routes.home') }}"
             class="btn btn-secondary btn-cancel"
           >
-            Cancel
+            <i class="fas fa-times"></i> Cancel
           </a>
         </form>
       </div>
@@ -376,7 +376,7 @@
 
     <!-- Footer -->
     <footer>
-      <p class="mb-0">© 2024 Collective Intranet</p>
+      <p class="mb-0">Collective Intranet© 2024</p>
     </footer>
 
     <!-- JS for form validation & captcha -->
@@ -385,8 +385,8 @@
 
       // Generate a simple math captcha
       function generateCaptcha() {
-        const a = Math.floor(Math.random() * 10) + 1; // random from 1..10
-        const b = Math.floor(Math.random() * 10) + 1; // random from 1..10
+        const a = Math.floor(Math.random() * 10) + 1;
+        const b = Math.floor(Math.random() * 10) + 1;
         document.getElementById(
           "captchaQuestion"
         ).textContent = `What is ${a} + ${b}?`;
@@ -395,7 +395,6 @@
 
       // Validate entire form (password & captcha)
       function validateForm() {
-        // 1) Password check
         const password = document.getElementById("password").value;
         const confirmPassword =
           document.getElementById("confirm_password").value;
@@ -404,29 +403,25 @@
           return false;
         }
         const passwordPattern =
-          /^(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$/;
+          /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
         if (!passwordPattern.test(password)) {
           alert(
             "Password must be at least 8 characters long and contain 1 uppercase letter, 1 symbol, and 1 number."
           );
           return false;
         }
-
-        // 2) Captcha check
         const userCaptcha = parseInt(
           document.getElementById("captchaAnswer").value,
           10
         );
         if (userCaptcha !== captchaCorrectAnswer) {
           alert("Captcha answer is incorrect. Please try again.");
-          // Refresh captcha
           generateCaptcha();
           return false;
         }
         return true;
       }
 
-      // On page load, generate the captcha & fade out error messages
       document.addEventListener("DOMContentLoaded", function () {
         generateCaptcha();
         const errorAlert = document.getElementById("errorAlert");
@@ -439,7 +434,7 @@
       });
     </script>
 
-    <!-- Bootstrap JS Bundle -->
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
   </body>
 </html>

@@ -1,24 +1,29 @@
-from flask import Flask, render_template, jsonify
-from extensions import db, login_manager, mail
-from auth_routes import auth_routes  # Authentication Blueprint
-from general_routes import general_routes  # General routes Blueprint
-from profile_routes import profile_routes  # Profile management Blueprint
-from task_routes import task_routes  # Task management Blueprint
-from exams_routes import exams_routes  # Exams routes Blueprint
+from flask import Flask, render_template, jsonify, request
+from extensions import db, login_manager, mail, scheduler
+from auth_routes import auth_routes            # Authentication Blueprint
+from general_routes import general_routes      # General routes Blueprint
+from profile_routes import profile_routes      # Profile management Blueprint
+from task_routes import task_routes            # Task management Blueprint
+from exams_routes import exams_routes          # Exams routes Blueprint
 from study_material_routes import study_material_routes  # Study Material Blueprint
-from admin_routes import admin_routes  # Admin routes Blueprint
-from management_routes import management_routes # Management routes Blueprint
-
-
-# NEW: import your special exams blueprint
-from special_exams_routes import special_exams_routes
-
+from admin_routes import admin_routes          # Admin routes Blueprint
+from management_routes import management_routes  # Management routes Blueprint
+from special_exams_routes import special_exams_routes  # Special exams Blueprint
 from models import User
 from flask_wtf import CSRFProtect
 from flask_migrate import Migrate
-from mongodb_operations import initialize_mongodb, setup_collections  # MongoDB initialization
+from mongodb_operations import initialize_mongodb, setup_collections  # MongoDB init
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import os
 import logging
+
+# Import Flask-Talisman for security headers (optional, disabled for now)
+# from flask_talisman import Talisman
+
+# Import Flask-Limiter for rate limiting
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -26,18 +31,56 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 # Initialize Flask app
 app = Flask(__name__)
 
-# CSRF Protection
+# ----------------------------------------------------------------------
+# (DISABLED FOR NOW) Set up Content Security Policy (CSP) using Flask-Talisman:
+# ----------------------------------------------------------------------
+# csp = {
+#     'default-src': ["'self'"],
+#     'style-src': ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+#     'script-src': ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+#     'font-src': ["'self'", "https://cdnjs.cloudflare.com"],
+#     'connect-src': ["'self'", "https://date.nager.at"]
+# }
+# Talisman(app, content_security_policy=csp, content_security_policy_report_uri='/csp-violation-report')
+
+# ----------------------------------------------------------------------
+# Enable the Scheduler API 
+# ----------------------------------------------------------------------
+app.config['SCHEDULER_API_ENABLED'] = True
+app.config['SCHEDULER_API_PREFIX']  = '/jobs'
+app.config['SCHEDULER_TIMEZONE']    = 'UTC'
+
+# ----------------------------------------------------------------------
+# Set up global rate limiting using Redis as the storage backend:
+# ----------------------------------------------------------------------
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["1000 per day", "200 per hour"],
+    storage_uri=os.getenv("REDIS_URI", "redis://localhost:6379")
+)
+limiter.init_app(app)
+
+# ----------------------------------------------------------------------
+# Enable CSRF Protection
+# ----------------------------------------------------------------------
 csrf = CSRFProtect()
 csrf.init_app(app)
 
-# Configuration
+# ----------------------------------------------------------------------
+# Application Configuration:
+# ----------------------------------------------------------------------
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-default-secret-key')
+
+# ✅ Restored the original database URI (without ?sslmode=require)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
     'DATABASE_URL', 'postgresql://postgres:root@localhost/collectivercm'
 )
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Flask-Mail configuration
+# ----------------------------------------------------------------------
+# Flask-Mail Configuration:
+# ----------------------------------------------------------------------
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
@@ -45,14 +88,18 @@ app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', 'thanuka.ellepola@gmail
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', 'gtkz lpyc ygon rbul')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'thanuka.ellepola@gmail.com')
 
-# Initialize Extensions
+# ----------------------------------------------------------------------
+# Initialize Extensions: SQLAlchemy, Login Manager, Mail, Migrate
+# ----------------------------------------------------------------------
 db.init_app(app)
 login_manager.init_app(app)
 login_manager.login_view = 'auth_routes.login'
 mail.init_app(app)
 migrate = Migrate(app, db)
 
-# MongoDB Initialization
+# ----------------------------------------------------------------------
+# MongoDB Initialization:
+# ----------------------------------------------------------------------
 try:
     mongo_client, mongo_db = initialize_mongodb()
     setup_collections(mongo_db)
@@ -61,7 +108,15 @@ except Exception as e:
     logging.critical(f"Error initializing MongoDB: {e}")
     raise SystemExit(f"Failed to initialize MongoDB: {e}")
 
-# Register Blueprints
+# ----------------------------------------------------------------------
+# APScheduler
+# ----------------------------------------------------------------------
+scheduler.init_app(app)
+scheduler.start()
+
+# ----------------------------------------------------------------------
+# Register Blueprints:
+# ----------------------------------------------------------------------
 app.register_blueprint(auth_routes, url_prefix='/auth')
 app.register_blueprint(general_routes)
 app.register_blueprint(profile_routes, url_prefix='/profile')
@@ -70,47 +125,69 @@ app.register_blueprint(exams_routes, url_prefix='/exams')
 app.register_blueprint(study_material_routes, url_prefix='/study_materials')
 app.register_blueprint(admin_routes, url_prefix='/admin')
 app.register_blueprint(management_routes, url_prefix='/management')
-
-# IMPORTANT: register the special exams blueprint
 app.register_blueprint(special_exams_routes)
 
-# Root Route
+# ----------------------------------------------------------------------
+# Define Routes:
+# ----------------------------------------------------------------------
 @app.route('/')
 def root():
-    """
-    Render the home page.
-    """
     return render_template('home.html')
 
-# User Loader for Flask-Login
+
+# ----------------------------------------------------------------------
+# CSP Violation Report Endpoint (DISABLED FOR NOW):
+# ----------------------------------------------------------------------
+# @app.route('/csp-violation-report', methods=['POST'])
+# def csp_violation_report():
+#     violation_report = request.get_json()
+#     if violation_report:
+#         logging.warning("CSP Violation Report: %s", violation_report)
+#         print("CSP Violation Report:", violation_report)
+#     return ('', 204)
+
+
+# ----------------------------------------------------------------------
+# Add Global Security Headers:
+# ----------------------------------------------------------------------
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    return response
+
+
+# ----------------------------------------------------------------------
+# User Loader for Flask-Login:
+# ----------------------------------------------------------------------
 @login_manager.user_loader
 def load_user(user_id):
-    """
-    Load user for Flask-Login.
-    """
     try:
         return db.session.get(User, int(user_id))
     except Exception as e:
         logging.error(f"Error loading user: {e}")
         return None
 
-# Error Handlers
+
+# ----------------------------------------------------------------------
+# Error Handlers:
+# ----------------------------------------------------------------------
 @app.errorhandler(404)
 def page_not_found(e):
-    """
-    Render custom 404 error page.
-    """
     logging.warning("404 - Page not found.")
     return render_template('404.html'), 404
 
+
 @app.errorhandler(500)
 def internal_error(e):
-    """
-    Render custom 500 error page.
-    """
     logging.error(f"500 - Internal server error: {e}")
     return render_template('500.html'), 500
 
+
+# ----------------------------------------------------------------------
+# Utility Route: List all routes in the application
+# ----------------------------------------------------------------------
 @app.route('/routes')
 def list_routes():
     return jsonify([
@@ -118,6 +195,11 @@ def list_routes():
         for rule in app.url_map.iter_rules()
     ])
 
-# Main Entry Point
+
+# ----------------------------------------------------------------------
+# Main Entry Point:
+# ----------------------------------------------------------------------
 if __name__ == '__main__':
-    app.run(debug=True)
+    env = os.getenv('FLASK_ENV', 'development')
+    debug_mode = True if env == 'development' else False
+    app.run(debug=debug_mode)

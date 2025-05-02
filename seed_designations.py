@@ -13,8 +13,7 @@ designations = [
     {"title": "Assistant Manager", "starting_level": 8},
     {"title": "Manager", "starting_level": 9},
     {"title": "Senior Manager", "starting_level": 10},
-    {"title": "Human Resource", "starting_level": 11},
-    {"title": "Process Improvement", "starting_level": 12}
+    {"title": "Director", "starting_level": 11},
 ]
 
 def seed_designations():

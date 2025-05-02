@@ -791,21 +791,26 @@ def dashboard():
 
 def can_access_study_material(user, study_material):
     """
-    Check if the user can access the study material based on designation and level.
+    Check if the user can access the study material based on the study material's 
+    restriction level, the user's designation, and the user's current level.
+    
+    A None restriction_level is treated as 0.
     """
-    # Get the restriction level for the study material
+    # Use a fallback of 0 if the restriction_level is None.
     restriction_level = study_material.restriction_level or 0
+    # Retrieve the user's current level using the helper method.
+    user_level = user.get_current_level()
 
-    # Allow access if no restriction level
+    # If there's no restriction level, allow access.
     if restriction_level == 0:
         return True
 
-    # Allow access if the user's designation allows skipping this level
+    # If the user's designation allows skipping this level, allow access.
     if user.designation and user.designation.starting_level <= restriction_level:
         return True
 
-    # Allow access if the user has completed the previous level
-    if restriction_level <= user.current_level:
+    # If the user's current level meets or exceeds the restriction, allow access.
+    if restriction_level <= user_level:
         return True
 
     return False
