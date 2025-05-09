@@ -10,6 +10,9 @@ special_exams_routes = Blueprint('special_exams_routes', __name__, url_prefix='/
 def can_attempt_again(completed_at):
     if not completed_at:
         return True
+    # Ensure completed_at is timezone-aware UTC
+    if completed_at.tzinfo is None:
+        completed_at = completed_at.replace(tzinfo=timezone.utc)
     next_allowed = completed_at + timedelta(days=30)
     return datetime.now(timezone.utc) >= next_allowed
 
@@ -18,15 +21,21 @@ def can_attempt_again(completed_at):
 def exam_paper1():
     try:
         record = SpecialExamRecord.query.filter_by(user_id=current_user.id).first()
-        if record and record.paper1_passed:
-            flash("You have already passed Paper 1.", "info")
+
+        # Lock out if either paper has already been passed
+        if record and (record.paper1_passed or record.paper2_passed):
+            flash("You have already passed one of the special papers.", "info")
             return redirect(url_for('exams_routes.list_exams'))
 
+        # Cooldown check for Paper 1
         if record and record.paper1_completed_at and not can_attempt_again(record.paper1_completed_at):
-            retry_date = (record.paper1_completed_at + timedelta(days=30)).strftime('%Y-%m-%d')
+            retry_date = (record.paper1_completed_at.replace(
+                              tzinfo=timezone.utc) + timedelta(days=30)
+                         ).strftime('%Y-%m-%d')
             flash(f"You can re-attempt Paper 1 after {retry_date}.", "info")
             return redirect(url_for('exams_routes.list_exams'))
 
+        # OK to start
         start_time = datetime.now(timezone.utc).isoformat()
         return render_template('exam_paper1.html', start_time=start_time)
 
@@ -41,15 +50,18 @@ def submit_paper1():
     try:
         data = request.form.to_dict()
         start_time_str = data.get('start_time')
-        end_time = datetime.now(timezone.utc)
-
         if not start_time_str:
             flash("Invalid form data.", "danger")
             return redirect(url_for('exams_routes.list_exams'))
 
+        # Parse and normalize start_time
         start_time = datetime.fromisoformat(start_time_str)
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+        end_time = datetime.now(timezone.utc)
         time_spent = (end_time - start_time).total_seconds()
 
+        # Hard-coded answer key
         correct_answers = {
             '1': 'd', '2': 'a', '3': 'c', '4': 'd', '5': 'b',
             '6': 'c', '7': 'c', '8': 'b', '9': 'd', '10': 'a',
@@ -60,38 +72,43 @@ def submit_paper1():
             '31': 'a', '32': 'b', '33': 'd', '34': 'a', '35': 'b',
             '36': 'a', '37': 'c', '38': 'b', '39': 'd', '40': 'a'
         }
-
-        total_questions = len(correct_answers)
+        total_questions    = len(correct_answers)
         marks_per_question = 2.5
-        user_score = 0
-        for q_num, correct_ans in correct_answers.items():
-            user_ans = data.get(f'answers[{q_num}]', '').lower()
-            if user_ans == correct_ans:
-                user_score += marks_per_question
-
+        user_score = sum(
+            marks_per_question
+            for q, ans in correct_answers.items()
+            if data.get(f'answers[{q}]', '').lower() == ans
+        )
         final_percentage = round(user_score, 2)
-        passed = final_percentage >= 56
+        passed = final_percentage >= 70  # 70% pass mark
 
+        # Ensure a record exists
         record = SpecialExamRecord.query.filter_by(user_id=current_user.id).first()
         if not record:
             record = SpecialExamRecord(user_id=current_user.id)
             db.session.add(record)
 
-        record.paper1_score = final_percentage
-        record.paper1_passed = passed
-        record.paper1_time_spent = int(time_spent)
+        # Re-check cooldown
+        if record.paper1_completed_at and not can_attempt_again(record.paper1_completed_at):
+            retry_date = (record.paper1_completed_at.replace(
+                              tzinfo=timezone.utc) + timedelta(days=30)
+                         ).strftime('%Y-%m-%d')
+            flash(f"You can re-attempt Paper 1 after {retry_date}.", "info")
+            return redirect(url_for('exams_routes.list_exams'))
+
+        # Save results
+        record.paper1_score        = final_percentage
+        record.paper1_passed       = passed
+        record.paper1_time_spent   = int(time_spent)
         record.paper1_completed_at = end_time
         db.session.commit()
 
-        return render_template(
-            'exam_results.html',
-            exam_title="Special Exam Paper 1",
-            percentage=final_percentage,
-            time_taken=int(time_spent // 60),
-            correct=int(user_score / marks_per_question),
-            total=total_questions,
-            passed=passed
+        # Flash the outcome and redirect into the unified results view
+        flash(
+            f"Special Paper 1 {'passed' if passed else 'completed'} with {final_percentage}%",
+            'success' if passed else 'warning'
         )
+        return redirect(url_for('exams_routes.exam_results'))
 
     except Exception as e:
         db.session.rollback()
@@ -104,16 +121,17 @@ def submit_paper1():
 def exam_paper2():
     try:
         record = SpecialExamRecord.query.filter_by(user_id=current_user.id).first()
-        if not record:
-            flash("Please attempt Paper 1 first.", "info")
+
+        # Lock out if either paper passed
+        if record and (record.paper1_passed or record.paper2_passed):
+            flash("You have already passed one of the special papers.", "info")
             return redirect(url_for('exams_routes.list_exams'))
 
-        if record.paper1_passed:
-            flash("Paper 2 is locked because you passed Paper 1.", "info")
-            return redirect(url_for('exams_routes.list_exams'))
-
-        if record.paper2_completed_at and not can_attempt_again(record.paper2_completed_at):
-            retry_date = (record.paper2_completed_at + timedelta(days=30)).strftime('%Y-%m-%d')
+        # Cooldown check for Paper 2
+        if record and record.paper2_completed_at and not can_attempt_again(record.paper2_completed_at):
+            retry_date = (record.paper2_completed_at.replace(
+                              tzinfo=timezone.utc) + timedelta(days=30)
+                         ).strftime('%Y-%m-%d')
             flash(f"You can re-attempt Paper 2 after {retry_date}.", "info")
             return redirect(url_for('exams_routes.list_exams'))
 
@@ -131,15 +149,18 @@ def submit_paper2():
     try:
         data = request.form.to_dict()
         start_time_str = data.get('start_time')
-        end_time = datetime.now(timezone.utc)
-
         if not start_time_str:
             flash("Invalid form data.", "danger")
             return redirect(url_for('exams_routes.list_exams'))
 
+        # Parse and normalize start_time
         start_time = datetime.fromisoformat(start_time_str)
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+        end_time = datetime.now(timezone.utc)
         time_spent = (end_time - start_time).total_seconds()
 
+        # Hard-coded answer key
         correct_answers = {
             '1': 'c', '2': 'd', '3': 'a', '4': 'c', '5': 'a',
             '6': 'b', '7': 'b', '8': 'c', '9': 'd', '10': 'd',
@@ -150,49 +171,45 @@ def submit_paper2():
             '31': 'a', '32': 'b', '33': 'c', '34': 'a', '35': 'b',
             '36': 'a', '37': 'd', '38': 'b', '39': 'b', '40': 'a'
         }
-
-        total_questions = len(correct_answers)
+        total_questions    = len(correct_answers)
         marks_per_question = 2.5
-        user_score = 0
-        for q_num, correct_ans in correct_answers.items():
-            user_ans = data.get(f'answers[{q_num}]', '').lower()
-            if user_ans == correct_ans:
-                user_score += marks_per_question
-
+        user_score = sum(
+            marks_per_question
+            for q, ans in correct_answers.items()
+            if data.get(f'answers[{q}]', '').lower() == ans
+        )
         final_percentage = round(user_score, 2)
-        passed = final_percentage >= 56
+        passed = final_percentage >= 70  # 70% pass mark
 
+        # Ensure record exists
         record = SpecialExamRecord.query.filter_by(user_id=current_user.id).first()
         if not record:
-            flash("Paper 1 not attempted; cannot submit Paper 2.", "danger")
-            return redirect(url_for('exams_routes.list_exams'))
+            record = SpecialExamRecord(user_id=current_user.id)
+            db.session.add(record)
 
-        if record.paper1_passed:
-            flash("Paper 2 is locked because you passed Paper 1.", "info")
-            return redirect(url_for('exams_routes.list_exams'))
-
+        # Cooldown check
         if record.paper2_completed_at and not can_attempt_again(record.paper2_completed_at):
-            retry_date = (record.paper2_completed_at + timedelta(days=30)).strftime('%Y-%m-%d')
+            retry_date = (record.paper2_completed_at.replace(
+                              tzinfo=timezone.utc) + timedelta(days=30)
+                         ).strftime('%Y-%m-%d')
             flash(f"You can re-attempt Paper 2 after {retry_date}.", "info")
             return redirect(url_for('exams_routes.list_exams'))
 
-        record.paper2_score = final_percentage
-        record.paper2_passed = passed
-        record.paper2_time_spent = int(time_spent)
+        # Save results
+        record.paper2_score        = final_percentage
+        record.paper2_passed       = passed
+        record.paper2_time_spent   = int(time_spent)
         record.paper2_completed_at = end_time
         db.session.commit()
 
-        return render_template(
-            'exam_results.html',
-            exam_title="Special Exam Paper 2",
-            percentage=final_percentage,
-            time_taken=int(time_spent // 60),
-            correct=int(user_score / marks_per_question),
-            total=total_questions,
-            passed=passed
+        flash(
+            f"Special Paper 2 {'passed' if passed else 'completed'} with {final_percentage}%",
+            'success' if passed else 'warning'
         )
+        return redirect(url_for('exams_routes.exam_results'))
 
     except Exception as e:
+        
         db.session.rollback()
         logging.error(f"Error submitting Paper 2: {e}")
         flash("Error processing Paper 2 submission.", "danger")

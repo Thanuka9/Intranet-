@@ -16,12 +16,11 @@
       body {
         font-family: "Segoe UI", sans-serif;
         background-color: #f8f9fa;
-        margin: 0;
-        padding: 0;
         display: flex;
         flex-direction: column;
         min-height: 100vh;
       }
+
       .top-bar {
         background-color: #ffffff;
         border-bottom: 1px solid #ddd;
@@ -30,6 +29,7 @@
         justify-content: space-between;
         align-items: center;
       }
+
       .top-bar img {
         height: 40px;
         margin-right: 10px;
@@ -44,6 +44,7 @@
       .brand .red {
         color: red;
       }
+
       .container {
         max-width: 900px;
         margin: 30px auto;
@@ -53,6 +54,7 @@
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
         flex: 1;
       }
+
       .header-card {
         border-bottom: 2px solid #dee2e6;
         margin-bottom: 20px;
@@ -76,41 +78,30 @@
         text-align: center;
         margin-top: 10px;
       }
-      .question {
+
+      .question-container {
+        display: none;
+        padding: 20px;
+        border: 1px solid #ddd;
         margin-bottom: 20px;
-        padding: 15px;
-        background: #f8f9fa;
         border-radius: 8px;
-        border: 1px solid #dee2e6;
+        background: #f9f9f9;
       }
-      .question h3 {
-        margin-bottom: 15px;
-        color: #343a40;
+      .question-container.active {
+        display: block;
       }
-      .question ul {
-        list-style-type: none;
-        padding-left: 0;
-      }
-      .question li {
-        margin-bottom: 10px;
-      }
-      .actions {
+
+      .navigation-controls {
         text-align: center;
-        margin-top: 30px;
+        margin-bottom: 20px;
       }
+
       .submit-btn {
+        display: none;
+        margin: 0 auto;
         padding: 10px 20px;
-        font-size: 1rem;
-        background-color: #007bff;
-        color: #ffffff;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
       }
-      .submit-btn:hover {
-        background-color: #0056b3;
-      }
+
       footer {
         background-color: #343a40;
         color: #ffffff;
@@ -118,8 +109,24 @@
         padding: 15px 0;
         margin-top: auto;
       }
+
+      #instructionOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #fff;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
     </style>
   </head>
+
   <body>
     <div class="top-bar">
       <div class="d-flex align-items-center">
@@ -146,6 +153,7 @@
         method="POST"
       >
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" id="timeSpentInput" name="time_spent" value="0" />
         <input type="hidden" name="start_time" value="{{ start_time }}" />
         <input
           type="hidden"
@@ -153,32 +161,43 @@
           value="{{ questions|map(attribute='id')|join(',') }}"
         />
 
-        {% for question in questions %}
-        <div class="question">
-          <h3>
-            <i class="fas fa-question-circle"></i> Q{{ loop.index }}: {{
-            question.text }}
-          </h3>
-          <ul>
-            {% for choice in question.choices %}
-            <li>
-              <label>
-                <input
-                  type="radio"
-                  name="answers[{{ question.id }}]"
-                  value="{{ choice|trim }}"
-                  required
-                />
-                {{ choice|trim }}
-              </label>
-            </li>
-            {% endfor %}
-          </ul>
+        <div id="questionWrapper">
+          {% for question in questions %}
+          <div class="question-container">
+            <h3>
+              <i class="fas fa-question-circle"></i> Q{{ loop.index }}: {{
+              question.text }}
+            </h3>
+            <ul class="list-unstyled">
+              {% for choice in question.choices %}
+              <li>
+                <label>
+                  <input
+                    type="radio"
+                    name="answers[{{ question.id }}]"
+                    value="{{ choice|trim }}"
+                  />
+                  {{ choice|trim }}
+                </label>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endfor %}
         </div>
-        {% endfor %}
 
-        <div class="actions">
-          <button type="submit" class="submit-btn" aria-label="Submit exam">
+        <div class="navigation-controls">
+          <button type="button" id="prevBtn" class="btn btn-secondary" disabled>
+            Previous
+          </button>
+          <button type="button" id="nextBtn" class="btn btn-primary">
+            Next
+          </button>
+          <button
+            type="submit"
+            id="submitBtn"
+            class="btn btn-success submit-btn"
+          >
             <i class="fas fa-paper-plane"></i> Submit Exam
           </button>
         </div>
@@ -186,84 +205,176 @@
     </div>
 
     <footer>
-      <p>Collective Intranet© 2024</p>
+      <p>Collective Intranet © 2024</p>
     </footer>
+
+    <!-- INSTRUCTION OVERLAY -->
+    <div id="instructionOverlay">
+      <div style="max-width: 600px; text-align: left">
+        <h2>Please Read These Rules Before Starting</h2>
+        <ul>
+          <li>No changing pages once the exam starts.</li>
+          <li>
+            Copy/paste, right-click, screenshots and PrintScreen are disabled.
+          </li>
+          <li>Switching tabs twice will auto-submit and disqualify you.</li>
+          <li>
+            Reloading or closing this tab will auto-submit your current answers.
+          </li>
+        </ul>
+        <div style="margin-top: 1.5rem">
+          <input type="checkbox" id="agreeCheckbox" />
+          <label for="agreeCheckbox"
+            >I have read and agree to these rules.</label
+          >
+        </div>
+        <button
+          id="agreeBtn"
+          disabled
+          style="margin-top: 1rem"
+          class="btn btn-primary"
+        >
+          Agree & Start Exam
+        </button>
+      </div>
+    </div>
 
     <script>
       document.addEventListener("DOMContentLoaded", () => {
-        const timerElement = document.getElementById("timer");
-        const examDuration = {{ exam.duration * 60 }};
-        let remainingTime = examDuration;
-        let submitted = false;
+        const overlay = document.getElementById("instructionOverlay"),
+              agreeCb = document.getElementById("agreeCheckbox"),
+              agreeBtn = document.getElementById("agreeBtn");
 
-        const updateTimer = () => {
-          const minutes = Math.floor(remainingTime / 60);
-          const seconds = remainingTime % 60;
-          timerElement.textContent = `Time Remaining: ${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+        function startExam() {
+          const wrapper   = document.getElementById("questionWrapper"),
+                timerEl   = document.getElementById("timer"),
+                prevBtn   = document.getElementById("prevBtn"),
+                nextBtn   = document.getElementById("nextBtn"),
+                submitBtn = document.getElementById("submitBtn"),
+                form      = document.getElementById("examForm"),
+                timeInp   = document.getElementById("timeSpentInput");
 
-          if (remainingTime <= 0 && !submitted) {
-            submitted = true;
-            clearInterval(timerInterval);
-            alert("Time's up! Your exam will be automatically submitted.");
-            document.getElementById("examForm").submit();
-          }
-          remainingTime--;
-        };
+          let submitted   = false,
+              tabSwitches = 0,
+              current     = 0,
+              remaining   = {{ exam.duration }} * 60;
 
-        const timerInterval = setInterval(updateTimer, 1000);
-        updateTimer();
-
-        const form = document.getElementById("examForm");
-        const submitButton = form.querySelector(".submit-btn");
-
-        form.addEventListener("submit", (e) => {
-          if (submitted) {
-            e.preventDefault();
-            return;
-          }
-
-          const radioGroups = {};
-          form.querySelectorAll('input[type="radio"]').forEach((radio) => {
-            const name = radio.name;
-            radioGroups[name] = radioGroups[name] || [];
-            radioGroups[name].push(radio);
-          });
-
-          const unansweredCount = Object.values(radioGroups).filter(
-            (group) => !group.some((radio) => radio.checked)
-          ).length;
-
-          if (unansweredCount > 0) {
-            if (!confirm(`You have ${unansweredCount} unanswered question${unansweredCount > 1 ? "s" : ""}. Do you want to submit anyway?`)) {
-              e.preventDefault();
-              return;
+          function tick() {
+            const m = String(Math.floor(remaining / 60)).padStart(2, '0'),
+                  s = String(remaining % 60).padStart(2, '0');
+            timerEl.textContent = `Time Remaining: ${m}:${s}`;
+            if (remaining-- <= 0 && !submitted) {
+              submitted = true;
+              form.submit();
             }
           }
+          setInterval(tick, 1000);
+          tick();
 
-          submitted = true;
-          submitButton.disabled = true;
-        });
-
-        document.addEventListener("contextmenu", (e) => {
-          e.preventDefault();
-          alert("Right-click is disabled during the exam.");
-        });
-
-        document.addEventListener("keydown", (e) => {
-          if (e.ctrlKey && ["c", "v", "x", "u"].includes(e.key.toLowerCase())) {
-            e.preventDefault();
-            alert("This shortcut is disabled during the exam.");
+          const questions = wrapper.querySelectorAll(".question-container");
+          function show(i) {
+            questions.forEach((q, idx) => q.classList.toggle("active", idx === i));
+            prevBtn.disabled = (i === 0);
+            nextBtn.style.display = (i === questions.length - 1) ? 'none' : 'inline-block';
+            submitBtn.style.display = (i === questions.length - 1) ? 'inline-block' : 'none';
           }
-        });
 
-        window.addEventListener("beforeunload", (e) => {
-          if (!submitted) {
-            e.preventDefault();
-            e.returnValue = "Your progress will be lost if you leave this page.";
+          function answered(i) {
+            return Array.from(
+              questions[i].querySelectorAll("input[type='radio']")
+            ).some(r => r.checked);
           }
-        });
+
+          nextBtn.onclick = () => {
+            if (!answered(current)) return alert("Please select an answer.");
+            if (current < questions.length - 1) show(++current);
+          };
+
+          prevBtn.onclick = () => {
+            if (current > 0) show(--current);
+          };
+
+          form.addEventListener("submit", (e) => {
+            for (let i = 0; i < questions.length; i++) {
+              if (!answered(i)) {
+                e.preventDefault();
+                show(i);
+                return alert(`Answer Question ${i + 1}.`);
+              }
+            }
+            timeInp.value = {{ exam.duration }} * 60 - remaining;
+            submitted = true;
+          });
+
+          // Anti-cheat
+          document.addEventListener("contextmenu", e => { e.preventDefault(); alert("Right-click disabled."); });
+          ["copy","cut","paste"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); alert(ev + " disabled."); }));
+          document.addEventListener("keydown", e => {
+            const k = e.key.toLowerCase(), c = e.keyCode;
+            if (["printscreen", "f5"].includes(k) || ((e.ctrlKey || e.metaKey) && ["r","u","i","c","v","x","s"].includes(k))) {
+              e.preventDefault();
+              alert("Key disabled during exam.");
+              if (k === "f5" || ((e.ctrlKey || e.metaKey) && k === "r")) {
+                const fd = new FormData(form);
+                fd.append("time_spent", {{ exam.duration }} * 60 - remaining);
+                navigator.sendBeacon(form.action, fd);
+                submitted = true;
+              }
+            }
+          });
+
+          document.addEventListener("visibilitychange", () => {
+            if (document.hidden && !submitted) {
+              tabSwitches++;
+              if (tabSwitches > 1) {
+                submitted = true;
+                form.submit();
+              } else {
+                alert("Switching tabs again will auto-submit.");
+              }
+            }
+          });
+
+          window.addEventListener("beforeunload", (e) => {
+            if (!submitted) {
+              const fd = new FormData(form);
+              fd.append("time_spent", {{ exam.duration }} * 60 - remaining);
+              navigator.sendBeacon(form.action, fd);
+              e.preventDefault();
+              e.returnValue = '';
+            }
+          });
+
+          history.pushState(null, "", location.href);
+          window.addEventListener("popstate", () => {
+            if (!submitted) {
+              const fd = new FormData(form);
+              fd.append("time_spent", {{ exam.duration }} * 60 - remaining);
+              navigator.sendBeacon(form.action, fd);
+              submitted = true;
+            }
+            history.pushState(null, "", location.href);
+          });
+
+          show(0);
+        }
+
+        if (sessionStorage.getItem("examAgreed") === "yes") {
+          overlay.style.display = "none";
+          startExam();
+        } else {
+          overlay.style.display = "flex";
+          agreeBtn.disabled = true;
+          agreeCb.addEventListener("change", () => {
+            agreeBtn.disabled = !agreeCb.checked;
+          });
+          agreeBtn.addEventListener("click", () => {
+            sessionStorage.setItem("examAgreed", "yes");
+            overlay.style.display = "none";
+            startExam();
+          });
+        }
       });
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
   </body>
 </html>

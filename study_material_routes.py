@@ -12,6 +12,7 @@ from docx import Document
 from pptx import Presentation
 from PIL import Image, ImageDraw
 from io import BytesIO
+from utils.progress_utils import has_finished_study, is_level_done
 from bson.objectid import ObjectId
 
 # Configure logging
@@ -532,118 +533,78 @@ def study_materials():
 @study_material_routes.route('/update_progress', methods=['POST'])
 def update_progress():
     """
-    Update the user's progress based on the pages visited for a specific study material.
-    Check for level completion and update user level if necessary.
+    Update the user's progress for a study material PDF.
+    When a PDF hits 100 % read, check whether the entire level
+    (study + exam for every area) is done and, if so, bump the user’s level.
     """
     try:
-        # Parse request data
-        data = request.json
-        user_id = session.get('user_id')  # Secure user identification
+        data              = request.json
+        user_id           = session.get('user_id')
         study_material_id = data.get('study_material_id')
-        current_page = data.get('current_page')
-        total_pages = data.get('total_pages')
+        current_page      = data.get('current_page')
+        total_pages       = data.get('total_pages')
 
-        # Validate input
         if not user_id or not study_material_id or current_page is None or total_pages is None:
             logging.error("Invalid data provided for progress update.")
             return jsonify({'error': 'Invalid input data'}), 400
 
-        # Fetch the study material to ensure it exists and get the total pages
         study_material = StudyMaterial.query.get(study_material_id)
         if not study_material:
-            logging.error(f"Study material with ID {study_material_id} not found.")
+            logging.error(f"Study material {study_material_id} not found.")
             return jsonify({'error': 'Study material not found'}), 404
 
-        # Ensure total pages from the client matches the database record
         if total_pages != study_material.total_pages:
             logging.warning(f"Total pages mismatch: client {total_pages} != DB {study_material.total_pages}")
             total_pages = study_material.total_pages
 
-        # Guard Clause: Prevent division by zero
         if total_pages < 1:
-            logging.error("Total pages is zero, cannot update progress.")
-            return jsonify({'error': 'Study material has 0 pages. Please re-upload or fix the page count.'}), 400
+            return jsonify({'error': 'Study material has 0 pages'}), 400
 
-        # Fetch or create the user's progress record
-        user_progress = UserProgress.query.filter_by(
-            user_id=user_id,
-            study_material_id=study_material_id
-        ).first()
-
+        # ── upsert UserProgress ──────────────────────────────────────────
+        user_progress = (
+            UserProgress.query
+            .filter_by(user_id=user_id, study_material_id=study_material_id)
+            .first()
+        )
         if not user_progress:
             user_progress = UserProgress(
                 user_id=user_id,
                 study_material_id=study_material_id,
                 pages_visited=current_page,
-                progress_percentage=int((current_page / total_pages) * 100)
             )
             db.session.add(user_progress)
-        else:
-            # Update progress only if the current page exceeds previously visited pages
-            if current_page > user_progress.pages_visited:
-                user_progress.pages_visited = current_page
-                user_progress.progress_percentage = int((user_progress.pages_visited / total_pages) * 100)
 
-        # Commit changes to update progress record
+        if current_page > user_progress.pages_visited:
+            user_progress.pages_visited = current_page
+
+        user_progress.progress_percentage = int((user_progress.pages_visited / total_pages) * 100)
         db.session.commit()
 
-        # Fetch the user record
-        user = User.query.get(user_id)
-        if not user:
-            logging.error("User not found after progress update.")
-            return jsonify({'error': 'User not found'}), 404
-
-        # Derive current level from StudyMaterial's level_id
+        # ── level check (restricted materials only) ─────────────────────
         current_level = study_material.level_id or 0
-        
-        # Guard Clause: Skip level checks for unrestricted materials
-        if current_level == 0:
-            logging.info("Unrestricted study material, skipping level checks.")
-            return jsonify({'success': True, 'progress_percentage': user_progress.progress_percentage}), 200
-
-        # Trigger Level Completion Check Only at 100% Progress
-        if user_progress.progress_percentage >= 100:
-            # Link Study Material Completion with Area Progress
-            area = Area.query.filter_by(level_id=current_level).first()
-            if area:
-                progress = UserLevelProgress.query.filter_by(
-                    user_id=user_id,
-                    level_id=current_level,
-                    area_id=area.id,
-                    passed=True
-                ).first()
-                if not progress:
-                    progress = UserLevelProgress(
-                        user_id=user_id,
-                        level_id=current_level,
-                        area_id=area.id,
-                        passed=True
-                    )
-                    db.session.add(progress)
-                    db.session.commit()
-                    logging.info(f"Marked area {area.id} as passed for user {user_id} at level {current_level}")
-
-            # Check Level Completion and Update Level
-            if has_completed_level(user_id, current_level):
-                # Increment user's current level
+        if current_level and user_progress.progress_percentage >= 100:
+            user = User.query.get(user_id)
+            if is_level_done(user, current_level):
                 user.current_level = max(user.current_level, current_level + 1)
                 db.session.commit()
-                logging.info(f"User {user_id} level updated to {user.current_level}")
-                flash(f"Congratulations! You have advanced to Level {user.current_level}", "success")
+                flash(f"🎉 Level {current_level + 1} unlocked!", "success")
+                logging.info(f"User {user_id} advanced to Level {user.current_level}")
             else:
-                logging.info(f"User {user_id} has not completed all areas in Level {current_level}")
+                logging.info(f"User {user_id} hasn’t yet completed Level {current_level}")
 
-        logging.info(f"Progress updated: user_id={user_id}, study_material_id={study_material_id}, "
-                     f"pages_visited={user_progress.pages_visited}, progress_percentage={user_progress.progress_percentage}")
-
+        logging.info(
+            f"Progress updated: user={user_id}, "
+            f"material={study_material_id}, pages={user_progress.pages_visited}, "
+            f"%={user_progress.progress_percentage}"
+        )
         return jsonify({'success': True, 'progress_percentage': user_progress.progress_percentage}), 200
 
     except KeyError as ke:
-        logging.error(f"Missing key in the request data: {ke}")
-        return jsonify({'error': f'Missing key: {str(ke)}'}), 400
+        return jsonify({'error': f"Missing key: {ke}"}), 400
     except Exception as e:
-        logging.error(f"Error updating progress: {e}")
+        logging.exception("Error updating progress")
         return jsonify({'error': str(e)}), 500
+
 
 def has_completed_level(user_id, level_id):
     """

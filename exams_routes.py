@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, render_template
 from extensions import db
-from models import Exam, Question, UserScore, User, Category, Level, Area, UserLevelProgress, Designation, LevelArea
+from models import Exam, Question, UserScore, User, Category, Level, Area, UserLevelProgress, Designation, LevelArea, StudyMaterial
 from flask_login import current_user, login_required
 from datetime import datetime, timezone, timedelta
 from jinja2 import TemplateNotFound
@@ -8,9 +8,11 @@ import random
 import requests
 from models import SpecialExamRecord
 import logging
-from models import Exam, Question, UserScore, User, Category, StudyMaterial
 from sqlalchemy.exc import SQLAlchemyError
+from flask import session
 from flask import redirect, flash, url_for
+from utils.progress_utils import has_finished_study, is_level_done
+
 
 # Blueprint setup
 exams_routes = Blueprint('exams_routes', __name__, url_prefix='/exams')
@@ -43,16 +45,17 @@ def create_exam():
             response = requests.get(url_for('study_material_routes.get_dropdowns', _external=True))
             dropdown_data = response.json()
 
-            # Fetch Courses from study_materials table
+            # Fetch Areas, Courses from database
+            areas   = Area.query.all()
             courses = StudyMaterial.query.all()
-            courses_data = [{"id": course.id, "title": course.title} for course in courses]
 
             return render_template(
                 'upload_exam.html',
-                levels=dropdown_data['levels'],
-                categories=dropdown_data['categories'],
-                designation_levels=dropdown_data['designations'],
-                courses=courses_data
+                levels              = dropdown_data['levels'],
+                categories          = dropdown_data['categories'],
+                areas               = [{'id': a.id, 'name': a.name} for a in areas],
+                designation_levels  = dropdown_data['designations'],
+                courses             = [{"id": c.id, "title": c.title} for c in courses]
             )
         except Exception as e:
             logging.error(f"Error rendering exam creation form: {e}")
@@ -63,59 +66,56 @@ def create_exam():
     # -------------------------------
     if request.method == 'POST':
         try:
-            data = request.form
-            title = data.get('title', '').strip()
-            duration = data.get('duration', '').strip()
-            level_id = data.get('level_id', '').strip()
-            category_id = data.get('category_id', '').strip()
-            course_id = data.get('course_id', '').strip()
-            min_designation_level = data.get('minimum_designation_level', '').strip()
+            form = request.form
+            # 1) Extract and validate all exam‐level fields
+            title   = form.get('title','').strip()
+            duration= form.get('duration','').strip()
+            level_id= form.get('level_id','').strip()
+            category_id = form.get('category_id','').strip()
+            area_id    = form.get('area_id','').strip()
+            course_id  = form.get('course_id','').strip()
+            min_desig  = form.get('minimum_designation_level','').strip()
 
-            # Validate form inputs
-            if not all([title, duration, level_id, category_id, course_id, min_designation_level]):
+            if not all([title, duration, level_id, category_id, area_id, course_id, min_desig]):
                 return jsonify({'error': 'All fields are required'}), 400
-
             if not duration.isdigit() or int(duration) <= 0:
                 return jsonify({'error': 'Duration must be a positive integer'}), 400
 
-            # Check if Level, Category, and Course exist
-            level = Level.query.get(level_id)
-            category = Category.query.get(category_id)
-            course = StudyMaterial.query.get(course_id)
-            designation = Designation.query.get(min_designation_level)
+            # 2) Load your FK objects
+            level       = Level.query.get(level_id)
+            category    = Category.query.get(category_id)
+            area        = Area.query.get(area_id)
+            course      = StudyMaterial.query.get(course_id)
+            designation = Designation.query.get(min_desig)
+            for obj,name in [(level,'Level'), (category,'Category'),
+                             (area,'Area'), (course,'Course'),
+                             (designation,'Designation')]:
+                if not obj:
+                    return jsonify({'error': f'Selected {name} does not exist'}), 400
 
-            if not level:
-                return jsonify({'error': 'Selected level does not exist'}), 400
-
-            if not category:
-                return jsonify({'error': 'Selected category does not exist'}), 400
-
-            if not course:
-                return jsonify({'error': 'Selected course does not exist'}), 400
-
-            if not designation:
-                return jsonify({'error': 'Selected minimum designation level does not exist'}), 400
-
-            # Check Level Eligibility based on User's Designation
-            if not current_user.can_skip_level(level.level_number):
-                logging.warning(f"User {current_user.id} attempted to create an exam for unauthorized level {level.level_number}")
-                return jsonify({'error': 'You are not allowed to create exams for this level'}), 403
-
-            # Create Exam
+            # 3) Create & commit the Exam
             exam = Exam(
-                title=title,
-                duration=int(duration),
-                level_id=int(level_id),
-                category_id=int(category_id),
-                course_id=int(course_id),  # Link to the selected course
-                minimum_designation_level=int(min_designation_level),
-                created_by=current_user.id
+                title                     = title,
+                duration                  = int(duration),
+                level_id                  = level.id,
+                area_id                   = area.id,
+                category_id               = category.id,
+                course_id                 = course.id,
+                created_by                = current_user.id,
+                minimum_level             = level.level_number,
+                minimum_designation_level = designation.id
             )
             db.session.add(exam)
             db.session.commit()
 
-            logging.info(f"Exam '{title}' created successfully by user {current_user.id}")
-            return jsonify({'message': 'Exam created successfully', 'exam_id': exam.id}), 201
+            # 4) Return the URL where the front‑end must POST the questions
+            add_q_url = url_for('exams_routes.add_questions', exam_id=exam.id)
+
+            return jsonify({
+                'message': 'Exam created successfully',
+                'exam_id': exam.id,
+                'add_questions_url': add_q_url
+            }), 201
 
         except SQLAlchemyError as db_error:
             logging.error(f"Database error creating exam: {db_error}")
@@ -127,6 +127,7 @@ def create_exam():
             db.session.rollback()
             return jsonify({'error': 'Failed to create exam. Please try again later.'}), 500
 
+
 # -------------------------------
 # Route to Add Questions to an Exam
 # -------------------------------
@@ -134,7 +135,8 @@ def create_exam():
 @login_required
 def add_questions(exam_id):
     """
-    Add questions to an existing exam.
+    Add questions to an existing exam, allowing correct answers as text,
+    numeric index ("2" → second choice), or letter ("B" → second choice).
     """
     if not getattr(current_user, 'is_super_admin', False):
         logging.warning(f"Unauthorized access by user {current_user.id} to add questions.")
@@ -147,13 +149,13 @@ def add_questions(exam_id):
             logging.error(f"Exam with ID {exam_id} not found.")
             return jsonify({'error': 'Exam not found'}), 404
 
-        # Parse the form data into a dictionary
+        # Parse the form data into a dictionary of question entries
         data = request.form.to_dict(flat=False)
         questions = {}
         errors = []
         questions_to_add = []
 
-        # Parse form data
+        # Group fields by question index
         for key, value in data.items():
             if key.startswith("questions["):
                 parts = key.split('][')
@@ -161,39 +163,51 @@ def add_questions(exam_id):
                 field = parts[1].rstrip(']')
                 questions.setdefault(question_index, {})[field] = value[0].strip()
 
-        # Process and validate questions
-        for question_index, question_data in questions.items():
+        # Process and validate each question
+        for question_index, qdata in questions.items():
             try:
-                # Clean and validate inputs
-                question_text = question_data.get('question_text', '').strip()
-                choices_raw = question_data.get('choices', '').strip(' ,')
-                correct_answer = question_data.get('correct_answer', '').strip(' "\'')
-                category_id = question_data.get('category_id', '').strip()
+                question_text      = qdata.get('question_text','').strip()
+                choices_raw        = qdata.get('choices','').strip(' ,')
+                raw_answer         = qdata.get('correct_answer','').strip(' "\'')
+                category_id        = qdata.get('category_id','').strip()
 
-                # Validate required fields
-                if not all([question_text, choices_raw, correct_answer, category_id]):
+                # Required fields check
+                if not all([question_text, choices_raw, raw_answer, category_id]):
                     errors.append(f"Question {question_index}: All fields are required")
                     continue
 
-                # Parse and clean choices
-                choices_list = [choice.strip(' "\'') for choice in choices_raw.split(',') if choice.strip()]
-                choices_list = [c for c in choices_list if c]  # Remove empty strings
-                
+                # Split and clean choice strings
+                choices_list = [c.strip() for c in choices_raw.split(',') if c.strip()]
                 if len(choices_list) < 2:
                     errors.append(f"Question {question_index}: At least 2 choices required")
                     continue
 
-                # Check for duplicate choices (case-insensitive)
-                unique_choices = {choice.lower() for choice in choices_list}
-                if len(choices_list) != len(unique_choices):
+                # Duplicate check (case-insensitive)
+                if len(choices_list) != len({c.lower() for c in choices_list}):
                     errors.append(f"Question {question_index}: Duplicate choices found (case-insensitive)")
                     continue
 
-                # Validate correct answer exists in choices
-                if correct_answer not in choices_list:
+                # Normalize correct answer input
+                corr = raw_answer.upper()
+                # Numeric index: "2" → second choice
+                if corr.isdigit():
+                    idx = int(corr) - 1
+                    if 0 <= idx < len(choices_list):
+                        corr = choices_list[idx]
+                    else:
+                        errors.append(f"Question {question_index}: Answer index {raw_answer} out of range")
+                        continue
+                # Letter index: "B" → second choice
+                elif len(corr) == 1 and 'A' <= corr <= 'Z':
+                    idx = ord(corr) - ord('A')
+                    if 0 <= idx < len(choices_list):
+                        corr = choices_list[idx]
+
+                # Final membership check
+                if corr not in choices_list:
                     errors.append(
                         f"Question {question_index}: Correct answer must match one of the choices. "
-                        f"Got '{correct_answer}', Choices: {choices_list}"
+                        f"Got '{raw_answer}', Choices: {choices_list}"
                     )
                     continue
 
@@ -202,15 +216,15 @@ def add_questions(exam_id):
                     errors.append(f"Question {question_index}: Invalid category ID")
                     continue
 
-                # Prepare the question object with proper string storage
-                question = Question(
-                    exam_id=exam_id,
-                    question_text=question_text,
-                    choices=','.join(choices_list),  # Convert list to comma-separated string
-                    correct_answer=correct_answer,
-                    category_id=int(category_id)
+                # Create Question model instance
+                q = Question(
+                    exam_id       = exam_id,
+                    question_text = question_text,
+                    choices       = ','.join(choices_list),
+                    correct_answer= corr,
+                    category_id   = int(category_id)
                 )
-                questions_to_add.append(question)
+                questions_to_add.append(q)
 
             except Exception as qe:
                 logging.error(f"Error processing question {question_index}: {qe}")
@@ -222,17 +236,17 @@ def add_questions(exam_id):
                 db.session.bulk_save_objects(questions_to_add)
                 db.session.commit()
                 logging.info(f"Added {len(questions_to_add)} questions to Exam {exam_id}")
-            except Exception as e:
+            except Exception as db_err:
                 db.session.rollback()
-                logging.error(f"Database error: {str(e)}")
+                logging.error(f"Database error saving questions: {db_err}")
                 errors.append("Failed to save questions due to database error")
 
         # Return response
         if errors:
             return jsonify({
-                'message': f"Processed with {len(errors)} errors",
+                'message':       f"Processed with {len(errors)} errors",
                 'success_count': len(questions_to_add),
-                'errors': errors
+                'errors':        errors
             }), 207
 
         return jsonify({
@@ -241,222 +255,197 @@ def add_questions(exam_id):
         }), 201
 
     except Exception as e:
-        logging.error(f"Unexpected error: {str(e)}")
+        logging.error(f"Unexpected error: {e}")
         db.session.rollback()
         return jsonify({'error': 'Internal server error'}), 500
     
+# -------------------------------
+# List Exams
+# -------------------------------
 @exams_routes.route('/list', methods=['GET'])
 @login_required
 def list_exams():
     """
-    Render the exam list page with user-specific exam status and retry information.
-    Handles:
-      - Designation-based skipping
-      - Level prerequisites
-      - Retry restrictions
-      - Dynamic exam display for DB-based exams
-      - Plus, adds two special exam papers (Paper 1 and Paper 2)
+    Build the exam dashboard for the current user.
     """
+    
     try:
-        user_id = current_user.id
-        now = datetime.utcnow()
-        retry_period = timedelta(days=30)
+        user_id       = current_user.id
+        now           = datetime.utcnow()
+        retry_period  = timedelta(days=30)
+        current_level = current_user.get_current_level()
 
-        # -----------------------------
-        # 1) Fetch normal (DB-based) Exams
-        # -----------------------------
-        exams = Exam.query.options(
-            db.joinedload(Exam.level),
-            db.joinedload(Exam.area),
-            db.joinedload(Exam.category)
-        ).all()
+        # ── base queries ──────────────────────────────────────────────
+        exams = (
+            Exam.query.options(
+                db.joinedload(Exam.level),
+                db.joinedload(Exam.area),
+                db.joinedload(Exam.category)
+            )
+            .order_by(Exam.level_id.asc(), Exam.title.asc())
+            .all()
+        )
 
+        exam_scores = {
+    s.exam_id: s
+    for s in (
+        UserScore.query
+        .filter_by(user_id=user_id)
+        .order_by(UserScore.created_at.desc())     # ← 1‑line change
+    )
+}
         processed_exams = []
 
-        if exams:
-            # Get completed courses from study_progress
-            completed_courses = {
-                progress.study_material_id
-                for progress in current_user.study_progress
-                if progress.progress_percentage >= 100
-            }
+        # ── main loop ────────────────────────────────────────────────
+        for exam in exams:
+            score_record = exam_scores.get(exam.id)
 
-            # Get exam scores
-            exam_scores = {
-                score.exam_id: score
-                for score in UserScore.query.filter_by(user_id=user_id)
-            }
-
-            # Current user level
-            current_level = current_user.get_current_level()
-
-            for exam in exams:
-                # 1) Minimum level check
-                if exam.minimum_level and current_level < exam.minimum_level:
-                    logging.info(f"User {current_user.id} does not meet the minimum level for Exam {exam.id}")
-                    continue
-
-                # 2) Check if user can skip exam based on designation
-                if exam.is_skippable(current_user):
-                    processed_exams.append({
-                        'exam_id': exam.id,
-                        'title': exam.title,
-                        'duration': exam.duration,
-                        'category': exam.category.name if exam.category else 'General',
-                        'level': exam.level.level_number,
-                        'status': 'Skipped',
-                        'retry_date': None,
-                        'can_retry': False
-                    })
-                    continue
-
-                # 3) Check if user can even access this level
-                if not current_user.designation.can_skip_level(exam.level.level_number) and exam.level.level_number > current_level:
-                    logging.info(f"User {current_user.id} cannot access Level {exam.level.level_number}")
-                    continue
-
-                exam_data = {
-                    'exam_id': exam.id,
-                    'title': exam.title,
-                    'duration': exam.duration,
-                    'category': exam.category.name if exam.category else 'General',
-                    'level': exam.level.level_number,
-                    'status': 'Course not completed',
+            # 0) optional‑skip exams never taken
+            if exam.is_skippable(current_user) and score_record is None:
+                processed_exams.append({
+                    'exam_id'  : exam.id,
+                    'title'    : exam.title,
+                    'duration' : exam.duration,
+                    'category' : exam.category.name if exam.category else 'General',
+                    'level'    : exam.level.level_number,
+                    'status'   : 'Skipped (optional)',
                     'retry_date': None,
-                    'can_retry': False
-                }
+                    'can_retry': False,
+                    'attempts' : 0,
+                    'route'    : 'exams_routes.start_exam'
+                })
+                continue
 
-                # 4) Check course prerequisite
-                if exam.course_id not in completed_courses:
-                    exam_data['status'] = 'Prerequisite Course Not Completed'
-                    processed_exams.append(exam_data)
-                    continue
+            # 1) hide exams above current level (unless designation override)
+            if (not current_user.designation.can_skip_level(exam.level.level_number)
+                and exam.level.level_number > current_level):
+                continue
 
-                # 5) Determine exam attempt status
-                score_record = exam_scores.get(exam.id)
-                if not score_record:
-                    # Not attempted => Start Exam
-                    exam_data.update({
-                        'status': 'Start Exam',
-                        'can_retry': True
-                    })
-                else:
-                    # Already attempted
-                    if score_record.score >= 56:
-                        exam_data['status'] = 'Completed'
-                    else:
-                        retry_available_date = score_record.created_at + retry_period
-                        exam_data['retry_date'] = retry_available_date.date().isoformat()
-                        exam_data.update({
-                            'status': ('Retry available' if now >= retry_available_date
-                                       else f'Retry after {retry_available_date.strftime("%Y-%m-%d")}'),
-                            'can_retry': now >= retry_available_date
-                        })
+            exam_data = {
+                'exam_id'  : exam.id,
+                'title'    : exam.title,
+                'duration' : exam.duration,
+                'category' : exam.category.name if exam.category else 'General',
+                'level'    : exam.level.level_number,
+                'retry_date': None,
+                'can_retry': False,
+                'attempts' : 0,
+                'status'   : '',
+                'route'    : 'exams_routes.start_exam'
+            }
 
-                # 6) Update level progression
-                update_level_progression(current_user.id, exam.id)
+            # 2) study prerequisite
+            if not has_finished_study(user_id, exam.level_id, exam.area_id):
+                exam_data['status'] = 'Study Material Not Completed'
                 processed_exams.append(exam_data)
-        else:
-            logging.info("No exams found in database")
+                continue
 
-        # ------------------------------------------------
-        # 2) Add Special Exam Papers (Paper 1 & Paper 2)
-        # ------------------------------------------------
-        from models import SpecialExamRecord
+            # 3) score / retry logic
+            if not score_record:
+                exam_data.update({'status': 'Start Exam', 'can_retry': True})
+            else:
+                exam_data['attempts'] = score_record.attempts or 1
+                if score_record.score >= 56:
+                    exam_data.update({'status': 'Passed', 'can_retry': False})
+                else:
+                    next_try  = score_record.created_at + retry_period
+                    can_retry = now >= next_try
+                    exam_data.update({
+                        'retry_date': next_try.date().isoformat(),
+                        'status'    : 'Retry available' if can_retry else 'Failed',
+                        'can_retry' : can_retry
+                    })
+
+            # 4) level‑completed badge only if *this* exam already Passed
+            if exam_data['status'] == 'Passed' and is_level_done(current_user, exam.level_id):
+                exam_data['status'] = 'Level Completed'
+
+            processed_exams.append(exam_data)
+
+        # ── Special Exam Papers (unchanged) ───────────────────────────
         record = SpecialExamRecord.query.filter_by(user_id=user_id).first()
 
-        def can_attempt_again(completed_at):
-            if not completed_at:
-                return True
-            next_allowed = completed_at + retry_period
-            return now >= next_allowed
+        def can_attempt_special(completed_at):
+            return not completed_at or now >= (completed_at + retry_period)
 
-        # ---------- Paper 1 ----------
-        if record:
-            if record.paper1_passed:
-                p1_status = "Completed"
-            elif record.paper1_completed_at:
-                p1_status = (
-                    "Retry available"
-                    if can_attempt_again(record.paper1_completed_at)
-                    else f"Retry after {(record.paper1_completed_at + retry_period).strftime('%Y-%m-%d')}"
-                )
+        # Paper 1
+        if record and not record.paper1_passed:
+            if record.paper2_passed:
+                p1_status = "Locked (Paper 2 passed)"
+            elif record.paper1_completed_at and not can_attempt_special(record.paper1_completed_at):
+                p1_status = "Failed"
             else:
-                p1_status = "Start Exam"
+                p1_status = "Retry available" if record.paper1_completed_at else "Start Exam"
         else:
-            p1_status = "Start Exam"
+            p1_status = "Passed" if record and record.paper1_passed else "Start Exam"
 
         paper1_data = {
-            'exam_id': 9991,  # Arbitrary ID
-            'title': 'Special Exam Paper 1',
-            'category': 'Special',
-            'duration': 45,
-            'status': p1_status,
+            'exam_id'  : 9991,
+            'title'    : 'Special Exam Paper 1',
+            'category' : 'Special',
+            'duration' : 60,
+            'status'   : p1_status,
             'retry_date': (
                 (record.paper1_completed_at + retry_period).date().isoformat()
-                if record and record.paper1_completed_at and not can_attempt_again(record.paper1_completed_at)
+                if record and record.paper1_completed_at and not record.paper1_passed
                 else None
             ),
             'can_retry': p1_status in ["Start Exam", "Retry available"],
-            # Provide the route to use in the template
-            'route': 'special_exams_routes.exam_paper1'
+            'attempts' : getattr(record, 'paper1_attempts', 0) if record else 0,
+            'route'    : 'special_exams_routes.exam_paper1'
         }
 
-        # ---------- Paper 2 ----------
-        if record:
+        # Paper 2
+        if record and not record.paper2_passed:
             if record.paper1_passed:
-                p2_status = "Locked (Paper 1 passed)"
+                p2_status = "Locked (Paper 1 passed)"
+            elif record.paper2_completed_at and not can_attempt_special(record.paper2_completed_at):
+                p2_status = "Failed"
             else:
-                if record.paper2_passed:
-                    p2_status = "Completed"
-                elif record.paper2_completed_at:
-                    p2_status = (
-                        "Retry available"
-                        if can_attempt_again(record.paper2_completed_at)
-                        else f"Retry after {(record.paper2_completed_at + retry_period).strftime('%Y-%m-%d')}"
-                    )
-                else:
-                    p2_status = "Start Exam"
+                p2_status = "Retry available" if record.paper2_completed_at else "Start Exam"
         else:
-            p2_status = "Locked (Attempt Paper 1 first)"
+            p2_status = "Passed" if record and record.paper2_passed else "Start Exam"
 
         paper2_data = {
-            'exam_id': 9992,
-            'title': 'Special Exam Paper 2',
-            'category': 'Special',
-            'duration': 45,
-            'status': p2_status,
+            'exam_id'  : 9992,
+            'title'    : 'Special Exam Paper 2',
+            'category' : 'Special',
+            'duration' : 60,
+            'status'   : p2_status,
             'retry_date': (
                 (record.paper2_completed_at + retry_period).date().isoformat()
-                if record and record.paper2_completed_at and not can_attempt_again(record.paper2_completed_at)
+                if record and record.paper2_completed_at and not record.paper2_passed
                 else None
             ),
             'can_retry': p2_status in ["Start Exam", "Retry available"],
-            'route': 'special_exams_routes.exam_paper2'
+            'attempts' : getattr(record, 'paper2_attempts', 0) if record else 0,
+            'route'    : 'special_exams_routes.exam_paper2'
         }
 
-        special_exams = [paper1_data, paper2_data]
+        unlocked_level = session.pop("new_level_unlocked", None)
 
-        # ------------------------------------------------
-        # 3) Render the exam list template
-        # ------------------------------------------------
         return render_template(
             'exam_list.html',
-            exams=processed_exams,
-            special_exams=special_exams,
-            message=f"Found {len(processed_exams)} regular exams"
+            exams          = processed_exams,
+            special_exams  = [paper1_data, paper2_data],
+            message        = f"Found {len(processed_exams)} regular exams",
+            unlocked_level = unlocked_level
         )
 
+    # ── error handlers ───────────────────────────────────────────────
     except SQLAlchemyError as e:
-        logging.critical(f"Database error in list_exams: {str(e)}")
+        logging.critical(f"Database error in list_exams: {e}")
         db.session.rollback()
         return render_template('500.html', error="Exam data unavailable"), 500
+
     except TemplateNotFound as e:
-        logging.error(f"Missing template: {str(e)}")
+        logging.error(f"Missing template: {e}")
         return "System error: Display template missing", 500
+
     except Exception as e:
-        logging.error(f"Unexpected error in list_exams: {str(e)}")
+        logging.error(f"Unexpected error in list_exams: {e}")
         return render_template('500.html', error="Failed to load exam list"), 500
+
 
 def update_level_progression(user_id, exam_id):
     """
@@ -470,33 +459,27 @@ def update_level_progression(user_id, exam_id):
     try:
         exam = Exam.query.get(exam_id)
         user = User.query.get(user_id)
-
         if not exam or not user:
-            logging.error("Invalid exam or user data.")
             return
 
-        # Check if the user has already passed this area
         existing_progress = UserLevelProgress.query.filter_by(
             user_id=user_id,
             level_id=exam.level_id,
             area_id=exam.area_id
         ).first()
 
-        # Fetch the latest score for this exam
         latest_score = UserScore.query.filter_by(
             user_id=user_id,
             exam_id=exam.id
         ).order_by(UserScore.created_at.desc()).first()
-
-        # If no score found, user hasn't attempted this exam
         if not latest_score:
             return
 
-        # Create progress if it doesn't exist
         if not existing_progress:
             existing_progress = UserLevelProgress(
                 user_id=user_id,
                 level_id=exam.level_id,
+                category_id=exam.category_id,
                 area_id=exam.area_id,
                 attempts=0,
                 best_score=0,
@@ -504,298 +487,403 @@ def update_level_progression(user_id, exam_id):
             )
             db.session.add(existing_progress)
 
-        # Update attempt count and best score
         existing_progress.attempts += 1
         existing_progress.best_score = max(existing_progress.best_score or 0, latest_score.score)
-
-        # Check if the exam is passed
         if latest_score.score >= 56:
             existing_progress.status = 'completed'
 
         db.session.commit()
 
-        # Check for level completion
+        # If entire level done, advance user
         if check_level_completion(user_id, exam.level_id):
-            next_level = Level.query.filter_by(level_number=exam.level.level_number + 1).first()
+            next_level = Level.query.filter_by(level_number=exam.level.level_number+1).first()
             if next_level:
                 user.current_level = next_level.level_number
                 db.session.commit()
                 flash(f"Congratulations! You have unlocked Level {next_level.level_number}", "success")
 
     except SQLAlchemyError as e:
-        logging.error(f"Database error in update_level_progression: {str(e)}")
+        logging.error(f"Database error in update_level_progression: {e}")
         db.session.rollback()
     except Exception as e:
-        logging.error(f"Unexpected error in update_level_progression: {str(e)}")
+        logging.error(f"Unexpected error in update_level_progression: {e}")
 
 
 def check_level_completion(user_id, level_id):
-    """
-    Check if the user has completed all areas in the given level.
-    Takes into account:
-    - Designation-based skips
-    - Completion status in UserLevelProgress
-    """
-    # Fetch all required areas for the given level
     required_areas = LevelArea.query.filter_by(level_id=level_id).all()
+    user           = User.query.get(user_id)
 
-    # Iterate through each required area to check completion status
     for area in required_areas:
-        # Check if the user is allowed to skip this exam/area
-        if current_user.can_skip_exam(area.required_exam_id):
+        # Skip if designation allows
+        if user.can_skip_exam(area.required_exam):       # ← pass Exam object, not ID
             continue
 
-        # Get progress record for this area
+        # Study 100 % ?
+        if not has_finished_study(user_id, level_id, area.area_id):
+            return False
+
+        # Exam passed ?
         progress = UserLevelProgress.query.filter_by(
             user_id=user_id,
             level_id=level_id,
-            area_id=area.category_id
+            area_id=area.area_id          # ← fixed column
         ).first()
-
-        # If no progress or status is not completed, return False
         if not progress or progress.status != 'completed':
             return False
 
-    # All areas completed or skipped, return True
     return True
 
-# -------------------------------
-# Route to Submit an Exam
-# -------------------------------
+# ------------------------------------------------------------
+# helper sits first, so linters see it before it’s used
+# ------------------------------------------------------------
+def calculate_grade(percentage: float) -> str:
+    """Return letter grade; 56 % is the pass mark."""
+    if percentage >= 86:
+        return "A"
+    elif percentage >= 76:
+        return "A-"
+    elif percentage >= 66:
+        return "B+"
+    elif percentage >= 56:
+        return "B-"
+    elif percentage >= 46:
+        return "C+"
+    elif percentage >= 35:
+        return "C-"
+    return "F"
 
-@exams_routes.route('/<int:exam_id>/submit', methods=['POST'])
+# ------------------------------------------------------------
+# Route to submit an exam
+# ------------------------------------------------------------
+# ------------------------------------------------------------
+# Route: POST /exams/<exam_id>/submit
+# ------------------------------------------------------------
+@exams_routes.route("/<int:exam_id>/submit", methods=["POST"])
 @login_required
 def submit_exam(exam_id):
     """
-    Handle exam submission with strict pass/fail enforcement
+    Score an exam attempt, enforce time + retake rules, and record the result.
     """
     try:
-        # Fetch exam and validate
-        exam = Exam.query.options(db.joinedload(Exam.category)).get_or_404(exam_id)
-        submitted_answers = request.form.to_dict(flat=True)
-        
-        # Check existing score first
-        existing_score = UserScore.query.filter_by(
-            user_id=current_user.id, 
-            exam_id=exam_id
-        ).first()
-        
-        # Prevent retakes if already passed
-        if existing_score and existing_score.score >= 56:
-            flash('You have already passed this exam', 'info')
-            return redirect(url_for('exams_routes.list_exams'))
+        # 1)  Load exam and form data
+        exam       = Exam.query.options(db.joinedload(Exam.category)).get_or_404(exam_id)
+        submitted  = request.form.to_dict(flat=True)
 
-        # Validate time parameters
-        start_time = datetime.fromisoformat(submitted_answers.get('start_time'))
+        # 2)  Block if user already passed
+        existing = UserScore.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
+        if existing and existing.score >= 56:
+            flash("You have already passed this exam.", "info")
+            return redirect(url_for("exams_routes.list_exams"))
+
+        # 3)  Check duration
+        start_time = datetime.fromisoformat(submitted.get("start_time"))
+        if start_time.tzinfo is None:  # make aware if needed
+            start_time = start_time.replace(tzinfo=timezone.utc)
         end_time = datetime.now(timezone.utc)
-        time_taken = (end_time - start_time).total_seconds() / 60
-        
-        if time_taken > exam.duration:
-            flash('Exam duration exceeded', 'danger')
-            return redirect(url_for('exams_routes.start_exam', exam_id=exam_id))
+        if (end_time - start_time).total_seconds() / 60 > exam.duration:
+            flash("Exam duration exceeded.", "danger")
+            return redirect(url_for("exams_routes.start_exam", exam_id=exam_id))
 
-        # Get served questions from form
-        served_question_ids = [int(qid) for qid in submitted_answers.get('served_questions', '').split(',') if qid]
-        questions = Question.query.filter(Question.id.in_(served_question_ids)).all()
-        
+        # 4)  Collect served questions
+        served_ids = [int(qid) for qid in submitted.get("served_questions", "").split(",") if qid]
+        questions  = Question.query.filter(Question.id.in_(served_ids)).all()
         if not questions:
-            flash('No valid questions found for scoring', 'danger')
-            return redirect(url_for('exams_routes.start_exam', exam_id=exam_id))
+            flash("No valid questions found for scoring.", "danger")
+            return redirect(url_for("exams_routes.start_exam", exam_id=exam_id))
 
-        # Calculate score
-        max_score = len(questions)
-        score_per_question = 100 / max_score if max_score > 0 else 0
-        total_percentage = 0.0
+        # 5)  Calculate score
+        per_q = 100 / len(questions)
+        score = round(sum(
+            per_q for q in questions
+            if submitted.get(f"answers[{q.id}]", "").strip(" \"'").lower()
+               == q.correct_answer.strip(" \"'").lower()
+        ), 2)
+        passed = score >= 56
+        grade  = calculate_grade(score)
 
-        for question in questions:
-            user_answer = submitted_answers.get(f'answers[{question.id}]', '').strip(' "\'').lower()
-            correct_answer = question.correct_answer.strip(' "\'').lower()
-            
-            if user_answer == correct_answer:
-                total_percentage += score_per_question
-
-        # Round to 2 decimal places for display
-        final_percentage = round(total_percentage, 2)
-        grade = calculate_grade(final_percentage)
-        passed = final_percentage >= 56
-
-        # Handle score recording
-        if existing_score:
-            # Only update if previous score was failing and this is better
-            if existing_score.score < 56 and final_percentage > existing_score.score:
-                existing_score.score = final_percentage
+        # 6)  Save / update UserScore
+        if existing:
+            if existing.score < 56:                 # only track retries after a fail
+                if score > existing.score:
+                    existing.score = score
+                existing.attempts += 1
+                existing.area_id  = exam.area_id
+                existing.level_id = exam.level_id
         else:
             new_score = UserScore(
-                user_id=current_user.id,
-                exam_id=exam_id,
-                category_id=exam.category_id,
-                score=final_percentage,
-                created_at=end_time  # Always use submission time for new attempts
+                user_id     = current_user.id,
+                exam_id     = exam_id,
+                area_id     = exam.area_id,
+                level_id    = exam.level_id,
+                category_id = exam.category_id,
+                score       = score,
+                attempts    = 1,
+                created_at  = end_time
             )
             db.session.add(new_score)
 
         db.session.commit()
 
-        # Determine retry info
-        retry_info = {}
-        if not passed:
-            attempt_date = existing_score.created_at if existing_score else end_time
-            retry_date = (attempt_date + timedelta(days=30)).strftime('%Y-%m-%d')
-            retry_info['retry_date'] = retry_date
-
-        flash('Exam results processed', 'success' if passed else 'warning')
-        return render_template(
-            'exam_results.html',
-            exam=exam,
-            percentage=final_percentage,
-            grade=grade,
-            **retry_info
+        # 7)  Flash result and go to dashboard
+        flash(
+            f"You scored {score:.2f}% ({grade}) on “{exam.title}”",
+            "success" if passed else "warning"
         )
+        return redirect(url_for("exams_routes.exam_results"))  # dashboard page
 
+    # -------- error handling ---------
     except SQLAlchemyError as e:
         db.session.rollback()
-        logging.error(f"Database error: {str(e)}")
-        flash('Failed to save results', 'danger')
-        return redirect(url_for('exams_routes.start_exam', exam_id=exam_id))
+        logging.error(f"DB error in submit_exam: {e}")
+        flash("Failed to save results.", "danger")
+        return redirect(url_for("exams_routes.start_exam", exam_id=exam_id))
 
-    except ValueError as e:
-        logging.error(f"Invalid data format: {str(e)}")
-        flash('Invalid exam data', 'danger')
-        return redirect(url_for('exams_routes.list_exams'))
+    except ValueError as ve:
+        logging.error(f"Bad data in submit_exam: {ve}")
+        flash("Invalid exam data.", "danger")
+        return redirect(url_for("exams_routes.list_exams"))
 
-    except Exception as e:
-        logging.error(f"Unexpected error: {str(e)}")
-        flash('Exam processing failed', 'danger')
-        return redirect(url_for('exams_routes.list_exams'))
+    except Exception as ex:
+        logging.error(f"Unexpected error in submit_exam: {ex}")
+        flash("Exam processing failed.", "danger")
+        return redirect(url_for("exams_routes.list_exams"))
 
-def calculate_grade(percentage):
-    """Grade calculation with precise 56% pass mark"""
-    if percentage >= 86:
-        return 'A'
-    elif percentage >= 76:
-        return 'A-'
-    elif percentage >= 66:
-        return 'B+'
-    elif percentage >= 56:  # Pass mark
-        return 'B-'
-    elif percentage >= 46:
-        return 'C+'
-    elif percentage >= 35:
-        return 'C-'
-    else:
-        return 'F'
 
-@exams_routes.route('/results', methods=['GET'])
+# -------------------------------
+# Exam Results 
+# -------------------------------
+@exams_routes.route("/results", methods=["GET"])
 @login_required
 def exam_results():
     """
-    Display user's exam results including both normal and special exams
+    Results dashboard:
+        • every regular exam (even if never attempted)
+        • special papers 1 & 2
+        • latest attempt determines status
     """
     try:
-        # Normal exams
-        results = UserScore.query.options(
-            db.joinedload(UserScore.exam),
-            db.joinedload(UserScore.category)
-        ).filter_by(user_id=current_user.id).all()
+        retry_period = timedelta(days=30)
 
-        # Special exams
-        special_record = db.session.execute(
-            db.select(SpecialExamRecord).filter_by(user_id=current_user.id)
-        ).scalar_one_or_none()
+        # ---------- fetch latest attempt for each regular exam ----------
+        latest_scores = {
+            s.exam_id: s
+            for s in (
+                UserScore.query
+                .filter_by(user_id=current_user.id)
+                .order_by(UserScore.created_at.desc())      # latest first
+            )
+        }
 
-        combined_results = []
+        # include exam metadata so un‑attempted rows render
+        all_exams = (
+            Exam.query.options(
+                db.joinedload(Exam.category)
+            )
+            .order_by(Exam.title.asc())
+            .all()
+        )
 
-        # Add normal exams to results
-        combined_results += [{
-            'exam_title': r.exam.title if r.exam else 'Deleted Exam',
-            'category': r.category.name if r.category else 'Uncategorized',
-            'score': r.score,
-            'date': r.created_at.strftime('%Y-%m-%d'),
-            'passed': r.score >= 56
-        } for r in results]
-
-        # Add special exams if available
-        if special_record:
-            if special_record.paper1_score is not None:
-                combined_results.append({
-                    'exam_title': 'Special Exam Paper 1',
-                    'category': 'Special',
-                    'score': special_record.paper1_score,
-                    'date': special_record.paper1_completed_at.strftime('%Y-%m-%d') if special_record.paper1_completed_at else 'N/A',
-                    'passed': special_record.paper1_passed
+        normal_results = []
+        for exam in all_exams:
+            s = latest_scores.get(exam.id)          # None → never attempted
+            if s:
+                passed = s.score >= 56
+                retry_date = None
+                if not passed:
+                    retry_date = (
+                        (s.created_at + retry_period).strftime("%Y-%m-%d")
+                        if s.created_at else None
+                    )
+                normal_results.append({
+                    "exam_title": exam.title,
+                    "category"  : exam.category.name if exam.category else "General",
+                    "score"     : round(s.score, 2),
+                    "attempts"  : s.attempts or 1,
+                    "date"      : s.created_at.strftime("%Y-%m-%d") if s.created_at else "Unknown",
+                    "passed"    : passed,
+                    "retry_date": retry_date or "—"
                 })
-            if special_record.paper2_score is not None:
-                combined_results.append({
-                    'exam_title': 'Special Exam Paper 2',
-                    'category': 'Special',
-                    'score': special_record.paper2_score,
-                    'date': special_record.paper2_completed_at.strftime('%Y-%m-%d') if special_record.paper2_completed_at else 'N/A',
-                    'passed': special_record.paper2_passed
+            else:
+                # ---- Never attempted ----
+                normal_results.append({
+                    "exam_title": exam.title,
+                    "category"  : exam.category.name if exam.category else "General",
+                    "score"     : "—",
+                    "attempts"  : 0,
+                    "date"      : "—",
+                    "passed"    : False,
+                    "retry_date": "—",
+                    "not_attempted": True          # flag for template if you want a grey badge
                 })
+
+        # ---------- special exam papers (latest‑attempt logic) ----------
+        special_results = []
+        record = (
+            db.session.execute(
+                db.select(SpecialExamRecord).filter_by(user_id=current_user.id)
+            ).scalar_one_or_none()
+        )
+
+        def add_special_row(title, score, passed, completed_at):
+            """
+            Normalise output for each special paper.
+            • If never attempted (completed_at is None) ⇒ Not Attempted.
+            • Else show real score / pass / fail and retry date.
+            """
+            if completed_at:
+                retry_date = (
+                    (completed_at + retry_period).strftime("%Y-%m-%d")
+                    if (not passed and completed_at) else "—"
+                )
+                special_results.append({
+                    "exam_title": title,
+                    "category"  : "Special",
+                    "score"     : round(score, 2),
+                    "attempts"  : 1,
+                    "date"      : completed_at.strftime("%Y-%m-%d"),
+                    "passed"    : passed,
+                    "retry_date": retry_date
+                })
+            else:   # never taken
+                special_results.append({
+                    "exam_title": title,
+                    "category"  : "Special",
+                    "score"     : "—",
+                    "attempts"  : 0,
+                    "date"      : "—",
+                    "passed"    : False,
+                    "retry_date": "—"
+                })
+
+        if record:
+            add_special_row(
+                "Special Exam Paper 1",
+                record.paper1_score or 0,
+                record.paper1_passed,
+                record.paper1_completed_at
+            )
+            add_special_row(
+                "Special Exam Paper 2",
+                record.paper2_score or 0,
+                record.paper2_passed,
+                record.paper2_completed_at
+            )
+
+        # ---------- combine + render ----------
+        all_results  = normal_results + special_results
+        passed_count = sum(1 for r in all_results if r["passed"])
+        failed_count = sum(
+            1 for r in all_results
+            if (not r["passed"]) and r["score"] != "—"
+        )
+        not_attempted_count = sum(1 for r in all_results if r["score"] == "—")
 
         return render_template(
-            'exam_results.html',
-            results=combined_results,
-            passed_count=sum(1 for r in combined_results if r['passed']),
-            total_attempts=len(combined_results)
+            "exam_results.html",
+            results           = all_results,
+            total_attempts    = passed_count + failed_count,   # attempted only
+            passed_count      = passed_count,
+            failed_count      = failed_count,
+            not_attempted_cnt = not_attempted_count            # if you display it
         )
 
     except Exception as e:
-        logging.error(f"Error loading results: {str(e)}")
-        flash('Could not load exam results', 'danger')
-        return redirect(url_for('exams_routes.list_exams'))
+        logging.error(f"Error loading results for user {current_user.id}: {e}")
+        flash("Could not load exam results.", "danger")
+        return redirect(url_for("exams_routes.list_exams"))
 
 # -------------------------------
-# Start Exam Route
+# Start Exam
 # -------------------------------
-@exams_routes.route('/<int:exam_id>/start', methods=['GET'])
+@exams_routes.route("/<int:exam_id>/start", methods=["GET"])
 @login_required
 def start_exam(exam_id):
     """
-    Render exam page with HTML template
+    Serve the exam page after all eligibility checks.
+
+    • honours ‘skippable’ exams (with ?force=true override)
+    • blocks users below the exam’s minimum level
+    • enforces a 30‑day cool‑down after each failed attempt
+    • prevents retake after a passing score (≥ 56 %)
+    • REFUSES start unless study material for this area + level is 100 % complete
     """
     try:
-        # Check existing passing score
-        if UserScore.query.filter_by(user_id=current_user.id, exam_id=exam_id, score__gte=56).first():
-            flash('You have already passed this exam', 'info')
-            return redirect(url_for('exams_routes.list_exams'))
+        # 0) ─── Load the exam first
+        exam = (
+            Exam.query
+            .options(db.joinedload(Exam.category))
+            .get_or_404(exam_id)
+        )
+        force    = request.args.get("force", "").lower() == "true"
+        now_utc  = datetime.utcnow()
 
-        exam = Exam.query.get_or_404(exam_id)
+        # 1) ─── Prerequisite‑study gate
+        
+        if not has_finished_study(current_user.id, exam.level_id, exam.area_id):
+            flash("Please finish the study material first.", "danger")
+            return redirect(url_for("exams_routes.list_exams"))
 
-        # Check course prerequisite
-        completed = any(p.study_material_id == exam.course_id 
-                      for p in current_user.study_progress 
-                      if p.progress_percentage >= 100)
-        if not completed:
-            flash('Complete the prerequisite course first', 'danger')
-            return redirect(url_for('exams_routes.list_exams'))
+        # 2) ─── Optional‑skip check
+        if exam.is_skippable(current_user) and not force:
+            flash(
+                "You can skip this exam. Click “Take Anyway” if you’d still like to attempt it.",
+                "info"
+            )
+            return redirect(url_for("exams_routes.list_exams"))
 
-        # Get and validate questions
+        # 3) ─── Minimum‑level gate
+        if exam.minimum_level and current_user.get_current_level() < exam.minimum_level:
+            flash("Your level is not high enough to take this exam yet.", "warning")
+            return redirect(url_for("exams_routes.list_exams"))
+
+        # 4) ─── Cool‑down & retake rules
+        last_score = (
+            UserScore.query
+            .filter_by(user_id=current_user.id, exam_id=exam_id)
+            .order_by(UserScore.created_at.desc())
+            .first()
+        )
+        if last_score:
+            if last_score.score >= 56:
+                flash("You have already passed this exam.", "info")
+                return redirect(url_for("exams_routes.list_exams"))
+
+            next_try = last_score.created_at + timedelta(days=30)
+            if now_utc < next_try:
+                flash(
+                    f"You can retry this exam after {next_try.strftime('%Y‑%m‑%d')}.",
+                    "warning"
+                )
+                return redirect(url_for("exams_routes.list_exams"))
+
+        # 5) ─── Load & sample questions (max 10)
         questions = Question.query.filter_by(exam_id=exam.id).all()
         if not questions:
-            flash('This exam currently has no questions', 'warning')
-            return redirect(url_for('exams_routes.list_exams'))
+            flash("This exam has no questions yet.", "warning")
+            return redirect(url_for("exams_routes.list_exams"))
 
-        # Select random questions
         selected = random.sample(questions, min(len(questions), 10))
-        question_ids = [str(q.id) for q in selected]
 
         return render_template(
-            'exam_page.html',
+            "exam_page.html",
             exam=exam,
-            questions=[{
-                'id': q.id,
-                'text': q.question_text,
-                'choices': q.choices.split(',') if isinstance(q.choices, str) else q.choices
-            } for q in selected],
-            start_time=datetime.now(timezone.utc).isoformat(),
-            served_questions=','.join(question_ids)
+            questions=[
+                {
+                    "id": q.id,
+                    "text": q.question_text,
+                    "choices": q.choices.split(","),
+                }
+                for q in selected
+            ],
+            start_time=now_utc.isoformat(),
+            served_questions=",".join(str(q.id) for q in selected),
         )
 
-    except Exception as e:
-        logging.error(f"Exam start error: {str(e)}")
-        flash('Could not start exam', 'danger')
-        return redirect(url_for('exams_routes.list_exams'))
+    # ─── Generic error fallback ───
+    except Exception as err:
+        logging.exception(f"Exam start error: {err}")
+        flash("Could not start exam.", "danger")
+        return redirect(url_for("exams_routes.list_exams"))
 
 # -------------------------------
 # Debug Start Exam Route
@@ -850,25 +938,43 @@ def debug_start_exam(exam_id):
 @login_required
 def get_exam_dropdowns():
     """
-    Fetch Levels, Categories, Designation Levels, and Courses for Exam Creation.
+    Fetch Levels, Categories, Designation Levels, Courses, and Areas for Exam Creation.
     This route is called via AJAX to populate the dropdowns dynamically.
     """
     try:
-        # Fetch Levels, Categories, Designation Levels, and Courses
-        levels = Level.query.order_by(Level.level_number.asc()).all()
-        categories = Category.query.order_by(Category.id.asc()).all()
+        # Query each table
+        levels       = Level.query.order_by(Level.level_number.asc()).all()
+        categories   = Category.query.order_by(Category.id.asc()).all()
         designations = Designation.query.order_by(Designation.id.asc()).all()
-        courses = StudyMaterial.query.order_by(StudyMaterial.id.asc()).all()
+        courses      = StudyMaterial.query.order_by(StudyMaterial.id.asc()).all()
+        areas        = Area.query.order_by(Area.name.asc()).all()
 
-        # Format the data as JSON
+        # Format into JSON‑serializable lists
         dropdown_data = {
-            "levels": [{"id": level.id, "level_number": level.level_number} for level in levels],
-            "categories": [{"id": category.id, "name": category.name} for category in categories],
-            "designations": [{"id": des.id, "title": des.title} for des in designations],
-            "courses": [{"id": course.id, "title": course.title} for course in courses]
+            "levels": [
+                {"id": lvl.id, "level_number": lvl.level_number}
+                for lvl in levels
+            ],
+            "categories": [
+                {"id": cat.id, "name": cat.name}
+                for cat in categories
+            ],
+            "designations": [
+                {"id": des.id, "title": des.title}
+                for des in designations
+            ],
+            "courses": [
+                {"id": crs.id, "title": crs.title}
+                for crs in courses
+            ],
+            "areas": [
+                {"id": area.id, "name": area.name}
+                for area in areas
+            ]
         }
 
         return jsonify(dropdown_data), 200
+
     except Exception as e:
         logging.error(f"Error fetching dropdown data for exams: {e}")
         return jsonify({'error': 'Failed to load dropdowns.'}), 500

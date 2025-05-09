@@ -25,6 +25,14 @@ import logging
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
+from flask import Flask
+
+app = Flask(
+    __name__,
+    static_folder='static',       # folder on disk
+    static_url_path='/static'     # URL prefix
+)
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 

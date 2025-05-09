@@ -3,18 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Dashboard - Collective Intranet</title>
+    <title>Admin Dashboard – Collective Intranet</title>
     <!-- Bootstrap CSS -->
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
     />
-    <!-- Font Awesome for Icons -->
+    <!-- Font Awesome -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
-    <!-- Chart.js (if needed) -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
       /* Global Styles */
@@ -22,7 +22,6 @@
         background-color: #f9f9f9;
         font-family: Arial, sans-serif;
         margin: 0;
-        padding: 0;
         display: flex;
         flex-direction: column;
         min-height: 100vh;
@@ -32,397 +31,359 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px 15px;
-        background-color: #fff;
+        padding: 0.5rem 1rem;
+        background: #fff;
         border-bottom: 1px solid #ddd;
       }
-      .top-bar-left,
-      .top-bar-center,
-      .top-bar-right {
+      .back-btn-top {
+        background: #6c757d;
+        color: #fff;
+        padding: 0.35rem 0.75rem;
+        border-radius: 0.25rem;
+        text-decoration: none;
+        transition: background 0.3s;
+      }
+      .back-btn-top:hover {
+        background: #5a6268;
+      }
+      .logo-section {
         display: flex;
         align-items: center;
       }
-      .back-btn-top {
-        padding: 6px 12px;
-        font-size: 0.85rem;
-        color: #fff;
-        background-color: #6c757d;
-        border: none;
-        border-radius: 5px;
-        text-decoration: none;
-        margin-right: 10px;
-      }
-      .back-btn-top:hover {
-        background-color: #5a6268;
-      }
       .logo-section img {
         height: 40px;
-        margin-right: 8px;
+        margin-right: 0.75rem;
       }
-      .brand {
+      .logo {
         font-size: 1.4rem;
-        font-weight: 600;
+        font-weight: bold;
       }
-      .brand .black {
+      .logo .black {
         color: #000;
       }
-      .brand .red {
-        color: #ba1e24; /* our chosen red */
+      .logo .red {
+        color: #ba1e24;
       }
       .btn-logout {
-        background-color: #ff4d4d;
+        background: #ff4d4d;
         color: #fff;
-        border: none;
-        padding: 6px 12px;
-        font-size: 0.85rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 0.25rem;
         text-decoration: none;
-        border-radius: 5px;
+        transition: background 0.3s;
       }
       .btn-logout:hover {
-        background-color: #ff1a1a;
+        background: #ff1a1a;
       }
+
       /* Main Container */
       .container {
-        margin-top: 30px;
+        flex: 1;
+        margin: 2rem auto;
+        max-width: 1200px;
         background: #fff;
-        padding: 20px;
-        border-radius: 8px;
+        padding: 2rem;
+        border-radius: 0.5rem;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       }
-      h1 {
-        font-size: 1.8rem;
-        margin-bottom: 20px;
-        text-align: center;
+
+      /* Dashboard Cards */
+      .row.g-3 .card {
+        transition: transform 0.2s, box-shadow 0.2s;
       }
-      h3 {
-        margin-top: 30px;
-        font-size: 1.4rem;
-        color: #007bff;
+      .row.g-3 .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
       }
-      /* Table Styles */
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
+
+      /* Admin Tools Nav */
+      .nav-section {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: center;
+        margin: 2rem 0;
       }
-      table th,
-      table td {
-        border: 1px solid #dee2e6;
-        padding: 12px;
-        text-align: center;
-        font-size: 0.95rem;
+      .nav-section .btn {
+        min-width: 140px;
+        transition: transform 0.2s, box-shadow 0.2s;
       }
-      table thead th {
-        background-color: #007bff !important;
-        color: #fff !important;
+      .nav-section .btn:hover {
+        transform: translateY(-2px) scale(1.03);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       }
-      .btn {
-        font-size: 0.85rem;
-      }
-      .badge-pass {
-        background-color: #28a745;
-      }
-      .badge-fail {
-        background-color: #dc3545;
-      }
-      .modal-body label {
-        font-weight: 500;
-      }
+
       /* Footer */
       footer {
-        background-color: #343a40;
+        background: #343a40;
         color: #fff;
         text-align: center;
-        padding: 15px 0;
-        margin-top: 30px;
+        padding: 1rem 0;
+        margin-top: auto;
       }
     </style>
   </head>
+
   <body>
     <!-- Top Bar -->
     <div class="top-bar">
-      <div class="top-bar-left">
-        <a href="javascript:history.back()" class="back-btn-top">
-          <i class="fas fa-arrow-left"></i> Back
-        </a>        
-      </div>
-      <div class="top-bar-center logo-section">
-        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" />
-        <div class="brand">
+      <!-- After -->
+      <a
+        href="{{ url_for('general_routes.hr_management') }}"
+        class="btn btn-sm btn-dark"
+      >
+        <i class="fas fa-arrow-left"></i> Back to HR Management
+      </a>
+
+      <div class="logo-section">
+        <img
+          src="{{ url_for('static', filename='images/logo.png') }}"
+          alt="Logo"
+        />
+        <div class="logo">
           <span class="black">Collect</span><span class="red">ive</span>
         </div>
       </div>
-      <div class="top-bar-right">
-        <a href="{{ url_for('auth_routes.logout') }}" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
-      </div>
+      <a href="{{ url_for('auth_routes.logout') }}" class="btn-logout">
+        <i class="fas fa-sign-out-alt"></i> Logout
+      </a>
     </div>
 
-    <!-- Main Content -->
+    <!-- Page Content -->
     <div class="container">
-      <h1>Admin Dashboard</h1>
+      <h1 class="text-center">Admin Dashboard</h1>
 
-      <!-- Manage Courses Section -->
-      <h3>Manage Courses</h3>
-      <table class="table table-bordered table-hover">
-        <thead>
-          <tr>
-            <th>Course ID</th>
-            <th>Title</th>
-            <th>Description</th>
-            <th>Restriction Level</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if courses %}
-            {% for course in courses %}
-              <tr>
-                <td>{{ course.id }}</td>
-                <td>{{ course.title }}</td>
-                <td>{{ course.description }}</td>
-                <td>{{ course.restriction_level or 'None' }}</td>
-                <td>
-                  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editCourseModal{{ course.id }}">
-                    <i class="fas fa-edit"></i> Edit
-                  </button>
-                  <form action="{{ url_for('admin_routes.delete_course', course_id=course.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this course?');" style="display: inline-block;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <button class="btn btn-danger btn-sm">
-                      <i class="fas fa-trash-alt"></i> Delete
-                    </button>
-                  </form>
-                </td>
-              </tr>
-
-              <!-- Edit Course Modal -->
-              <div class="modal fade" id="editCourseModal{{ course.id }}" tabindex="-1" aria-labelledby="editCourseModalLabel{{ course.id }}" aria-hidden="true">
-                <div class="modal-dialog">
-                  <div class="modal-content">
-                    <div class="modal-header">
-                      <h5 class="modal-title" id="editCourseModalLabel{{ course.id }}">Edit Course: {{ course.title }}</h5>
-                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <form action="{{ url_for('admin_routes.edit_course', course_id=course.id) }}" method="POST" enctype="multipart/form-data">
-                      <div class="modal-body">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        <div class="mb-3">
-                          <label for="title{{ course.id }}" class="form-label">Course Title</label>
-                          <input type="text" class="form-control" id="title{{ course.id }}" name="title" value="{{ course.title }}" required />
-                        </div>
-                        <div class="mb-3">
-                          <label for="description{{ course.id }}" class="form-label">Description</label>
-                          <textarea class="form-control" id="description{{ course.id }}" name="description" required>{{ course.description }}</textarea>
-                        </div>
-                        <div class="mb-3">
-                          <label for="course_time{{ course.id }}" class="form-label">Course Time (hours)</label>
-                          <input type="number" class="form-control" id="course_time{{ course.id }}" name="course_time" value="{{ course.course_time }}" required />
-                        </div>
-                        <div class="mb-3">
-                          <label for="max_time{{ course.id }}" class="form-label">Max Time (days)</label>
-                          <input type="number" class="form-control" id="max_time{{ course.id }}" name="max_time" value="{{ course.max_time }}" required />
-                        </div>
-                        <div class="mb-3">
-                          <label for="restriction_level{{ course.id }}" class="form-label">Restriction Level</label>
-                          <select name="restriction_level" id="restriction_level{{ course.id }}" class="form-control" required>
-                            <option value="">None</option>
-                            {% for designation in designations %}
-                              <option value="{{ designation.id }}" {% if course.restriction_level == designation.id %} selected {% endif %}>
-                                {{ designation.title }}
-                              </option>
-                            {% endfor %}
-                          </select>
-                        </div>
-                        <div class="mb-3">
-                          <label for="new_files{{ course.id }}" class="form-label">Upload New Files</label>
-                          <input type="file" class="form-control" id="new_files{{ course.id }}" name="new_files" multiple />
-                        </div>
-                        <h6>Existing Files</h6>
-                        {% if course.files %}
-                          {% for file in course.files %}
-                            <div class="form-check">
-                              <input class="form-check-input" type="checkbox" name="delete_files" value="{{ file.split('|')[0] }}" id="deleteFile{{ loop.index }}" />
-                              <label class="form-check-label" for="deleteFile{{ loop.index }}">
-                                {{ file.split('|')[1] }}
-                              </label>
-                            </div>
-                          {% endfor %}
-                        {% else %}
-                          <p>No files uploaded.</p>
-                        {% endif %}
-                      </div>
-                      <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-success">
-                          <i class="fas fa-save"></i> Save Changes
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            {% endfor %}
-          {% else %}
-            <tr>
-              <td colspan="5">No courses available</td>
-            </tr>
-          {% endif %}
-        </tbody>
-      </table>
-
-      <!-- Manage Exams Section -->
-      <h3>Manage Exams</h3>
-      <table class="table table-bordered table-hover">
-        <thead>
-          <tr>
-            <th>Exam ID</th>
-            <th>Title</th>
-            <th>Duration</th>
-            <th>Course ID</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if exams %}
-            {% for exam in exams %}
-              <tr>
-                <td>{{ exam.id }}</td>
-                <td>{{ exam.title }}</td>
-                <td>{{ exam.duration }} minutes</td>
-                <td>{{ exam.course_id }}</td>
-                <td>
-                  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editExamModal{{ exam.id }}">
-                    <i class="fas fa-edit"></i> Edit
-                  </button>
-                  <form action="{{ url_for('admin_routes.delete_exam', exam_id=exam.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this exam?');" style="display: inline-block;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <button class="btn btn-danger btn-sm">
-                      <i class="fas fa-trash-alt"></i> Delete
-                    </button>
-                  </form>
-                </td>
-              </tr>
-              <!-- Edit Exam Modal -->
-              <div class="modal fade" id="editExamModal{{ exam.id }}" tabindex="-1" aria-labelledby="editExamModalLabel{{ exam.id }}" aria-hidden="true">
-                <div class="modal-dialog">
-                  <div class="modal-content">
-                    <div class="modal-header">
-                      <h5 class="modal-title" id="editExamModalLabel{{ exam.id }}">Edit Exam: {{ exam.title }}</h5>
-                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <form action="{{ url_for('admin_routes.edit_exam', exam_id=exam.id) }}" method="POST">
-                      <div class="modal-body">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        <div class="mb-3">
-                          <label for="title{{ exam.id }}" class="form-label">Exam Title</label>
-                          <input type="text" class="form-control" id="title{{ exam.id }}" name="title" value="{{ exam.title }}" required />
-                        </div>
-                        <div class="mb-3">
-                          <label for="duration{{ exam.id }}" class="form-label">Duration (minutes)</label>
-                          <input type="number" class="form-control" id="duration{{ exam.id }}" name="duration" value="{{ exam.duration }}" required />
-                        </div>
-                      </div>
-                      <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Save Changes</button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            {% endfor %}
-          {% else %}
-            <tr>
-              <td colspan="5">No exams available</td>
-            </tr>
-          {% endif %}
-        </tbody>
-      </table>
-
-      <!-- Manage Special Exams Section -->
-      <h3>Manage Special Exams</h3>
-      <table class="table table-bordered table-hover">
-        <thead>
-          <tr>
-            <th>User ID</th>
-            <th>User Name</th>
-            <th>Paper 1 Score</th>
-            <th>Paper 1 Status</th>
-            <th>Paper 2 Score</th>
-            <th>Paper 2 Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if special_exam_records %}
-            {% for record in special_exam_records %}
-              <tr>
-                <td>{{ record.user_id }}</td>
-                <td>{{ record.user.first_name }} {{ record.user.last_name }}</td>
-                <td>{{ record.paper1_score }}%</td>
-                <td>
-                  {% if record.paper1_passed %}
-                    <span class="badge bg-success text-white">Passed</span>
-                  {% else %}
-                    <span class="badge bg-danger text-white">Failed</span>
-                  {% endif %}
-                </td>
-                <td>{{ record.paper2_score }}%</td>
-                <td>
-                  {% if record.paper2_passed %}
-                    <span class="badge bg-success text-white">Passed</span>
-                  {% else %}
-                    <span class="badge bg-danger text-white">Failed</span>
-                  {% endif %}
-                </td>
-                <td>
-                  <!-- Updated View Button: Link to a route that shows detailed info for this special exam record -->
-                  <a href="{{ url_for('admin_routes.view_special_exam_record', record_id=record.id) }}" class="btn btn-info btn-sm">
-                    <i class="fas fa-eye"></i> View
-                  </a>
-                </td>
-              </tr>
-            {% endfor %}
-          {% else %}
-            <tr>
-              <td colspan="7">No special exam records found.</td>
-            </tr>
-          {% endif %}
-        </tbody>
-      </table>
-
-      <!-- Reports Section -->
-      <h3>Reports</h3>
-      <a href="{{ url_for('admin_routes.generate_reports') }}" class="btn btn-primary mb-4">
-        <i class="fas fa-chart-bar"></i> View Reports
-      </a>
-
-      <!-- Set Restrictions Section -->
-      <h3>Set Restrictions</h3>
-      <form action="{{ url_for('admin_routes.set_restrictions') }}" method="POST" class="mt-3">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <div class="mb-3">
-          <label for="course_id" class="form-label">Course ID</label>
-          <input type="number" name="course_id" id="course_id" class="form-control" required />
+      <!-- Metrics Row 1 -->
+      <div class="row g-3 mb-4">
+        <!-- Users Card -->
+        <div class="col-md-3">
+          <div class="card text-white bg-primary h-100">
+            <div class="card-body">
+              <h6 class="card-title"><i class="fas fa-users"></i> Users</h6>
+              <p><strong>{{ total_users }}</strong> Total</p>
+              <p>
+                <a
+                  href="{{ url_for('admin_routes.view_users', status='verified') }}"
+                  class="text-light text-decoration-underline"
+                >
+                  <strong>{{ active_users }}</strong> Active
+                </a>
+              </p>
+              <small class="opacity-75">Based on user activity</small>
+            </div>
+          </div>
         </div>
-        <div class="mb-3">
-          <label for="restriction_level" class="form-label">Restriction Level</label>
-          <select name="restriction_level" id="restriction_level" class="form-control" required>
+        <!-- Exams Card -->
+        <div class="col-md-3">
+          <div class="card text-white bg-success h-100">
+            <div class="card-body">
+              <h6 class="card-title">
+                <i class="fas fa-graduation-cap"></i> Exams
+              </h6>
+              <p><strong>{{ total_exams }}</strong> Total</p>
+              <p>Avg Score: <strong>{{ average_exam_score }}%</strong></p>
+            </div>
+          </div>
+        </div>
+        <!-- Courses Card -->
+        <div class="col-md-3">
+          <div class="card text-white bg-danger h-100">
+            <div class="card-body">
+              <h6 class="card-title"><i class="fas fa-book"></i> Courses</h6>
+              <p><strong>{{ total_study_materials }}</strong> Total</p>
+              <p><strong>{{ restricted_courses }}</strong> Restricted</p>
+            </div>
+          </div>
+        </div>
+        <!-- Special Exams Card -->
+        <div class="col-md-3">
+          <div class="card text-white bg-dark h-100">
+            <div class="card-body">
+              <h6 class="card-title">
+                <i class="fas fa-award"></i> Special Exams
+              </h6>
+              <p><strong>{{ special_exam_count }}</strong> Records</p>
+              <p>
+                Pass 1: <strong>{{ special_exam_passed_1 }}</strong> │ Pass 2:
+                <strong>{{ special_exam_passed_2 }}</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metrics Row 2 -->
+      <div class="row g-3 mb-4">
+        <!-- Designations Card -->
+        <div class="col-md-3">
+          <div class="card bg-secondary text-white h-100">
+            <div class="card-body">
+              <h6 class="card-title">
+                <i class="fas fa-id-badge"></i> Designations
+              </h6>
+              <p><strong>{{ total_designations }}</strong></p>
+            </div>
+          </div>
+        </div>
+        <!-- Clients Card -->
+        <div class="col-md-3">
+          <div class="card bg-warning text-dark h-100">
+            <div class="card-body">
+              <h6 class="card-title">
+                <i class="fas fa-handshake"></i> Clients
+              </h6>
+              <p><strong>{{ total_clients }}</strong></p>
+            </div>
+          </div>
+        </div>
+        <!-- Questions Card -->
+        <div class="col-md-3">
+          <div class="card bg-light text-dark h-100">
+            <div class="card-body">
+              <h6 class="card-title">
+                <i class="fas fa-question-circle"></i> Questions
+              </h6>
+              <p><strong>{{ total_questions }}</strong></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Tools Nav -->
+      <div class="nav-section">
+        <a href="{{ url_for('admin_routes.view_users') }}" class="btn btn-info">
+          <i class="fas fa-users"></i> Manage Users
+        </a>
+        <a href="{{ url_for('admin_routes.view_roles') }}" class="btn btn-dark">
+          <i class="fas fa-user-shield"></i> Manage Roles
+        </a>
+        <a
+          href="{{ url_for('admin_routes.view_courses') }}"
+          class="btn btn-primary"
+        >
+          <i class="fas fa-book-open"></i> Manage Courses
+        </a>
+        <a
+          href="{{ url_for('admin_routes.view_exams') }}"
+          class="btn btn-success"
+        >
+          <i class="fas fa-file-alt"></i> Manage Exams
+        </a>
+        <a
+          href="{{ url_for('admin_routes.view_analytics') }}"
+          class="btn btn-warning"
+        >
+          <i class="fas fa-chart-line"></i> Analytics
+        </a>
+        <a
+          href="{{ url_for('admin_routes.generate_reports') }}"
+          class="btn btn-danger"
+        >
+          <i class="fas fa-chart-bar"></i> View Reports
+        </a>
+        <a
+          href="{{ url_for('admin_routes.view_audit_logs') }}"
+          class="btn btn-secondary"
+        >
+          <i class="fas fa-history"></i> Audit Logs
+        </a>
+      </div>
+
+      <!-- Set Restrictions Form -->
+      <h3>Set Restrictions</h3>
+      <form
+        action="{{ url_for('admin_routes.set_restrictions') }}"
+        method="POST"
+        class="row g-3 mb-5"
+      >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="col-md-6">
+          <label for="course_id" class="form-label">Course ID</label>
+          <input
+            type="number"
+            name="course_id"
+            id="course_id"
+            class="form-control"
+            required
+          />
+        </div>
+        <div class="col-md-6">
+          <label for="restriction_level" class="form-label"
+            >Restriction Level</label
+          >
+          <select
+            name="restriction_level"
+            id="restriction_level"
+            class="form-select"
+            required
+          >
             <option value="">None</option>
             {% for designation in designations %}
-              <option value="{{ designation.id }}">{{ designation.title }}</option>
+            <option value="{{ designation.id }}">
+              {{ designation.title }}
+            </option>
             {% endfor %}
           </select>
         </div>
-        <button class="btn btn-success"><i class="fas fa-lock"></i> Set Restrictions</button>
+        <div class="col-12">
+          <button class="btn btn-success">
+            <i class="fas fa-lock"></i> Set Restrictions
+          </button>
+        </div>
       </form>
     </div>
 
     <!-- Footer -->
-    <footer>
-      <p class="mb-0">Collective Intranet© 2024</p>
-    </footer>
+    <footer>Collective Intranet © {{ current_year or 2024 }}</footer>
 
-    <!-- Bootstrap JS Bundle -->
+    <!-- Access Denied Modal -->
+    <div
+      class="modal fade"
+      id="accessDeniedModal"
+      tabindex="-1"
+      aria-labelledby="accessDeniedTitle"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="accessDeniedTitle">Access Denied</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body text-center">
+            <i class="fas fa-ban display-1 text-danger"></i>
+            <p class="mt-3">
+              You don’t have permission to perform that action.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" data-bs-dismiss="modal">
+              Okay
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS (load before trigger) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Trigger the modal if we flashed an access_denied -->
+    <script>
+      {% with msgs = get_flashed_messages(category_filter=['access_denied']) %}
+        {% if msgs %}
+          window.addEventListener('load', () => {
+            new bootstrap.Modal(
+              document.getElementById('accessDeniedModal')
+            ).show();
+          });
+        {% endif %}
+      {% endwith %}
+    </script>
   </body>
 </html>

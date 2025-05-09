@@ -1,0 +1,242 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Manage Courses{% endblock %}
+
+{% block content %}
+<h1>Manage Courses</h1>
+
+<table class="table table-bordered table-hover">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Title</th>
+      <th>Description</th>
+      <th>Category</th>
+      <th>Level</th>
+      <th>Min Designation</th>
+      <th>Restricted To</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in courses %}
+    <tr>
+      <td>{{ c.id }}</td>
+      <td>{{ c.title }}</td>
+      <td>{{ c.description }}</td>
+      <td>{{ c.category.name if c.category else '—' }}</td>
+      <td>{{ c.level.level_number if c.level else '—' }}</td>
+      <td>{{ c.minimum_designation.title if c.minimum_designation else 'None' }}</td>
+      <td>{{ c.restriction_level or 'None' }}</td>
+      <td>
+        <!-- Edit button triggers modal -->
+        <button
+          class="btn btn-primary btn-sm"
+          data-bs-toggle="modal"
+          data-bs-target="#editCourseModal{{ c.id }}"
+        >
+          <i class="fas fa-edit"></i>
+        </button>
+
+        <!-- Delete form with CSRF token -->
+        <form
+          action="{{ url_for('admin_routes.delete_course', course_id=c.id) }}"
+          method="POST"
+          style="display: inline;"
+          onsubmit="return confirm('Delete this course?');"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="fas fa-trash-alt"></i>
+          </button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="8" class="text-center">No courses available.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{# Edit Course modals #}
+{% for c in courses %}
+<div
+  class="modal fade"
+  id="editCourseModal{{ c.id }}"
+  tabindex="-1"
+  aria-labelledby="editCourseLabel{{ c.id }}"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editCourseLabel{{ c.id }}">Edit Course #{{ c.id }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form
+        action="{{ url_for('admin_routes.edit_course', course_id=c.id) }}"
+        method="POST"
+        enctype="multipart/form-data"
+      >
+        <div class="modal-body">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <!-- Title -->
+          <div class="mb-3">
+            <label for="title{{ c.id }}" class="form-label">Title</label>
+            <input
+              type="text"
+              class="form-control"
+              id="title{{ c.id }}"
+              name="title"
+              value="{{ c.title }}"
+              required
+            >
+          </div>
+
+          <!-- Description -->
+          <div class="mb-3">
+            <label for="desc{{ c.id }}" class="form-label">Description</label>
+            <textarea
+              class="form-control"
+              id="desc{{ c.id }}"
+              name="description"
+              rows="3"
+            >{{ c.description }}</textarea>
+          </div>
+
+          <!-- Course Time -->
+          <div class="mb-3">
+            <label for="courseTime{{ c.id }}" class="form-label">Course Time (minutes)</label>
+            <input
+              type="number"
+              class="form-control"
+              id="courseTime{{ c.id }}"
+              name="course_time"
+              value="{{ c.course_time }}"
+              min="0"
+              required
+            >
+          </div>
+
+          <!-- Max Time -->
+          <div class="mb-3">
+            <label for="maxTime{{ c.id }}" class="form-label">Max Time (minutes)</label>
+            <input
+              type="number"
+              class="form-control"
+              id="maxTime{{ c.id }}"
+              name="max_time"
+              value="{{ c.max_time }}"
+              min="0"
+              required
+            >
+          </div>
+
+          <!-- Category -->
+          <div class="mb-3">
+            <label for="cat{{ c.id }}" class="form-label">Category</label>
+            <select class="form-select" id="cat{{ c.id }}" name="category_id">
+              <option value="">-- Select --</option>
+              {% for cat in categories %}
+                <option
+                  value="{{ cat.id }}"
+                  {% if c.category and c.category.id == cat.id %}selected{% endif %}
+                >{{ cat.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Level -->
+          <div class="mb-3">
+            <label for="lvl{{ c.id }}" class="form-label">Level</label>
+            <select class="form-select" id="lvl{{ c.id }}" name="level_id">
+              <option value="">-- Select --</option>
+              {% for lvl in levels %}
+                <option
+                  value="{{ lvl.id }}"
+                  {% if c.level and c.level.id == lvl.id %}selected{% endif %}
+                >Level {{ lvl.level_number }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Min Designation -->
+          <div class="mb-3">
+            <label for="minDesig{{ c.id }}" class="form-label">Min Designation</label>
+            <select class="form-select" id="minDesig{{ c.id }}" name="minimum_designation_id">
+              <option value="">None</option>
+              {% for des in designations %}
+                <option
+                  value="{{ des.id }}"
+                  {% if c.minimum_designation and c.minimum_designation.id == des.id %}selected{% endif %}
+                >{{ des.title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Existing Attachments: Delete or Replace -->
+          {% if c.files %}
+          <h6 class="mt-4">Current Files</h6>
+          {% for file_entry in c.files %}
+            {% set fid, fname = file_entry.split('|') %}
+            <div class="border p-2 mb-2">
+              <!-- Delete checkbox -->
+              <div class="form-check">
+                <input
+                  type="checkbox"
+                  class="form-check-input"
+                  id="delFile{{ fid }}"
+                  name="delete_files"
+                  value="{{ fid }}"
+                >
+                <label class="form-check-label" for="delFile{{ fid }}">
+                  Delete “{{ fname }}”
+                </label>
+              </div>
+              <!-- Replace input -->
+              <div class="mt-2">
+                <label for="repFile{{ fid }}" class="form-label">Replace file</label>
+                <input
+                  type="file"
+                  class="form-control form-control-sm"
+                  id="repFile{{ fid }}"
+                  name="replace_files"
+                >
+                <input
+                  type="hidden"
+                  name="replace_file_ids"
+                  value="{{ fid }}"
+                >
+              </div>
+            </div>
+          {% endfor %}
+          {% endif %}
+
+          <!-- New uploads -->
+          <div class="mb-3 mt-4">
+            <label for="newFiles{{ c.id }}" class="form-label">Attach New Files</label>
+            <input
+              type="file"
+              class="form-control"
+              id="newFiles{{ c.id }}"
+              name="new_files"
+              multiple
+            >
+          </div>
+
+        </div><!-- /.modal-body -->
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save changes</button>
+        </div>
+      </form>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+{% endfor %}
+
+{% endblock %}

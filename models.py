@@ -7,6 +7,7 @@ from sqlalchemy import Column, Integer, String, LargeBinary, Date, DateTime, Boo
 from sqlalchemy.orm import relationship
 from flask_login import UserMixin
 from sqlalchemy import Float
+from flask import request
 from sqlalchemy.dialects.postgresql import ARRAY 
 
 # -------------------------------
@@ -35,7 +36,14 @@ user_clients = Table(
   Column('user_id',   Integer, ForeignKey('users.id'),   primary_key=True),
   Column('client_id', Integer, ForeignKey('clients.id'), primary_key=True),
 )
-
+# ------------------------------------------
+# Association table between modules and roles
+# -------------------------------------------
+module_roles = Table(
+    'module_roles', db.Model.metadata,
+    Column('module_id', Integer, ForeignKey('modules.id'), primary_key=True),
+    Column('role_id',   Integer, ForeignKey('roles.id'),   primary_key=True)
+)
 
 # -------------------------------------
 # Role Model
@@ -432,6 +440,25 @@ class User(db.Model, UserMixin):
         db.session.commit()
 
     # ---------------------------------
+    # Lockout on Failed Logins
+    # ---------------------------------
+    failed_login_count = Column(Integer, default=0, nullable=False)
+    is_locked          = Column(Boolean, default=False, nullable=False)
+    locked_at          = Column(DateTime, nullable=True)
+
+    def lock(self):
+        """Freeze the account."""
+        self.is_locked = True
+        self.locked_at = datetime.utcnow()
+        
+
+    def reset_lock(self):
+        """Clear failed‐login counter and unlock."""
+        self.failed_login_count = 0
+        self.is_locked          = False
+        self.locked_at          = None
+        db.session.commit()
+    # ---------------------------------
     # Password Management
     # ---------------------------------
     def set_password(self, password: str) -> None:
@@ -640,21 +667,33 @@ class TaskDocument(db.Model):
 # -------------------------------
 class FailedLogin(db.Model):
     __tablename__ = 'failed_logins'
-    id = Column(Integer, primary_key=True)
-    email = Column(String(120), nullable=False)
-    attempt_time = Column(DateTime, default=datetime.utcnow)
+
+    id          = Column(Integer, primary_key=True)
+    email       = Column(String(120), nullable=False)
+    ip_address  = Column(String(45), nullable=True)
+    user_agent  = Column(String(256), nullable=True)
+    timestamp   = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     def __repr__(self):
-        return f"<FailedLogin(id={self.id}, email='{self.email}', attempt_time={self.attempt_time})>"
+        return (
+            f"<FailedLogin(id={self.id}, email='{self.email}', "
+            f"ip='{self.ip_address}', ts={self.timestamp})>"
+        )
 
 def log_failed_login_attempt(email):
-    """Log a failed login attempt."""
+    """Log a failed login attempt, capturing IP and User-Agent."""
     try:
-        failed_login = FailedLogin(email=email)
-        db.session.add(failed_login)
+        fl = FailedLogin(
+            email=email,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent'),
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(fl)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
+        # Consider using logging.error(...) instead of print in production
         print(f"Error logging failed login attempt: {e}")
 
 # -------------------------------
@@ -745,7 +784,7 @@ class SpecialExamRecord(db.Model):
         return f"<SpecialExamRecord(id={self.id}, user_id={self.user_id})>"
 
 # -------------------------------------
-# Department Model (New)
+# Department Model
 # -------------------------------------
 class Department(db.Model):
     __tablename__ = 'departments'
@@ -758,6 +797,22 @@ class Department(db.Model):
     
     def __repr__(self):
         return f"<Department(id={self.id}, name='{self.name}')>"
+# -------------------------------------
+# Module Model
+# -------------------------------------
+class Module(db.Model):
+    __tablename__ = 'modules'
+    id          = Column(Integer, primary_key=True)
+    name        = Column(String(50), unique=True, nullable=False)
+    description = Column(String(255), nullable=True)
+    enabled     = Column(Boolean, default=True, nullable=False)
 
+    # === hierarchy ===
+    parent_id   = Column(Integer, ForeignKey('modules.id'), nullable=True)
+    parent      = relationship('Module', remote_side=[id], backref='children')
 
+    # === role-based access ===
+    roles       = relationship('Role', secondary=module_roles, backref='modules')
 
+    def __repr__(self):
+        return f"<Module {self.name}: {'ON' if self.enabled else 'OFF'}>"

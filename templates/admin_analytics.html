@@ -1,0 +1,182 @@
+{% extends 'admin_base.html' %} {% block title %}Analytics{% endblock %} {%
+block content %}
+<h1>Analytics Dashboard</h1>
+
+<!-- Timeframe Selector -->
+<form method="get" class="mb-4">
+  <label class="me-2">Show last:</label>
+  {% for p in periods %}
+  <button
+    type="submit"
+    name="period"
+    value="{{ p }}"
+    class="btn btn-sm {% if period == p %}btn-primary{% else %}btn-outline-primary{% endif %} me-1"
+  >
+    {{ p }} days
+  </button>
+  {% endfor %}
+</form>
+
+<!-- Summary Metrics Table -->
+<h3>Summary Metrics</h3>
+<table class="table table-bordered mb-5">
+  <thead class="table-light">
+    <tr>
+      <th>Metric</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Total Users</td>
+      <td>{{ total_users }}</td>
+    </tr>
+    <tr>
+      <td>Active Users</td>
+      <td>{{ active_users }}</td>
+    </tr>
+    <tr>
+      <td>Avg Exam Score</td>
+      <td>{{ avg_exam_score }}%</td>
+    </tr>
+    <tr>
+      <td>Avg Course Progress</td>
+      <td>{{ avg_course_progress }}%</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- Exam Averages -->
+<div class="row mb-5">
+  <div class="col-md-6">
+    <h4>Average Exam Scores</h4>
+    <!-- Table -->
+    <table class="table table-striped mb-3">
+      <thead>
+        <tr>
+          <th>Exam</th>
+          <th>Avg Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in range(exam_labels|length) %}
+        <tr>
+          <td>{{ exam_labels[i] }}</td>
+          <td>{{ exam_avg_scores[i] }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <!-- Chart -->
+    <canvas id="examChart"></canvas>
+  </div>
+
+  <!-- Pass vs Fail -->
+  <div class="col-md-6">
+    <h4>Pass vs Fail</h4>
+    <div class="d-flex align-items-center justify-content-center mb-2">
+      <span class="badge bg-success me-3">Passed: {{ pass_pct }}%</span>
+      <span class="badge bg-danger">Failed: {{ fail_pct }}%</span>
+    </div>
+    <canvas id="passFailChart" style="max-width: 300px; margin: auto"></canvas>
+  </div>
+</div>
+
+<!-- Course Progress -->
+<div class="row mb-5">
+  <div class="col-md-6">
+    <h4>Course Progress</h4>
+    <!-- Table -->
+    <table class="table table-striped mb-3">
+      <thead>
+        <tr>
+          <th>Course</th>
+          <th>Avg Progress</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in range(course_labels|length) %}
+        <tr>
+          <td>{{ course_labels[i] }}</td>
+          <td>{{ course_avg_progress[i] }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <!-- Chart -->
+    <canvas id="courseChart"></canvas>
+  </div>
+
+  <!-- Score Trend -->
+  <div class="col-md-6">
+    <h4>Score Trend (Last {{ period }} Days)</h4>
+    <canvas id="trendChart"></canvas>
+  </div>
+</div>
+
+<script>
+  const examLabels     = {{ exam_labels|tojson }};
+  const examScores     = {{ exam_avg_scores|tojson }};
+  const courseLabels   = {{ course_labels|tojson }};
+  const courseProgress = {{ course_avg_progress|tojson }};
+  const passCount      = {{ passed_count }};
+  const failCount      = {{ failed_count }};
+  const trendLabels    = {{ ts_labels|tojson }};
+  const trendScores    = {{ ts_avg_scores|tojson }};
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Horizontal bar for exams
+    new Chart(document.getElementById('examChart'), {
+      type: 'bar',
+      data: {
+        labels: examLabels,
+        datasets: [{ label: 'Avg Score (%)', data: examScores }]
+      },
+      options: {
+        indexAxis: 'y',
+        scales: { x: { beginAtZero: true, max: 100 } }
+      }
+    });
+
+    // Doughnut for pass/fail
+    new Chart(document.getElementById('passFailChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Passed','Failed'],
+        datasets: [{ data: [passCount, failCount] }]
+      },
+      options: { cutout: '60%' }
+    });
+
+    // Horizontal bar for course progress
+    new Chart(document.getElementById('courseChart'), {
+      type: 'bar',
+      data: {
+        labels: courseLabels,
+        datasets: [{ label: 'Avg Progress (%)', data: courseProgress }]
+      },
+      options: {
+        indexAxis: 'y',
+        scales: { x: { beginAtZero: true, max: 100 } }
+      }
+    });
+
+    // Line chart for trend
+    new Chart(document.getElementById('trendChart'), {
+      type: 'line',
+      data: {
+        labels: trendLabels,
+        datasets: [{
+          label: 'Avg Score',
+          data: trendScores,
+          fill: false,
+          tension: 0.1
+        }]
+      },
+      options: {
+        scales: { y: { beginAtZero: true, max: 100 } }
+      }
+    });
+  });
+</script>
+{% endblock %}

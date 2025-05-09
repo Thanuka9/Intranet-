@@ -1,0 +1,105 @@
+{% extends 'admin_base.html' %}
+{% block title %}Users{% endblock %}
+{% block content %}
+  <h1>All Users{% if status %} – {{ status|capitalize }}{% endif %}</h1>
+
+  <table class="table table-bordered table-hover mb-5">
+    <thead class="table-light">
+      <tr>
+        <th>User ID</th>
+        <th>Name</th>
+        <th>Employee ID</th>
+        <th>Phone</th>
+        <th>Email</th>
+        <th>Department</th>
+        <th>Joined</th>
+        <th>Status</th>
+        <th>Designation</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.id }}</td>
+        <td>{{ u.first_name }} {{ u.last_name }}</td>
+        <td>{{ u.employee_id or '—' }}</td>
+        <td>{{ u.phone_number or '—' }}</td>
+        <td>{{ u.employee_email or '—' }}</td>
+        <td>{{ u.department.name if u.department else '—' }}</td>
+        <td>{{ u.join_date.strftime('%Y-%m-%d') }}</td>
+        <td>
+          {% if u.is_verified %}
+            <span class="badge bg-success">Verified</span>
+          {% else %}
+            <span class="badge bg-secondary">Unverified</span>
+          {% endif %}
+        </td>
+        <td>
+          <form
+            action="{{ url_for('admin_routes.change_designation', user_id=u.id) }}"
+            method="POST"
+            class="d-inline"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select
+              name="designation_id"
+              class="form-select form-select-sm"
+              onchange="this.form.submit()"
+            >
+              {% for d in designations %}
+                <option value="{{ d.id }}" {% if u.designation_id == d.id %}selected{% endif %}>
+                  {{ d.title }}
+                </option>
+              {% endfor %}
+            </select>
+          </form>
+        </td>
+        <td class="text-center">
+          {% if u.is_verified %}
+            <form
+              action="{{ url_for('admin_routes.deactivate_user', user_id=u.id) }}"
+              method="POST"
+              style="display:inline-block;"
+              onsubmit="return confirm('Deactivate this user?');"
+            >
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-warning btn-sm" title="Deactivate">
+                <i class="fas fa-user-slash"></i>
+              </button>
+            </form>
+          {% else %}
+            <form
+              action="{{ url_for('admin_routes.activate_user', user_id=u.id) }}"
+              method="POST"
+              style="display:inline-block;"
+              onsubmit="return confirm('Activate this user?');"
+            >
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-success btn-sm" title="Activate">
+                <i class="fas fa-user-check"></i>
+              </button>
+            </form>
+          {% endif %}
+          <form
+            action="{{ url_for('admin_routes.delete_user', user_id=u.id) }}"
+            method="POST"
+            style="display:inline-block;"
+            onsubmit="return confirm('Delete this user permanently?');"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-danger btn-sm" title="Delete">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="10" class="text-center">No users found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  
+{% endblock %}

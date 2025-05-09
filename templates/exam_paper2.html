@@ -114,6 +114,40 @@
       }
     </style>
   </head>
+    <!-- … existing HTML … -->
+
+  <!-- add this just before </body> -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const wrapper = document.getElementById('questionWrapper');
+      if (!wrapper) return;
+
+      // grab all question containers
+      const containers = Array.from(wrapper.querySelectorAll('.question-container'));
+
+      // Fisher–Yates shuffle
+      for (let i = containers.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [containers[i], containers[j]] = [containers[j], containers[i]];
+      }
+
+      // clear out and re-append in new order, re-numbering each heading
+      wrapper.innerHTML = '';
+      containers.forEach((qc, idx) => {
+        qc.dataset.questionIndex = idx;
+        const h3 = qc.querySelector('h3');
+        if (h3) {
+          // replace leading number in the question text
+          h3.textContent = h3.textContent.replace(/^\d+/, idx + 1);
+        }
+        wrapper.appendChild(qc);
+        // only the first one gets the “active” class
+        qc.classList.toggle('active', idx === 0);
+      });
+    });
+  </script>
+</body>
+
   <body>
     <div class="top-bar">
       <a href="{{ url_for('exams_routes.list_exams') }}" class="btn btn-secondary">
@@ -131,8 +165,8 @@
       <!-- Header Section -->
       <div class="header">
         <h1>Exam Paper 2 - Billing &amp; Coding</h1>
-        <p><strong>Time Allowed:</strong> 45 minutes</p>
-        <div class="timer" id="timer">Time Remaining: 45:00</div>
+        <p><strong>Time Allowed:</strong> 60 minutes</p>
+        <div class="timer" id="timer">Time Remaining: 60:00</div>
         <p>
           Instructions: Answer all 40 questions. Use the Next/Previous buttons
           to navigate. You may review and change your answers before submitting.
@@ -155,7 +189,7 @@
           <!-- Question 1 -->
           <div class="question-container active" data-question-index="0">
             <div class="question">
-              <h3>1. Which of the following is an example of BPO?</h3>
+              <h3>Which of the following is an example of BPO?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -212,7 +246,7 @@
           <div class="question-container" data-question-index="1">
             <div class="question">
               <h3>
-                2. Which of the following is an example of a commercial payor in
+                Which of the following is an example of a commercial payor in
                 the United States?
               </h3>
               <div class="form-check">
@@ -262,7 +296,7 @@
           <div class="question-container" data-question-index="2">
             <div class="question">
               <h3>
-                3. Which of the following is NOT a part of the RCM process?
+                Which of the following is NOT a part of the RCM process?
               </h3>
               <div class="form-check">
                 <input
@@ -319,7 +353,7 @@
           <div class="question-container" data-question-index="3">
             <div class="question">
               <h3>
-                4. Who is responsible for purchasing workers' compensation
+                Who is responsible for purchasing workers' compensation
                 insurance?
               </h3>
               <div class="form-check">
@@ -370,7 +404,7 @@
           <!-- Question 5 -->
           <div class="question-container" data-question-index="4">
             <div class="question">
-              <h3>5. Which is the first step in RCM process?</h3>
+              <h3>Which is the first step in RCM process?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -422,7 +456,7 @@
           <div class="question-container" data-question-index="5">
             <div class="question">
               <h3>
-                6. Which of the following would be considered a responsibility
+                Which of the following would be considered a responsibility
                 of a "patient"?
               </h3>
               <div class="form-check">
@@ -480,7 +514,7 @@
           <div class="question-container" data-question-index="6">
             <div class="question">
               <h3>
-                7. If a child is covered under their parent's health insurance
+                If a child is covered under their parent's health insurance
                 plan, the subscriber is:
               </h3>
               <div class="form-check">
@@ -534,7 +568,7 @@
           <div class="question-container" data-question-index="7">
             <div class="question">
               <h3>
-                8. Claims aged up to 30 days from the Date of Service (DOS) are
+                Claims aged up to 30 days from the Date of Service (DOS) are
                 placed in which bucket?
               </h3>
               <div class="form-check">
@@ -584,7 +618,7 @@
           <div class="question-container" data-question-index="8">
             <div class="question">
               <h3>
-                9. Which status indicates that the insurance company has refused
+                Which status indicates that the insurance company has refused
                 to make a payment for the claim?
               </h3>
               <div class="form-check">
@@ -634,7 +668,7 @@
           <div class="question-container" data-question-index="9">
             <div class="question">
               <h3>
-                10. Which of the following factors can cause changes in fee
+                Which of the following factors can cause changes in fee
                 schedule rates?
               </h3>
               <div class="form-check">
@@ -683,7 +717,7 @@
           <!-- Question 11 -->
           <div class="question-container" data-question-index="10">
             <div class="question">
-              <h3>11. Which of the following is an example of a CARC code?</h3>
+              <h3>Which of the following is an example of a CARC code?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -731,7 +765,7 @@
           <div class="question-container" data-question-index="11">
             <div class="question">
               <h3>
-                12. Which of the following statements is true regarding patient
+                Which of the following statements is true regarding patient
                 responsibility?
               </h3>
               <div class="form-check">
@@ -790,7 +824,7 @@
           <!-- Question 13 -->
           <div class="question-container" data-question-index="12">
             <div class="question">
-              <h3>13. How is the total payment amount calculated?</h3>
+              <h3>How is the total payment amount calculated?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -845,7 +879,7 @@
           <!-- Question 14 -->
           <div class="question-container" data-question-index="13">
             <div class="question">
-              <h3>14. How is the allowable amount determined?</h3>
+              <h3>How is the allowable amount determined?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -901,7 +935,7 @@
           <div class="question-container" data-question-index="14">
             <div class="question">
               <h3>
-                15. Which of the following statements about manual payment
+                Which of the following statements about manual payment
                 posting is true?
               </h3>
               <div class="form-check">
@@ -961,7 +995,7 @@
           <div class="question-container" data-question-index="15">
             <div class="question">
               <h3>
-                16. Which of the following best describes the process of posting
+                Which of the following best describes the process of posting
                 adjustments in medical billing?
               </h3>
               <div class="form-check">
@@ -1021,7 +1055,7 @@
           <div class="question-container" data-question-index="16">
             <div class="question">
               <h3>
-                17. Where can claims get rejected during the billing process?
+                Where can claims get rejected during the billing process?
               </h3>
               <div class="form-check">
                 <input
@@ -1077,7 +1111,7 @@
           <!-- Question 18 -->
           <div class="question-container" data-question-index="17">
             <div class="question">
-              <h3>18. Which of the following best describes the NPI?</h3>
+              <h3>Which of the following best describes the NPI?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -1132,7 +1166,7 @@
           <!-- Question 19 -->
           <div class="question-container" data-question-index="18">
             <div class="question">
-              <h3>19. What does Medicare Part B cover?</h3>
+              <h3>What does Medicare Part B cover?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -1186,7 +1220,7 @@
           <div class="question-container" data-question-index="19">
             <div class="question">
               <h3>
-                20. What does the Effective Date of an insurance policy
+                What does the Effective Date of an insurance policy
                 indicate?
               </h3>
               <div class="form-check">
@@ -1245,7 +1279,7 @@
           <div class="question-container" data-question-index="20">
             <div class="question">
               <h3>
-                21. What does the abbreviation "DX" refer to in medical billing?
+                What does the abbreviation "DX" refer to in medical billing?
               </h3>
               <div class="form-check">
                 <input
@@ -1294,7 +1328,7 @@
           <div class="question-container" data-question-index="21">
             <div class="question">
               <h3>
-                22. If a patient has a $6,000 out-of-pocket maximum and has
+                If a patient has a $6,000 out-of-pocket maximum and has
                 already paid $6,000 in medical expenses, how much will they owe
                 for additional medical services that year?
               </h3>
@@ -1344,7 +1378,7 @@
           <!-- Question 23 -->
           <div class="question-container" data-question-index="22">
             <div class="question">
-              <h3>23. A participating provider is also known as:</h3>
+              <h3>A participating provider is also known as:</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -1400,7 +1434,7 @@
           <div class="question-container" data-question-index="23">
             <div class="question">
               <h3>
-                24. In below, who is not referred to as a "provider" in RCM?
+                In below, who is not referred to as a "provider" in RCM?
               </h3>
               <div class="form-check">
                 <input
@@ -1451,7 +1485,7 @@
           <div class="question-container" data-question-index="24">
             <div class="question">
               <h3>
-                25. Which of the following is NOT covered by Medicare Part B?
+                Which of the following is NOT covered by Medicare Part B?
               </h3>
               <div class="form-check">
                 <input
@@ -1503,7 +1537,7 @@
           <!-- Question 26 -->
           <div class="question-container" data-question-index="25">
             <div class="question">
-              <h3>26. What is a diagnosis code?</h3>
+              <h3>What is a diagnosis code?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -1560,7 +1594,7 @@
           <div class="question-container" data-question-index="26">
             <div class="question">
               <h3>
-                27. Which of the following is a government health insurance
+                Which of the following is a government health insurance
                 program designed for elderly citizens and certain disabled
                 individuals?
               </h3>
@@ -1611,7 +1645,7 @@
           <div class="question-container" data-question-index="27">
             <div class="question">
               <h3>
-                28. If a spouse is covered under their partner’s insurance
+                If a spouse is covered under their partner’s insurance
                 policy, the spouse is referred to as the:
               </h3>
               <div class="form-check">
@@ -1661,7 +1695,7 @@
           <div class="question-container" data-question-index="28">
             <div class="question">
               <h3>
-                29. Which of the following statements is true about an
+                Which of the following statements is true about an
                 out-of-pocket maximum?
               </h3>
               <div class="form-check">
@@ -1717,7 +1751,7 @@
           <div class="question-container" data-question-index="29">
             <div class="question">
               <h3>
-                30. If a patient has a $2000 yearly deductible and each doctor’s
+                If a patient has a $2000 yearly deductible and each doctor’s
                 visit costs $100, how many visits must the patient pay for
                 out-of-pocket before insurance starts covering the cost?
               </h3>
@@ -1767,7 +1801,7 @@
           <!-- Question 31 -->
           <div class="question-container" data-question-index="30">
             <div class="question">
-              <h3>31. What is Practice Management Software in RCM?</h3>
+              <h3>What is Practice Management Software in RCM?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -1826,7 +1860,7 @@
           <!-- Question 32 -->
           <div class="question-container" data-question-index="31">
             <div class="question">
-              <h3>32. What does Medicare Part A cover?</h3>
+              <h3>What does Medicare Part A cover?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -1884,7 +1918,7 @@
           <div class="question-container" data-question-index="32">
             <div class="question">
               <h3>
-                33. Why is it important to verify benefits before providing
+                Why is it important to verify benefits before providing
                 services?
               </h3>
               <div class="form-check">
@@ -1941,7 +1975,7 @@
           <!-- Question 34 -->
           <div class="question-container" data-question-index="33">
             <div class="question">
-              <h3>34. What is a deductible in health insurance?</h3>
+              <h3>What is a deductible in health insurance?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -2000,7 +2034,7 @@
           <div class="question-container" data-question-index="34">
             <div class="question">
               <h3>
-                35. Which of the following is NOT a method of performing VOB?
+                Which of the following is NOT a method of performing VOB?
               </h3>
               <div class="form-check">
                 <input
@@ -2048,7 +2082,7 @@
           <!-- Question 36 -->
           <div class="question-container" data-question-index="35">
             <div class="question">
-              <h3>36. What is an Out-of-Pocket Maximum?</h3>
+              <h3>What is an Out-of-Pocket Maximum?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -2105,7 +2139,7 @@
           <!-- Question 37 -->
           <div class="question-container" data-question-index="36">
             <div class="question">
-              <h3>37. Why is Provider Enrollment important in healthcare?</h3>
+              <h3>Why is Provider Enrollment important in healthcare?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -2164,7 +2198,7 @@
           <!-- Question 38 -->
           <div class="question-container" data-question-index="37">
             <div class="question">
-              <h3>38. What is a referral in healthcare?</h3>
+              <h3>What is a referral in healthcare?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -2223,7 +2257,7 @@
           <!-- Question 39 -->
           <div class="question-container" data-question-index="38">
             <div class="question">
-              <h3>39. What does HIPAA require from healthcare providers?</h3>
+              <h3>What does HIPAA require from healthcare providers?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -2281,7 +2315,7 @@
           <div class="question-container" data-question-index="39">
             <div class="question">
               <h3>
-                40. A claim was billed to BCBS with a billed amount of $1500. As
+                A claim was billed to BCBS with a billed amount of $1500. As
                 per the patient's insurance plan, the allowable is $1200. The
                 patient has a Copay of $100 and the patient has 20%
                 co-insurance. Calculate the following: Insurance paid amount and
@@ -2368,113 +2402,213 @@
 
     <footer>Collective Intranet© 2024</footer>
 
-    <!-- JavaScript for Timer, Navigation, and Anti-Cheating -->
-    <script>
-      const timerElement = document.getElementById("timer");
-      let remainingTime = 45 * 60;
-      let examSubmitted = false;
-      let tabSwitchCount = 0;
+    <!-- INSTRUCTION OVERLAY -->
+    <div id="instructionOverlay" style="
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          background: #fff; z-index: 9999; overflow: auto;
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          padding: 2rem;
+        ">
+      <div style="max-width: 600px; text-align: left;">
+        <h2>Please Read These Rules Before Starting</h2>
+        <ul>
+          <li>No changing pages once the exam starts.</li>
+          <li>Copy/paste, right-click, screenshots and PrintScreen are disabled.</li>
+          <li>Switching tabs twice will auto-submit and disqualify you.</li>
+          <li>Reloading or closing this tab will auto-submit your current answers.</li>
+        </ul>
+        <div style="margin-top: 1.5rem;">
+          <input type="checkbox" id="agreeCheckbox" />
+          <label for="agreeCheckbox">I have read and agree to these rules.</label>
+        </div>
+        <button id="agreeBtn" disabled style="
+              margin-top: 1rem; padding: 0.5rem 1rem; font-size: 1rem;
+            ">
+          Agree &amp; Start Exam
+        </button>
+      </div>
+    </div>
 
-      function updateTimer() {
-        const minutes = Math.floor(remainingTime / 60);
-        const seconds = remainingTime % 60;
-        timerElement.textContent = `Time Remaining: ${minutes
-          .toString()
-          .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-
-        if (remainingTime <= 0 && !examSubmitted) {
-          examSubmitted = true;
-          alert("Time's up! Your exam will be automatically submitted.");
-          document.getElementById("examForm").submit();
+ <!-- ALL EXAM JS: Shuffle, Timer, Navigation & Anti-Cheating -->
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Overlay + one-time “agree” per session
+    const overlay  = document.getElementById('instructionOverlay'),
+          agreeCb  = document.getElementById('agreeCheckbox'),
+          agreeBtn = document.getElementById('agreeBtn');
+  
+    function startExam() {
+      // grab DOM elements
+      const wrapper   = document.getElementById('questionWrapper'),
+            timerEl   = document.getElementById('timer'),
+            prevBtn   = document.getElementById('prevBtn'),
+            nextBtn   = document.getElementById('nextBtn'),
+            submitBtn = document.getElementById('submitBtn'),
+            form      = document.getElementById('examForm'),
+            timeInp   = document.getElementById('timeSpentInput');
+  
+      let submitted   = false,
+          tabSwitches = 0,
+          current     = 0,
+          remaining   = 60 * 60; // ← 60 minutes
+  
+      // 1) Shuffle & Renumber
+      if (wrapper) {
+        const qs = Array.from(wrapper.querySelectorAll('.question-container'));
+        for (let i = qs.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [qs[i], qs[j]] = [qs[j], qs[i]];
         }
-        remainingTime--;
-      }
-
-      setInterval(updateTimer, 1000);
-      updateTimer();
-
-      const questions = document.querySelectorAll(".question-container");
-      let currentQuestionIndex = 0;
-
-      function showQuestion(index) {
-        questions.forEach((q, i) => q.classList.toggle("active", i === index));
-        document.getElementById("prevBtn").disabled = index === 0;
-        document.getElementById("nextBtn").style.display =
-          index === questions.length - 1 ? "none" : "inline-block";
-        document.getElementById("submitBtn").style.display =
-          index === questions.length - 1 ? "inline-block" : "none";
-      }
-
-      function nextQuestion() {
-        if (!isQuestionAnswered(currentQuestionIndex)) {
-          alert("Please select an answer before continuing.");
-          return;
-        }
-        if (currentQuestionIndex < questions.length - 1) {
-          currentQuestionIndex++;
-          showQuestion(currentQuestionIndex);
-        }
-      }
-
-      function prevQuestion() {
-        if (currentQuestionIndex > 0) {
-          currentQuestionIndex--;
-          showQuestion(currentQuestionIndex);
-        }
-      }
-
-      function isQuestionAnswered(index) {
-        const radios = document.querySelectorAll(
-          `.question-container[data-question-index='${index}'] input[type='radio']`
-        );
-        return Array.from(radios).some((r) => r.checked);
-      }
-
-      showQuestion(currentQuestionIndex);
-
-      document
-        .getElementById("examForm")
-        .addEventListener("submit", function (e) {
-          for (let i = 0; i < questions.length; i++) {
-            if (!isQuestionAnswered(i)) {
-              e.preventDefault();
-              currentQuestionIndex = i;
-              showQuestion(i);
-              alert(`Please answer Question ${i + 1}.`);
-              return;
-            }
+        wrapper.innerHTML = '';
+        qs.forEach((qc, idx) => {
+          const n = idx + 1;
+          qc.dataset.questionIndex = idx;
+          const h3 = qc.querySelector('h3');
+          if (h3) {
+            const raw = h3.textContent.replace(/^\d+\.\s*/, '').trim();
+            h3.textContent = `${n}. ${raw}`;
           }
-          const timeSpent = 45 * 60 - remainingTime;
-          document.getElementById("timeSpentInput").value = timeSpent;
-          examSubmitted = true;
+          qc.querySelectorAll('input[type="radio"]')
+            .forEach(i => i.name = `answers[${n}]`);
+          qc.classList.toggle('active', idx === 0);
+          wrapper.appendChild(qc);
         });
-
-      // Disable copy, cut, paste, right-click
-      document.addEventListener("copy", (e) => e.preventDefault());
-      document.addEventListener("cut", (e) => e.preventDefault());
-      document.addEventListener("paste", (e) => e.preventDefault());
-      document.addEventListener("contextmenu", (e) => e.preventDefault());
-
-      // Detect tab switching
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden && !examSubmitted) {
-          tabSwitchCount++;
-          if (tabSwitchCount === 1) {
-            alert(
-              "Warning: You have switched tabs. Switching again will disqualify you."
-            );
-          } else if (tabSwitchCount >= 2) {
-            alert(
-              "You have been disqualified for switching tabs multiple times. Exam will be submitted."
-            );
-            examSubmitted = true;
-            document.getElementById("examForm").submit();
+      }
+  
+      // 2) Countdown Timer
+      function tick() {
+        const m = String(Math.floor(remaining/60)).padStart(2,'0'),
+              s = String(remaining%60).padStart(2,'0');
+        timerEl.textContent = `Time Remaining: ${m}:${s}`;
+        if (remaining-- <= 0 && !submitted) {
+          submitted = true;
+          form.submit();
+        }
+      }
+      setInterval(tick,1000);
+      tick();
+  
+      // 3) Navigation & Validation
+      const questions = document.querySelectorAll('.question-container');
+      function show(i) {
+        questions.forEach((q,j) => q.classList.toggle('active', i===j));
+        prevBtn.disabled      = i===0;
+        nextBtn.style.display   = (i===questions.length-1) ? 'none' : 'inline-block';
+        submitBtn.style.display = (i===questions.length-1) ? 'inline-block' : 'none';
+      }
+      function answered(i) {
+        return Array.from(
+          document.querySelectorAll(
+            `.question-container[data-question-index='${i}'] input[type='radio']`
+          )
+        ).some(r=>r.checked);
+      }
+      nextBtn.onclick = () => {
+        if (!answered(current)) return alert('Please select an answer.');
+        if (current < questions.length - 1) show(++current);
+      };
+      prevBtn.onclick = () => { if (current>0) show(--current); };
+      show(0);
+  
+      form.addEventListener('submit', e => {
+        for (let i=0; i<questions.length; i++) {
+          if (!answered(i)) {
+            e.preventDefault();
+            show(i);
+            return alert(`Answer Question ${i+1}.`);
+          }
+        }
+        timeInp.value = 60*60 - remaining;
+        submitted = true;
+      });
+  
+      // 4) Anti-Cheat & Forced-Submit on Unload/Back
+      // a) Tab switching
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && !submitted) {
+          tabSwitches++;
+          if (tabSwitches>1) {
+            submitted = true;
+            form.submit();
+          } else {
+            alert('Switching tabs again will submit your exam.');
           }
         }
       });
-    </script>
-
-    <!-- Bootstrap JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-  </body>
-</html>
+  
+      // b) Block right-click
+      document.addEventListener('contextmenu', e => e.preventDefault());
+  
+      // c) Block copy/cut/paste
+      ['copy','cut','paste'].forEach(ev =>
+        document.addEventListener(ev, e => {
+          e.preventDefault();
+          alert('Copy/Cut/Paste disabled.');
+        })
+      );
+  
+      // d) Block PrintScreen, reload, DevTools, shortcuts
+      document.addEventListener('keydown', e => {
+        const k = e.key.toLowerCase(), c=e.keyCode;
+        if (e.key==='PrintScreen'
+          || c===116   // F5
+          || ((e.ctrlKey||e.metaKey)&&k==='r')
+          || ((e.ctrlKey||e.metaKey)&&e.shiftKey&&k==='i')
+          || ((e.ctrlKey||e.metaKey)&&['c','x','v','u','s','p'].includes(k))
+        ) {
+          e.preventDefault();
+          alert('Exam shortcuts & screenshot disabled.');
+          if (c===116||((e.ctrlKey||e.metaKey)&&k==='r')) {
+            // use beacon to send partial answers before reload
+            const fd = new FormData(form);
+            fd.append('time_spent', 60*60 - remaining);
+            navigator.sendBeacon(form.action, fd);
+            submitted = true;
+          }
+        }
+      });
+  
+      // e) beforeunload → sendBeacon + warning
+      window.addEventListener('beforeunload', e => {
+        if (!submitted) {
+          const fd = new FormData(form);
+          fd.append('time_spent', 60*60 - remaining);
+          navigator.sendBeacon(form.action, fd);
+          e.preventDefault();
+          e.returnValue = '';
+        }
+      });
+  
+      // f) back-button → force submit
+      history.pushState(null, '', location.href);
+      window.addEventListener('popstate', () => {
+        if (!submitted) {
+          const fd = new FormData(form);
+          fd.append('time_spent', 60*60 - remaining);
+          navigator.sendBeacon(form.action, fd);
+          submitted = true;
+        }
+        history.pushState(null, '', location.href);
+      });
+    }
+  
+    // MAIN: show overlay or start directly
+    if (sessionStorage.getItem('examAgreed')==='yes') {
+      overlay.style.display='none';
+      startExam();
+    } else {
+      overlay.style.display='flex';
+      agreeBtn.disabled = true;
+      agreeCb.addEventListener('change', () => agreeBtn.disabled = !agreeCb.checked);
+      agreeBtn.addEventListener('click', () => {
+        sessionStorage.setItem('examAgreed','yes');
+        overlay.style.display='none';
+        startExam();
+      });
+    }
+  });
+  </script>
+  
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  
