@@ -17,7 +17,8 @@ def seed_clients():
         "IONM Help",
         "TXPH",
         "TPC",
-        "Other"
+        "Other",
+        "ConFidas"
     ]
 
     for name in client_names:
