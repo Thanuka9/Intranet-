@@ -1,4 +1,4 @@
-﻿alembic==1.14.0
+﻿﻿alembic==1.14.0
 APScheduler==3.11.0
 asttokens==3.0.0
 async-timeout==5.0.1
@@ -97,4 +97,4 @@ zipp==3.21.0
 zopfli==0.2.3.post1
 gunicorn==21.2.0
 email-validator==2.1.1
-gevent==24.2.1  # or eventlet==0.33.3
+gevent==24.2.1   # or eventlet==0.33.3
