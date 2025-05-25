@@ -1,12 +1,14 @@
 from pymongo import MongoClient, errors
 from gridfs import GridFS
-from bson.objectid import ObjectId
+from bson.objectid import ObjectId  # OK - from pymongo's internal bson
+from bson import SON  # Also OK now since bson comes from pymongo
 import logging
 from datetime import datetime
 from typing import Optional, Union, List, Tuple
 from pymongo.database import Database
 import os
 from dotenv import load_dotenv
+
 
 # Load environment variables from .env if present
 load_dotenv()
