@@ -259,19 +259,47 @@
     <script>
       const idleThreshold = 15 * 60 * 1000;
       let idleTime = 0;
+
       function resetIdle() {
         idleTime = 0;
       }
+
       function tickIdle() {
         idleTime += 1000;
         if (idleTime >= idleThreshold) {
           window.location.href = "{{ url_for('auth_routes.logout') }}";
         }
       }
+
       ["mousemove", "keydown", "click"].forEach((ev) =>
         document.addEventListener(ev, resetIdle)
       );
       setInterval(tickIdle, 1000);
+    </script>
+
+    <!-- Access Denied Modal + Session Ping -->
+    <script>
+      {% with msgs = get_flashed_messages(category_filter=['access_denied']) %}
+        {% if msgs %}
+          window.addEventListener('load', () => {
+            const modal = document.getElementById('accessDeniedModal');
+            if (modal) {
+              new bootstrap.Modal(modal).show();
+            }
+          });
+        {% endif %}
+      {% endwith %}
+
+      // Server-side ping to keep session alive while active
+      setInterval(() => {
+        fetch('/ping', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+      }, 300000); // every 5 minutes
     </script>
   </body>
 </html>

@@ -4,7 +4,7 @@ from pymongo import MongoClient
 from gridfs import GridFS
 import logging
 from bson.objectid import ObjectId
-from models import db, StudyMaterial, SubTopic, UserProgress, User, Level, Area, UserLevelProgress, Designation, Category
+from models import db, StudyMaterial, SubTopic, UserProgress, User, Level, Area, UserLevelProgress, Designation, Category, LevelArea
 from datetime import datetime
 from io import BytesIO
 import PyPDF2
@@ -12,8 +12,17 @@ from docx import Document
 from pptx import Presentation
 from PIL import Image, ImageDraw
 from io import BytesIO
-from utils.progress_utils import has_finished_study, is_level_done
-from bson.objectid import ObjectId
+from utils.progress_utils import has_finished_study
+import os
+from dotenv import load_dotenv
+from flask import current_app
+from exams_routes import check_level_completion
+
+
+
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -22,8 +31,12 @@ logging.basicConfig(level=logging.INFO)
 study_material_routes = Blueprint('study_material_routes', __name__)
 
 # MongoDB Client and GridFS Initialization
-mongo_client = MongoClient('mongodb://localhost:27017/')  # Replace with your MongoDB connection string
-mongo_db = mongo_client['collective_rcm']  # MongoDB database name
+# MongoDB + GridFS Initialization (from environment)
+mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+mongo_db_name = os.getenv("MONGO_DB_NAME", "collective_rcm")
+
+mongo_client = MongoClient(mongo_uri)
+mongo_db = mongo_client[mongo_db_name]
 grid_fs = GridFS(mongo_db)
 
 # Allowed file extensions
@@ -289,34 +302,69 @@ def start_course(course_id):
         logging.error(f"Error starting course: {e}", exc_info=True)
         return jsonify({'error': 'Failed to start course'}), 500
 
+
 def can_access_level(user, level_id):
     """
     Check if the user can access the specified level.
+
+    Access is granted if:
+      1. user.current_level >= level_id (progress-based)
+      2. user.designation.starting_level >= level_id (designation-based)
+      3. OR — if level_id <= 1, everyone may see level 1 by default.
+    Otherwise, require that all LevelArea rules for the previous level are met:
+      • 100% study completion for each area
+      • Exam passed if one is required (but skips allowed by designation)
     """
     try:
-        user_level = user.get_current_level() if hasattr(user, 'get_current_level') else user.current_level or 0
-        level_id = level_id or 1
+        # normalize user’s current level
+        user_level = (
+            user.get_current_level()
+            if hasattr(user, "get_current_level")
+            else getattr(user, "current_level", 0)
+        ) or 0
 
-        # Allow access if user's current level is high enough
-        if user_level >= level_id:
+        required = level_id or 0
+
+        # 1) Progress-based
+        if user_level >= required:
             return True
 
-        # Allow access if the user's designation permits
-        if user.designation and user.designation.starting_level <= level_id:
+        # 2) Designation-based
+        if (
+            user.designation
+            and getattr(user.designation, "starting_level", 0) >= required
+        ):
             return True
 
-        # Check if all areas in the previous level are completed
-        previous_level_id = level_id - 1
-        if previous_level_id > 0:
-            areas = Area.query.all()
-            for area in areas:
-                progress = UserLevelProgress.query.filter_by(
-                    user_id=user.id,
-                    level_id=previous_level_id,
-                    area_id=area.id,
-                    passed=True
-                ).first()
-                if not progress:
+        # 3) Level 1 is open to all
+        if required <= 1:
+            return True
+
+        # 4) Gated by LevelArea entries for (required - 1)
+        prev = required - 1
+        level_areas = LevelArea.query.filter_by(level_id=prev).all()
+        for la in level_areas:
+            # a) study must be 100% complete
+            if not has_finished_study(user.id, prev, la.area_id):
+                return False
+
+            # b) if an exam is specified, it must be passed (unless skipped)
+            if la.required_exam_id:
+                # skip only if designation allows
+                if user.can_skip_exam(la.required_exam):
+                    continue
+
+                prog = (
+                    UserLevelProgress.query
+                    .filter_by(
+                        user_id=user.id,
+                        level_id=prev,
+                        area_id=la.area_id,
+                        passed=True
+                    )
+                    .first()
+                )
+                if not prog:
                     return False
 
         return True
@@ -325,150 +373,118 @@ def can_access_level(user, level_id):
         logging.warning(f"Access level check failed: {e}")
         return False
 
-@study_material_routes.route('/view_course/<int:course_id>', methods=['GET'])
+# ----  Course Details  ----
+@study_material_routes.route("/view_course/<int:course_id>")
 def view_course(course_id):
     """
-    Display the details of a study material course with inline files.
+    Dashboard-style page that shows title, description,
+    dates, overall progress, and a “Continue” link.
+    No heavy file streaming happens here.
     """
-    try:
-        # Fetch study material details
-        logging.info(f"Fetching study material for course_id: {course_id}")
-        study_material = StudyMaterial.query.get_or_404(course_id)
-        logging.info(f"Study material fetched: {study_material.title}")
+    # 1 Fetch objects --------------------------------------------------
+    study_material = StudyMaterial.query.get_or_404(course_id)
+    subtopics      = SubTopic.query.filter_by(study_material_id=course_id).all()
 
-        # Fetch associated subtopics
-        subtopics = SubTopic.query.filter_by(study_material_id=course_id).all()
-        logging.info(f"Subtopics fetched: {[subtopic.title for subtopic in subtopics]}")
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Please log in.", "warning")
+        return redirect(url_for("auth_routes.login"))
 
-        # Fetch user ID securely from session
-        user_id = session.get('user_id')
-        if not user_id:
-            raise ValueError("User ID not found in session.")
-        logging.info(f"User ID fetched from session: {user_id}")
+    user         = User.query.get_or_404(user_id)
+    level_id     = study_material.restriction_level or 0
+    if not can_access_level(user, level_id):
+        flash(f"Complete previous levels to unlock Level {level_id}.", "danger")
+        return redirect(url_for("study_material_routes.list_study_materials"))
 
-        # Fetch user details
-        user = User.query.get(user_id)
-        if not user:
-            flash("User not found.", "danger")
-            return redirect(url_for('auth_routes.login'))
+    user_progress = (UserProgress.query
+                     .filter_by(user_id=user_id, study_material_id=course_id)
+                     .first())
 
-        # Get the course level restriction (if any)
-        level_id = study_material.restriction_level or 0
-
-        # Check level access
-        if not can_access_level(user, level_id):
-            flash(f"Complete the previous levels before accessing Level {level_id}.", "danger")
-            return redirect(url_for('study_material_routes.list_study_materials'))
-
-        # Fetch or initialize user progress
-        user_progress = UserProgress.query.filter_by(
+    if not user_progress:
+        user_progress = UserProgress(
             user_id=user_id,
-            study_material_id=course_id
-        ).first()
-
-        if not user_progress:
-            logging.info(f"No progress found for user_id {user_id}. Initializing progress...")
-            user_progress = UserProgress(
-                user_id=user_id,
-                study_material_id=course_id,
-                pages_visited=0,
-                progress_percentage=0,
-                start_date=datetime.utcnow()
-            )
-            db.session.add(user_progress)
-            db.session.commit()
-            logging.info(f"User progress initialized for course_id {course_id} and user_id {user_id}")
-
-        # Fetch files from MongoDB using file references stored in PostgreSQL
-        documents = []
-
-        if study_material.files:
-            logging.info(f"Fetching documents associated with study_material.files: {study_material.files}")
-
-            # study_material.files is a list of strings, each like "mongo_id|filename"
-            for file_entry in study_material.files:
-                try:
-                    if "|" not in file_entry:
-                        logging.warning(f"Skipping malformed file entry: {file_entry}")
-                        continue
-
-                    file_id, filename = file_entry.split("|", 1)  # split once, in case filename has "|"
-                    file_id = file_id.strip()
-                    filename = filename.strip()
-
-                    if not file_id:
-                        logging.warning(f"Skipping file with empty file_id: {filename}")
-                        continue
-
-                    grid_file = grid_fs.get(ObjectId(file_id))
-
-                    file_data = {
-                        'filename': filename,
-                        'id': str(grid_file._id),
-                        'type': None,
-                    }
-
-                    # Determine file type for rendering
-                    if filename.lower().endswith('.txt'):
-                        file_data['content'] = grid_file.read().decode('utf-8', errors='ignore')
-                        file_data['type'] = 'text'
-                    elif filename.lower().endswith('.pdf'):
-                        file_data['type'] = 'pdf'
-                    elif filename.lower().endswith('.pptx'):
-                        file_data['type'] = 'pptx'
-                    elif filename.lower().endswith('.docx'):
-                        file_data['type'] = 'docx'
-                    else:
-                        file_data['type'] = 'unsupported'
-
-                    documents.append(file_data)
-                    logging.info(f"File added to documents list: {file_data['filename']}")
-
-                except Exception as e:
-                    logging.warning(f"Error retrieving file {file_entry} from GridFS: {e}")
-
-        # Process subtopics to include metadata if available
-        for subtopic in subtopics:
-            try:
-                if subtopic.file_id:
-                    grid_file = grid_fs.get(ObjectId(subtopic.file_id))
-                    subtopic.file_metadata = {
-                        'filename': grid_file.filename,
-                        'id': str(grid_file._id),
-                        'type': 'unknown',
-                    }
-                    filename_lower = grid_file.filename.lower()
-                    if filename_lower.endswith('.txt'):
-                        subtopic.file_metadata['type'] = 'text'
-                    elif filename_lower.endswith('.pdf'):
-                        subtopic.file_metadata['type'] = 'pdf'
-                    elif filename_lower.endswith('.pptx'):
-                        subtopic.file_metadata['type'] = 'pptx'
-                    elif filename_lower.endswith('.docx'):
-                        subtopic.file_metadata['type'] = 'docx'
-                else:
-                    subtopic.file_metadata = None
-
-                logging.info(f"Subtopic processed: {subtopic.title} with file metadata: {subtopic.file_metadata}")
-            except Exception as e:
-                logging.warning(f"Error processing subtopic file {subtopic.file_id}: {e}")
-
-        # Render the course details page
-        logging.info(f"Rendering course page with {len(documents)} documents and {len(subtopics)} subtopics.")
-        return render_template(
-            'view_course.html',
-            study_material=study_material,
-            subtopics=subtopics,
-            documents=documents,
-            user_progress=user_progress
+            study_material_id=course_id,
+            pages_visited=0,
+            progress_percentage=0,
+            start_date=datetime.utcnow()
         )
+        db.session.add(user_progress)
+        db.session.commit()
 
-    except ValueError as ve:
-        logging.error(f"Validation error: {ve}")
-        return jsonify({'error': str(ve)}), 400
-    except Exception as e:
-        logging.error(f"Error viewing course for course_id={course_id}: {e}")
-        return jsonify({'error': f'An error occurred while fetching course details: {str(e)}'}), 500
+    # 2 Pick the first PDF-id so the template can build the CTA
+    first_doc_id = None
+    if study_material.files:
+        head_entry = study_material.files[0]
+        if "|" in head_entry:
+            first_doc_id, _ = head_entry.split("|", 1)
+
+    continue_url = url_for("study_material_routes.course_content",
+                           course_id=course_id,
+                           file_id=first_doc_id) if first_doc_id else None
+
+    # 3 Render
+    return render_template(
+        "view_course.html",
+        study_material=study_material,
+        subtopics=subtopics,
+        user_progress=user_progress,
+        continue_url=continue_url
+    )
+
+# ----  Document Viewer  --------------------------------------------
+@study_material_routes.route("/course_content/<int:course_id>")
+def course_content(course_id):
+    """
+    Streams PDFs / other docs in a dedicated viewer.
+    ?file_id=<mongo-id> tells the page which file to open first.
+    """
+
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Please log in.", "warning")
+        return redirect(url_for("auth_routes.login"))
+
+    study_material = StudyMaterial.query.get_or_404(course_id)
+
+    # ---- Collect docs ------------------------------------------------
+    requested_id = request.args.get("file_id")          # <<< NEW
+    documents = []
+
+    for entry in (study_material.files or []):
+        if "|" not in entry:
+            continue
+        fid, filename = (p.strip() for p in entry.split("|", 1))
+        try:
+            gfile = grid_fs.get(ObjectId(fid))
+        except Exception as e:
+            current_app.logger.warning(f"GridFS fetch failed: {e}")
+            continue
+
+        ext = filename.lower().rsplit(".", 1)[-1]
+        doc_type = ext if ext in ("pdf", "pptx", "docx", "txt") else "unsupported"
+
+        documents.append({
+            "id": str(gfile._id),
+            "filename": filename,
+            "type": doc_type,
+            "content": gfile.read().decode() if doc_type == "txt" else None
+        })
+
+    # ---- Put the requested file first -------------------------------  <<< NEW
+    if requested_id:
+        documents.sort(key=lambda d: 0 if d["id"] == requested_id else 1)
+
+    # ---- Progress record (unchanged) --------------------------------
+    user_progress = (UserProgress.query
+                     .filter_by(user_id=user_id, study_material_id=course_id)
+                     .first())
+
+    return render_template(
+        "course_content.html",
+        study_material=study_material,
+        documents=documents,
+        user_progress=user_progress
+    )
 
 @study_material_routes.route('/list', methods=['GET'])
 def list_study_materials():
@@ -530,98 +546,74 @@ def study_materials():
     return render_template('study_materials.html')
 
 
-@study_material_routes.route('/update_progress', methods=['POST'])
+@study_material_routes.route("/update_progress", methods=["POST"])
 def update_progress():
     """
-    Update the user's progress for a study material PDF.
-    When a PDF hits 100 % read, check whether the entire level
-    (study + exam for every area) is done and, if so, bump the user’s level.
+    Called by the viewer whenever a page becomes 50 % visible.
+    Updates pages_visited, progress %, completion_date, and (optionally) bumps the user level.
     """
     try:
-        data              = request.json
-        user_id           = session.get('user_id')
-        study_material_id = data.get('study_material_id')
-        current_page      = data.get('current_page')
-        total_pages       = data.get('total_pages')
+        data              = request.json or {}
+        user_id           = session.get("user_id")
+        study_material_id = data.get("study_material_id")
+        current_page      = int(data.get("current_page", 0))
+        total_pages       = int(data.get("total_pages", 0))
 
-        if not user_id or not study_material_id or current_page is None or total_pages is None:
-            logging.error("Invalid data provided for progress update.")
-            return jsonify({'error': 'Invalid input data'}), 400
+        if not (user_id and study_material_id and total_pages):
+            return jsonify(error="invalid input"), 400
 
-        study_material = StudyMaterial.query.get(study_material_id)
-        if not study_material:
-            logging.error(f"Study material {study_material_id} not found.")
-            return jsonify({'error': 'Study material not found'}), 404
-
+        study_material = StudyMaterial.query.get_or_404(study_material_id)
         if total_pages != study_material.total_pages:
-            logging.warning(f"Total pages mismatch: client {total_pages} != DB {study_material.total_pages}")
-            total_pages = study_material.total_pages
+            total_pages = study_material.total_pages  # always trust DB
 
-        if total_pages < 1:
-            return jsonify({'error': 'Study material has 0 pages'}), 400
+        prog = (UserProgress.query
+                .filter_by(user_id=user_id, study_material_id=study_material_id)
+                .with_for_update()
+                .first())
 
-        # ── upsert UserProgress ──────────────────────────────────────────
-        user_progress = (
-            UserProgress.query
-            .filter_by(user_id=user_id, study_material_id=study_material_id)
-            .first()
-        )
-        if not user_progress:
-            user_progress = UserProgress(
+        if not prog:
+            prog = UserProgress(
                 user_id=user_id,
                 study_material_id=study_material_id,
                 pages_visited=current_page,
+                start_date=datetime.utcnow()
             )
-            db.session.add(user_progress)
+            db.session.add(prog)
 
-        if current_page > user_progress.pages_visited:
-            user_progress.pages_visited = current_page
+        # advance page counter
+        if current_page > prog.pages_visited:
+            prog.pages_visited = current_page
 
-        user_progress.progress_percentage = int((user_progress.pages_visited / total_pages) * 100)
+        # compute %
+        prog.progress_percentage = int(prog.pages_visited / total_pages * 100)
+
+        # stamp completion once
+        if prog.progress_percentage == 100 and prog.completion_date is None:
+            prog.completion_date = datetime.utcnow()
+            prog.completed = True
+
         db.session.commit()
 
-        # ── level check (restricted materials only) ─────────────────────
+        # ---------- level-unlock check --------------------------------
         current_level = study_material.level_id or 0
-        if current_level and user_progress.progress_percentage >= 100:
-            user = User.query.get(user_id)
-            if is_level_done(user, current_level):
-                user.current_level = max(user.current_level, current_level + 1)
+        if current_level and prog.completed:
+            # only advance when *all* areas + exams for this level are satisfied
+            if check_level_completion(user_id, current_level):
+                user = User.query.get(user_id)
+                user.current_level = current_level + 1
                 db.session.commit()
                 flash(f"🎉 Level {current_level + 1} unlocked!", "success")
-                logging.info(f"User {user_id} advanced to Level {user.current_level}")
-            else:
-                logging.info(f"User {user_id} hasn’t yet completed Level {current_level}")
 
-        logging.info(
-            f"Progress updated: user={user_id}, "
-            f"material={study_material_id}, pages={user_progress.pages_visited}, "
-            f"%={user_progress.progress_percentage}"
-        )
-        return jsonify({'success': True, 'progress_percentage': user_progress.progress_percentage}), 200
+        return jsonify(
+            success=True,
+            progress_percentage=prog.progress_percentage,
+            completed=prog.completed
+        ), 200
 
-    except KeyError as ke:
-        return jsonify({'error': f"Missing key: {ke}"}), 400
     except Exception as e:
-        logging.exception("Error updating progress")
-        return jsonify({'error': str(e)}), 500
+        logging.exception("update_progress failed")
+        return jsonify(error=str(e)), 500
 
-
-def has_completed_level(user_id, level_id):
-    """
-    Check if the user has completed all areas in the specified level.
-    """
-    # Fetch areas specific to the level_id
-    areas = Area.query.filter_by(level_id=level_id).all()
-    for area in areas:
-        progress = UserLevelProgress.query.filter_by(
-            user_id=user_id,
-            level_id=level_id,
-            area_id=area.id,
-            passed=True
-        ).first()
-        if not progress:
-            return False
-    return True
 
 
 @study_material_routes.route('/stream_file/<file_id>', methods=['GET'])
@@ -681,33 +673,43 @@ def stream_file(file_id):
 
 @study_material_routes.route('/update_time', methods=['POST'])
 def update_time():
+    """
+    Add elapsed seconds to UserProgress.total_time.
+    The viewer sends chunks (default 30 s) while the tab is visible.
+    """
     try:
-        data = request.json
-        elapsed_time = data.get('elapsed_time', 0)
-        user_progress = UserProgress.query.filter_by(
-            user_id=session.get('user_id'), 
-            study_material_id=data.get('study_material_id')
-        ).first()
+        data         = request.json or {}
+        delta        = int(data.get('elapsed_time', 0))
+        material_id  = data.get('study_material_id')
+        user_id      = session.get('user_id')
 
-        if not user_progress:
-            return jsonify({'error': 'Progress record not found'}), 404
+        if not user_id or not material_id:
+            return jsonify(error="missing ids"), 400
+        if delta <= 0:
+            return jsonify(success=True)          # ignore zero/neg chunks
 
-        # Ensure start_date exists to calculate max_allowed_time
-        if not user_progress.start_date:
-            return jsonify({'error': 'Start date not available for progress tracking'}), 400
+        prog = (UserProgress.query
+                .filter_by(user_id=user_id, study_material_id=material_id)
+                .with_for_update()
+                .first())
 
-        max_allowed_time = (datetime.utcnow() - user_progress.start_date).total_seconds() + 300  # 5 min buffer
-        if elapsed_time < 0 or elapsed_time > max_allowed_time:
-            return jsonify({'error': 'Invalid elapsed_time value'}), 400
+        if not prog:
+            return jsonify(error="progress not found"), 404
 
-        user_progress.time_spent = (user_progress.time_spent or 0) + elapsed_time
+        # sanity-check: don’t let a single chunk exceed total possible time.
+        if prog.start_date:
+            max_allowed = (datetime.utcnow() - prog.start_date).total_seconds() + 300
+            if delta > max_allowed:
+                return jsonify(error="elapsed_time too large"), 400
+
+        prog.time_spent = (prog.time_spent or 0) + delta
         db.session.commit()
-        return jsonify({'success': True})
+        return jsonify(success=True)
+
     except Exception as e:
-        logging.error(f"Error updating time: {e}")
-        return jsonify({'error': str(e)}), 500
-''
-    
+        logging.exception("update_time failed")
+        return jsonify(error=str(e)), 500
+
 
 @study_material_routes.route('/download_file/<file_id>', methods=['GET'])
 def download_file(file_id):
@@ -767,7 +769,7 @@ def can_access_study_material(user, study_material):
         return True
 
     # If the user's designation allows skipping this level, allow access.
-    if user.designation and user.designation.starting_level <= restriction_level:
+    if user.designation and user.designation.starting_level >= restriction_level:
         return True
 
     # If the user's current level meets or exceeds the restriction, allow access.

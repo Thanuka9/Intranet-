@@ -5,7 +5,11 @@ import logging
 from datetime import datetime
 from typing import Optional, Union, List, Tuple
 from pymongo.database import Database
+import os
+from dotenv import load_dotenv
 
+# Load environment variables from .env if present
+load_dotenv()
 # -------------------------------
 # Logging Setup
 # -------------------------------
@@ -14,8 +18,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 # -------------------------------
 # MongoDB Configuration
 # -------------------------------
-MONGO_URI = "mongodb://localhost:27017"
-DB_NAME = "collective_rcm"
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+DB_NAME = os.getenv("MONGO_DB_NAME", "collective_rcm")
 FILES_COLLECTION = "file_metadata"
 PROFILE_PICTURES_COLLECTION = "profile_pictures"
 

@@ -1,0 +1,59 @@
+{% extends 'admin_base.html' %} {% block title %}Incorrect Answers Summary{%
+endblock %} {% block content %}
+<div class="container">
+  <h2 class="mb-4">Users’ Incorrect Answers Summary</h2>
+
+  <div class="table-responsive mb-5">
+    <table class="table table-striped table-bordered">
+      <thead class="table-light">
+        <tr>
+          <th>User</th>
+          <th>Email</th>
+          <th>Wrong Answers</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in data %}
+        <tr>
+          <td>{{ u.first_name }} {{ u.last_name }}</td>
+          <td>{{ u.employee_email }}</td>
+          <td>{{ u.wrong_count }}</td>
+          <td class="d-flex gap-2">
+            <!-- View Details -->
+            <a
+              href="{{ url_for('admin_routes.view_incorrect_answers', user_id=u.id) }}"
+              class="btn btn-sm btn-outline-primary"
+              >View Details</a
+            >
+
+            <!-- Clear All Incorrect Answers for this user -->
+            <form
+              method="POST"
+              action="{{ url_for('admin_routes.clear_incorrect_answers') }}"
+              onsubmit="return confirm('Really delete ALL incorrect answers for {{ u.first_name }}?');"
+            >
+              <input type="hidden" name="user_id" value="{{ u.id }}" />
+              <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+              />
+              <button type="submit" class="btn btn-sm btn-danger">
+                Clear All
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4" class="text-center">
+            No incorrect answers logged yet.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

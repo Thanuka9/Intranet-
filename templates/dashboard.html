@@ -12,146 +12,422 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
     <style>
+      :root {
+        --brand-red: #ff4d4d;
+        --brand-dark: #010305;
+        --brand-light: #f4f7f9;
+        --brand-light2: #fff;
+        --brand-shadow: 0 2px 18px rgba(44, 62, 80, 0.11);
+        --brand-shadow-nav: 0 2px 18px rgba(44, 62, 80, 0.11);
+        --nav-height: 52px;
+        --progress-bg: #e9ecef;
+        --progress-gradient: linear-gradient(90deg, #28a745 0%, #60e860 100%);
+        --card-bg: #fff;
+        --card-text: #23272f;
+        --main-text: #23272f;
+        --nav-bg: #010305;
+        --footer-bg: #010305;
+        --green: #28a745;
+      }
+      .dark-theme {
+        --brand-dark: #191c22;
+        --brand-light: #1b1e23;
+        --brand-light2: #22262e;
+        --brand-shadow: 0 2px 18px rgba(20, 22, 27, 0.21);
+        --brand-shadow-nav: 0 2px 18px rgba(20, 22, 27, 0.21);
+        --progress-bg: #363945;
+        --progress-gradient: linear-gradient(90deg, #38d67a 0%, #9ff4c1 100%);
+        --card-bg: #23252b;
+        --card-text: #f2f3fa;
+        --main-text: #f2f2f2;
+        --nav-bg: #181b20;
+        --footer-bg: #181b20;
+        --green: #38d67a;
+      }
+      html,
       body {
-        background-color: #f4f7f9;
-        font-family: Arial, sans-serif;
-        margin: 0;
-        padding: 0;
         min-height: 100vh;
+        height: 100%;
+        background: var(--brand-light);
+        color: var(--main-text);
+        font-family: "Inter", Arial, sans-serif;
         display: flex;
         flex-direction: column;
+        margin: 0;
+        padding: 0;
       }
+      body {
+        flex: 1 0 auto;
+        background: var(--brand-light);
+        color: inherit;
+        transition: background 0.3s, color 0.3s;
+      }
+
       .logo-title {
         display: flex;
         align-items: center;
         justify-content: center;
-        background-color: #ffffff;
-        padding: 6px 10px;
-        box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.05);
+        background: var(--brand-light2);
+        padding: 12px 0 7px 0;
+        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+        letter-spacing: 1px;
       }
       .logo-title img {
-        height: 35px;
-        margin-right: 10px;
+        height: 38px;
+        margin-right: 13px;
+        border-radius: 50%;
+        background: #f7f7f7;
       }
       .logo-title h1 {
-        font-size: 1.4rem;
-        font-weight: bold;
+        font-size: 1.43rem;
+        font-weight: 600;
         margin: 0;
-        color: #333;
+        color: var(--main-text);
       }
       .logo-title .red {
-        color: #ff4d4d;
+        color: var(--brand-red);
       }
+      .logo-title h1 span {
+        color: inherit;
+      }
+      .dark-theme .logo-title h1 span:not(.red) {
+        color: #fff !important;
+      }
+
+      /* NAVIGATION BAR LAYOUT */
       nav {
-        background-color: #010305;
-        padding: 6px 10px;
+        background: var(--nav-bg);
+        min-height: var(--nav-height);
+        box-shadow: var(--brand-shadow-nav);
+        padding: 0;
+        z-index: 100;
+        position: relative;
+      }
+      .navbar-collective {
+        max-width: 1300px;
+        margin: 0 auto;
+        width: 100%;
+        min-height: var(--nav-height);
         display: flex;
+        align-items: center;
         justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
+        padding: 0 18px;
       }
-      .nav-left a {
-        color: #ffffff;
+      /* Corners for Profile and Logout (absolutely placed) */
+      .navbar-corner {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        display: flex;
+        align-items: center;
+      }
+      .navbar-left-corner {
+        left: 18px;
+      }
+      .navbar-right-corner {
+        right: 18px;
+      }
+      /* Centered nav links */
+      .navbar-center {
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 0.2rem;
+      }
+      .navbar-link {
+        color: #fff;
+        font-size: 1.02rem;
+        font-weight: 500;
+        padding: 5px 12px;
+        border-radius: 6px;
         text-decoration: none;
-        margin-right: 10px;
-        font-size: 0.95rem;
-        display: inline-flex;
+        transition: background 0.15s, color 0.15s;
+        display: flex;
         align-items: center;
+        gap: 4.5px;
+        margin: 0 1px;
+        white-space: nowrap;
       }
-      .nav-left a i {
-        margin-right: 6px;
-      }
-      .nav-left a:hover {
+      .navbar-link.active,
+      .navbar-link:hover {
+        background: #24262e;
         color: #ffdd57;
       }
-      .nav-center {
-        flex: 1;
-        text-align: center;
-      }
-      .nav-center a {
-        color: #ffffff;
-        text-decoration: none;
-        margin: 0 8px;
-        font-size: 0.9rem;
-        display: inline-flex;
-        align-items: center;
-      }
-      .nav-center a i {
-        margin-right: 6px;
-      }
-      .nav-center a:hover {
-        color: #ffdd57;
+      .navbar-link:focus-visible {
+        outline: 2px solid #ffdd57;
+        outline-offset: 2px;
       }
       .btn-logout {
-        background-color: #ff4d4d;
-        color: #ffffff;
+        background: var(--brand-red);
+        color: #fff;
         border: none;
-        padding: 5px 10px;
-        font-size: 0.85rem;
-        text-decoration: none;
+        padding: 5.5px 15px;
+        font-size: 1.02rem;
+        border-radius: 7px;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transition: background 0.2s, color 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }
-      .btn-logout:hover {
-        background-color: #ff1a1a;
+      .btn-logout:hover,
+      .btn-logout:focus-visible {
+        background: #ff1a1a;
+        color: #fff;
+      }
+      .navbar-collective {
+        position: relative;
+        min-height: var(--nav-height);
+      }
+      @media (max-width: 1080px) {
+        .navbar-collective {
+          flex-direction: column;
+          gap: 2px;
+          height: auto;
+          padding: 5px 4px;
+        }
+        .navbar-center {
+          margin: 3px 0;
+        }
+        .btn-logout {
+          margin-top: 4px;
+        }
+        .navbar-corner {
+          position: static;
+          height: auto;
+        }
+      }
+      @media (max-width: 650px) {
+        .navbar-collective {
+          flex-direction: column;
+          gap: 5px;
+          height: auto;
+          padding: 4px 2px;
+        }
+        .navbar-link {
+          font-size: 0.96rem;
+          padding: 4px 8px;
+        }
+        .btn-logout {
+          font-size: 0.93rem;
+          padding: 4.5px 11px;
+        }
+        .navbar-corner {
+          position: static;
+          height: auto;
+        }
+      }
+
+      .container-fluid {
+        flex: 1 0 auto;
+        padding-bottom: 30px;
       }
       .card {
-        transition: transform 0.3s, box-shadow 0.3s;
-        border-radius: 10px;
+        background: var(--card-bg) !important;
+        color: var(--card-text) !important;
+        border-radius: 16px;
+        box-shadow: var(--brand-shadow);
+        border: none;
+        transition: background 0.3s, color 0.3s, box-shadow 0.3s;
       }
       .card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.1);
+        transform: scale(1.015) translateY(-2px);
+        box-shadow: 0px 8px 28px 0px rgba(44, 62, 80, 0.18);
+      }
+      .dashboard-header {
+        background: var(--card-bg);
+        border-radius: 18px;
+        margin-bottom: 34px;
+        box-shadow: 0 1px 8px rgba(44, 62, 80, 0.08);
+        padding: 2.2rem 2rem 2rem 2rem;
+        text-align: center;
+      }
+      .dashboard-header h2 {
+        font-weight: 700;
+        font-size: 2.05rem;
+        margin-bottom: 1rem;
+      }
+      .dashboard-header p {
+        font-size: 1.13rem;
+        margin-bottom: 0.5rem;
+      }
+      .dashboard-header strong {
+        font-size: 1.08rem;
+      }
+      .card h5 {
+        font-weight: 600;
+        font-size: 1.08rem;
+        margin-bottom: 0.7rem;
+      }
+      .progress {
+        background: var(--progress-bg);
+        border-radius: 8px;
+        height: 20px;
+        margin-bottom: 0.5rem;
+        margin-top: 0.2rem;
+        overflow: hidden;
       }
       .progress-bar {
-        background-color: #28a745 !important;
+        background: var(--progress-gradient);
+        color: #fff;
+        font-weight: 600;
+        font-size: 1.03rem;
+        transition: width 0.6s;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: none;
+        letter-spacing: 0.5px;
+        animation: slideIn 1s cubic-bezier(0.33, 1, 0.68, 1);
       }
+      @keyframes slideIn {
+        from {
+          width: 0;
+        }
+        to {
+          width: var(--progress-width, 70%);
+        }
+      }
+      .announcements-list {
+        max-height: 120px;
+        overflow-y: auto;
+        padding-left: 10px;
+        margin-bottom: 0;
+      }
+      .announcement-item {
+        margin-bottom: 7px;
+        color: inherit;
+        font-size: 1rem;
+      }
+      /* Exam results green highlight */
+      .exam-score-green {
+        color: var(--green);
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+      /* Responsive Card Grid */
+      @media (max-width: 767px) {
+        .row > [class*="col-"] {
+          margin-bottom: 18px;
+        }
+        .container-fluid {
+          padding-left: 5px;
+          padding-right: 5px;
+        }
+      }
+
+      /* Floating Theme Toggle */
+      .theme-toggle-fab {
+        position: fixed;
+        right: 32px;
+        bottom: 65px;
+        z-index: 1200;
+        background: var(--nav-bg) !important;
+        color: #ffe66d !important;
+        border: none;
+        border-radius: 50%;
+        width: 35px;
+        height: 35px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.09);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.08rem;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+        opacity: 0.9;
+      }
+      .theme-toggle-fab:hover,
+      .theme-toggle-fab:focus-visible {
+        background: #24262e !important;
+        color: #fffbe6 !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.16);
+      }
+      @media (max-width: 600px) {
+        .theme-toggle-fab {
+          right: 12px;
+          bottom: 67px;
+          width: 31px;
+          height: 31px;
+          font-size: 0.97rem;
+        }
+        .logo-title h1 {
+          font-size: 1.1rem;
+        }
+      }
+
+      /* Footer */
       footer {
-        background-color: #343a40;
-        color: #ffffff;
-        padding: 10px;
-        font-size: 0.85rem;
+        background: var(--footer-bg) !important;
+        color: #fff;
+        padding: 13px 0 13px 0;
+        font-size: 1.07rem;
         text-align: center;
         margin-top: auto;
-      }
-      .back-btn {
-        margin-bottom: 20px;
+        letter-spacing: 0.01em;
+        width: 100%;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.07);
+        position: relative;
       }
     </style>
   </head>
-
   <body>
     <div class="logo-title">
       <img
-        src="{{ url_for('static', filename='images/logo.png') }}"
-        alt="Company Logo"
+        src="{{ user_avatar_url or url_for('static', filename='images/logo.png') }}"
+        alt="Profile"
       />
       <h1><span>COLLECT</span><span class="red">IVE</span></h1>
     </div>
-
+    <!-- Navbar with Profile (left corner), Center Nav, Logout (right corner) -->
     <nav>
-      <div class="nav-left">
-        <a href="{{ url_for('profile_routes.profile') }}"
-          ><i class="fas fa-user"></i> Profile</a
-        >
+      <div class="navbar-collective">
+        <div class="navbar-corner navbar-left-corner">
+          <a
+            href="{{ url_for('profile_routes.profile') }}"
+            class="navbar-link{% if active_page == 'profile' %} active{% endif %}"
+            ><i class="fas fa-user"></i>
+            <span class="d-none d-md-inline">Profile</span></a
+          >
+        </div>
+        <div class="navbar-center">
+          <a
+            href="{{ url_for('task_routes.view_tasks') }}"
+            class="navbar-link{% if active_page == 'tasks' %} active{% endif %}"
+            ><i class="fas fa-tasks"></i>
+            <span class="d-none d-md-inline">Tasks</span></a
+          >
+          <a
+            href="{{ url_for('general_routes.study_materials') }}"
+            class="navbar-link{% if active_page == 'study' %} active{% endif %}"
+            ><i class="fas fa-book"></i>
+            <span class="d-none d-md-inline">Knowledge Base</span></a
+          >
+          <a
+            href="{{ url_for('general_routes.hr_management') }}"
+            class="navbar-link{% if active_page == 'management' %} active{% endif %}"
+            ><i class="fas fa-briefcase"></i>
+            <span class="d-none d-md-inline">Management Portal</span></a
+          >
+        </div>
+        <div class="navbar-corner navbar-right-corner">
+          <a href="{{ url_for('auth_routes.logout') }}" class="btn-logout">
+            <i class="fas fa-sign-out-alt"></i>
+            <span class="d-none d-sm-inline">Logout</span>
+          </a>
+        </div>
       </div>
-      <div class="nav-center">
-        <a href="{{ url_for('task_routes.view_tasks') }}"
-          ><i class="fas fa-tasks"></i> Tasks</a
-        >
-        <a href="{{ url_for('general_routes.study_materials') }}"
-          ><i class="fas fa-book"></i> Study Materials</a
-        >
-        <a href="{{ url_for('general_routes.hr_management') }}"
-          ><i class="fas fa-briefcase"></i> Management Portal</a
-        >
-      </div>
-      <a href="{{ url_for('auth_routes.logout') }}" class="btn-logout"
-        >Logout</a
-      >
     </nav>
 
     <div class="container-fluid mt-4">
-      <div class="card shadow-sm p-4 mb-4 text-center">
+      <div class="dashboard-header">
         <h2>Welcome, {{ user_name }}!</h2>
         <p>
           Manage your profile, learning progress, deadlines, and tasks all in
@@ -159,19 +435,18 @@
         </p>
         <p><strong>Designation:</strong> {{ user_role }}</p>
       </div>
-
-      <div class="row">
+      <div class="row g-3">
         <!-- Learning Progress -->
-        <div class="col-md-6 col-lg-3 mb-4">
+        <div class="col-md-6 col-lg-3">
           <div class="card h-100 p-3">
             <h5><i class="fas fa-graduation-cap"></i> Learning Progress</h5>
             {% if current_course %}
-            <p class="mb-1">{{ current_course }}</p>
-            <div class="progress" style="height: 15px">
+            <p class="mb-2">{{ current_course }}</p>
+            <div class="progress" style="height: 20px">
               <div
                 class="progress-bar progress-bar-striped progress-bar-animated"
                 role="progressbar"
-                style="width: {{ course_progress or 0 }}%"
+                style="width: {{ course_progress or 0 }}%;"
                 aria-valuenow="{{ course_progress or 0 }}"
                 aria-valuemin="0"
                 aria-valuemax="100"
@@ -184,13 +459,17 @@
             {% endif %}
           </div>
         </div>
-
         <!-- Exam Results -->
-        <div class="col-md-6 col-lg-3 mb-4">
+        <div class="col-md-6 col-lg-3">
           <div class="card h-100 p-3">
             <h5><i class="fas fa-chart-line"></i> Exam Results</h5>
             {% if last_exam_title %}
-            <p>{{ last_exam_title }} – Score: {{ last_exam_score }}%</p>
+            <p>
+              <span>{{ last_exam_title }} – </span>
+              <span class="exam-score-green"
+                >Score: {{ last_exam_score }}%</span
+              >
+            </p>
             {% else %}
             <p>No exams completed yet.</p>
             {% endif %}
@@ -200,9 +479,8 @@
             </p>
           </div>
         </div>
-
         <!-- Upcoming Deadlines -->
-        <div class="col-md-6 col-lg-3 mb-4">
+        <div class="col-md-6 col-lg-3">
           <div class="card h-100 p-3">
             <h5><i class="fas fa-calendar-alt"></i> Upcoming Deadlines</h5>
             {% if upcoming_tasks %}
@@ -221,24 +499,77 @@
             {% endif %}
           </div>
         </div>
-
         <!-- Announcements -->
-        <div class="col-md-6 col-lg-3 mb-4">
+        <div class="col-md-6 col-lg-3">
           <div class="card h-100 p-3">
             <h5><i class="fas fa-bullhorn"></i> Announcements</h5>
-            <ul class="ps-3">
+            <div class="announcements-list" id="announcementsList">
               {% if announcements %} {% for note in announcements %}
-              <li>{{ note.message }} – <strong>{{ note.date }}</strong></li>
+              <div class="announcement-item">
+                {{ note.message }} – <strong>{{ note.date }}</strong>
+              </div>
               {% endfor %} {% else %}
-              <li>No announcements</li>
+              <div class="announcement-item">No announcements</div>
               {% endif %}
-            </ul>
+            </div>
           </div>
         </div>
       </div>
     </div>
-
+    <!-- Floating dark mode toggle (above footer, always visible) -->
+    <button
+      class="theme-toggle-fab"
+      id="themeToggle"
+      aria-label="Toggle dark mode"
+    >
+      <i class="fas fa-moon"></i>
+    </button>
+    <!-- Sticky footer always at bottom -->
     <footer>Collective Intranet© 2024</footer>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Floating dark mode toggle
+      const themeToggle = document.getElementById("themeToggle");
+      const body = document.body;
+      function setTheme(theme) {
+        if (theme === "dark") {
+          body.classList.add("dark-theme");
+          themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        } else {
+          body.classList.remove("dark-theme");
+          themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+        }
+        localStorage.setItem("theme", theme);
+      }
+      themeToggle?.addEventListener("click", () => {
+        setTheme(body.classList.contains("dark-theme") ? "light" : "dark");
+      });
+      (() => {
+        const savedTheme =
+          localStorage.getItem("theme") ||
+          (window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light");
+        setTheme(savedTheme);
+      })();
+
+      // Keep session alive by pinging the server every 5 minutes
+      setInterval(() => {
+        fetch("/ping", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        });
+      }, 300000); // 5 minutes
+
+      // Keyboard shortcut (Ctrl+B) for dark mode
+      document.addEventListener("keydown", function (e) {
+        if (e.ctrlKey && e.key.toLowerCase() === "b") {
+          setTheme(body.classList.contains("dark-theme") ? "light" : "dark");
+        }
+      });
+    </script>
   </body>
 </html>

@@ -1,0 +1,97 @@
+{% extends 'admin_base.html' %} {% block title %}Exam Access Requests{% endblock
+%} {% block content %}
+<h1>Exam Access Requests</h1>
+
+<!-- Filter Form -->
+<form method="GET" class="row g-3 align-items-end mb-4">
+  <div class="col-auto">
+    <label for="from_date" class="form-label">From</label>
+    <input
+      type="date"
+      class="form-control"
+      name="from_date"
+      value="{{ from_date }}"
+    />
+  </div>
+  <div class="col-auto">
+    <label for="to_date" class="form-label">To</label>
+    <input
+      type="date"
+      class="form-control"
+      name="to_date"
+      value="{{ to_date }}"
+    />
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-primary">Filter</button>
+  </div>
+</form>
+
+<table class="table table-bordered table-hover mb-5">
+  <thead class="table-light">
+    <tr>
+      <th>Request ID</th>
+      <th>User</th>
+      <th>Exam Title</th>
+      <th>Requested At</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in requests %}
+    <tr>
+      <td>{{ r.id }}</td>
+      <td>{{ r.user.first_name }} {{ r.user.last_name }}</td>
+      <td>
+        {% if r.exam_id == 9991 %} Special Exam Paper 1 {% elif r.exam_id ==
+        9992 %} Special Exam Paper 2 {% else %} {{ r.exam_title or 'Unknown
+        Exam' }} {% endif %}
+      </td>
+      <td>{{ r.requested_at.strftime('%Y-%m-%d %H:%M') }}</td>
+      <td>
+        {% if r.status == 'pending' %}
+        <span class="badge bg-warning text-dark">Pending</span>
+        {% elif r.status == 'approved' %}
+        <span class="badge bg-success">Approved</span>
+        {% elif r.status == 'rejected' %}
+        <span class="badge bg-danger">Rejected</span>
+        {% else %}
+        <span class="badge bg-secondary">{{ r.status }}</span>
+        {% endif %}
+      </td>
+      <td class="text-center">
+        {% if r.status == 'pending' %}
+        <form method="POST" class="d-inline-block">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <input type="hidden" name="request_id" value="{{ r.id }}" />
+          <button
+            name="action"
+            value="approve"
+            class="btn btn-success btn-sm"
+            title="Approve Request"
+          >
+            <i class="fas fa-check"></i>
+          </button>
+          <button
+            name="action"
+            value="reject"
+            class="btn btn-danger btn-sm"
+            title="Reject Request"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </form>
+        {% else %}
+        <em class="text-muted">No actions</em>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="6" class="text-center">No access requests found.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

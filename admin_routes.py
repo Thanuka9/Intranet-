@@ -1,6 +1,6 @@
 from flask import (
     Blueprint, request, jsonify, render_template,
-    redirect, url_for, session, flash
+    redirect, url_for, session, flash, current_app
 )
 from flask_login import login_required, current_user
 from models import (
@@ -9,7 +9,7 @@ from models import (
     User, Designation, Exam, Question, UserScore,
     Category, Level, Area, UserLevelProgress,
     SpecialExamRecord, Client, LevelArea,
-    Task, TaskDocument, FailedLogin, Event, Role
+    Task, TaskDocument, FailedLogin, Event, Role, ExamAccessRequest, IncorrectAnswer, Department
 )
 import logging
 from datetime import datetime, timedelta
@@ -17,16 +17,30 @@ from werkzeug.utils import secure_filename
 from gridfs import GridFS
 from pymongo import MongoClient
 from functools import wraps
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, and_
 import io, csv
 from bson import ObjectId
 from flask import make_response
+import os
+from dotenv import load_dotenv
+from pymongo import MongoClient
+from gridfs import GridFS
+from sqlalchemy import desc
+from IPython.display import HTML
+from sqlalchemy.orm  import joinedload
 
+
+# Load .env variables (if running locally)
+load_dotenv()
 
 # --- MongoDB + GridFS setup ---
-mongo_client = MongoClient('mongodb://localhost:27017/')
-mongo_db     = mongo_client['collective_rcm']
-grid_fs      = GridFS(mongo_db)
+mongo_uri = os.getenv('MONGO_URI', 'mongodb://localhost:27017/')
+mongo_db_name = os.getenv('MONGO_DB_NAME', 'collective_rcm')
+
+mongo_client = MongoClient(mongo_uri)
+mongo_db = mongo_client[mongo_db_name]
+grid_fs = GridFS(mongo_db)
+
 
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'ppt', 'xlsx'}
 
@@ -576,102 +590,319 @@ def view_exams():
         categories=categories,
         users=users
     )
-
+# --- Admin Analytics ---
 @admin_routes.route('/admin/analytics')
 @login_required
 @admin_required
 def view_analytics():
-    # 1) Period selection
-    try:
-        period = int(request.args.get('period', 30))
-    except ValueError:
+    # Add 'all' as an option for all time
+    periods = ['all', 30, 60, 90]
+    period_str = request.args.get('period', '')
+    start_date_str = request.args.get('start_date', '').strip()
+    end_date_str = request.args.get('end_date', '').strip()
+    q = request.args.get('q', '').strip()
+
+    today = datetime.utcnow().date()
+
+    # All time analytics
+    if period_str == 'all':
+        start_date = None
+        end_date = None
+        period = 'all'
+    elif period_str:
+        try:
+            period = int(period_str)
+        except ValueError:
+            period = 30
+        if period not in [30, 60, 90]:
+            period = 30
+        start_date = today - timedelta(days=period)
+        end_date = today
+    elif start_date_str and end_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+            period = (end_date - start_date).days
+        except ValueError:
+            period = 30
+            start_date = today - timedelta(days=period)
+            end_date = today
+    else:
         period = 30
-    if period not in (30, 60, 90):
-        period = 30
+        start_date = today - timedelta(days=period)
+        end_date = today
 
-    today      = datetime.utcnow().date()
-    start_date = today - timedelta(days=period)
+    # --- User queries ---
+    user_query = User.query.filter(User.deleted_at.is_(None))
+    # Total users (not deleted)
+    total_users = user_query.count()
+    active_users = total_users
 
-    # 2) Summary metrics
-    total_users         = User.query.count()
-    active_user_ids     = set([u for (u,) in db.session.query(UserScore.user_id).distinct()]
-                              + [u for (u,) in db.session.query(UserProgress.user_id).distinct()])
-    active_users        = len(active_user_ids)
-    avg_exam_score      = db.session.query(func.avg(UserScore.score)).scalar() or 0
-    avg_course_progress = db.session.query(func.avg(UserProgress.progress_percentage)).scalar() or 0
+    # --- Analytics Queries ---
+    def date_filter(query, model_field):
+        """Apply date filter if start_date/end_date are set (not all time)"""
+        if start_date and end_date:
+            return query.filter(model_field >= start_date, model_field <= end_date)
+        return query
 
-    # 3) Exam averages + table
+    # Average exam score, course progress, exam stats filtered by date if not all time
+    avg_exam_score = date_filter(db.session.query(func.avg(UserScore.score)), UserScore.created_at).scalar() or 0
+    avg_course_progress = date_filter(db.session.query(func.avg(UserProgress.progress_percentage)), UserProgress.completion_date).scalar() or 0
+
     exam_data = (
-        db.session.query(
-            Exam.title,
-            func.avg(UserScore.score).label('avg_score')
+        date_filter(
+            db.session.query(
+                Exam.title,
+                func.avg(UserScore.score).label('avg_score')
+            )
+            .join(UserScore, UserScore.exam_id == Exam.id),
+            UserScore.created_at
         )
-        .join(UserScore, UserScore.exam_id == Exam.id)
         .group_by(Exam.title)
         .order_by(Exam.title)
         .all()
     )
-    exam_labels       = [row.title for row in exam_data]
-    exam_avg_scores   = [round(row.avg_score,2) for row in exam_data]
+    exam_labels = [row.title for row in exam_data]
+    exam_avg_scores = [round(row.avg_score, 2) for row in exam_data]
 
-    # 4) Pass vs Fail counts + percentages
-    passed_count = UserScore.query.filter(UserScore.score >= 56).count()
-    failed_count = UserScore.query.filter(UserScore.score < 56).count()
-    pf_total     = passed_count + failed_count or 1
-    pass_pct     = round(passed_count / pf_total * 100, 1)
-    fail_pct     = round(failed_count / pf_total * 100, 1)
+    passed_count = date_filter(UserScore.query.filter(UserScore.score >= 56), UserScore.created_at).count()
+    failed_count = date_filter(UserScore.query.filter(UserScore.score < 56), UserScore.created_at).count()
+    pf_total = passed_count + failed_count or 1
+    pass_pct = round(passed_count / pf_total * 100, 1)
+    fail_pct = round(failed_count / pf_total * 100, 1)
 
-    # 5) Course progress averages + table
     cp_data = (
-        db.session.query(
-            StudyMaterial.title,
-            func.avg(UserProgress.progress_percentage).label('avg_prog')
+        date_filter(
+            db.session.query(
+                StudyMaterial.title,
+                func.avg(UserProgress.progress_percentage).label('avg_prog')
+            )
+            .join(UserProgress, UserProgress.study_material_id == StudyMaterial.id),
+            UserProgress.completion_date
         )
-        .join(UserProgress, UserProgress.study_material_id == StudyMaterial.id)
         .group_by(StudyMaterial.title)
         .order_by(StudyMaterial.title)
         .all()
     )
-    course_labels       = [row.title for row in cp_data]
-    course_avg_progress = [round(row.avg_prog,2) for row in cp_data]
+    course_labels = [row.title for row in cp_data]
+    course_avg_progress = [round(row.avg_prog, 2) for row in cp_data]
 
-    # 6) Time-series of avg score
     ts = (
-        db.session.query(
-            func.date(UserScore.created_at).label('date'),
-            func.avg(UserScore.score).label('avg_score')
+        date_filter(
+            db.session.query(
+                func.date(UserScore.created_at).label('date'),
+                func.avg(UserScore.score).label('avg_score')
+            ),
+            UserScore.created_at
         )
-        .filter(UserScore.created_at >= start_date)
         .group_by(func.date(UserScore.created_at))
         .order_by(func.date(UserScore.created_at))
         .all()
     )
-    ts_labels    = [r.date.strftime('%Y-%m-%d') for r in ts]
-    ts_avg_scores= [round(r.avg_score,2) for r in ts]
+    ts_labels = [r.date.strftime('%Y-%m-%d') for r in ts]
+    ts_avg_scores = [round(r.avg_score, 2) for r in ts]
+
+    # Top users by exam score in range
+    top_users_query = db.session.query(User, func.avg(UserScore.score).label('avg_score')) \
+        .join(UserScore, UserScore.user_id == User.id) \
+        .filter(User.deleted_at.is_(None))
+    if start_date and end_date:
+        top_users_query = top_users_query.filter(UserScore.created_at >= start_date, UserScore.created_at <= end_date)
+    top_users = top_users_query.group_by(User).order_by(func.avg(UserScore.score).desc()).limit(5).all()
+
+    # --- Advanced 3D Scatter Metrics ---
+    users_all = User.query.filter(User.deleted_at.is_(None)).all()
+    metrics = {
+        "avg_exam_score": [],
+        "total_time_spent": [],
+        "completion_rate": [],
+        "exams_taken": [],
+        "avg_attempts_per_exam": [],
+        "score_improvement": [],
+        "last_activity_days_ago": [],
+        "user_labels": [],
+        "department": [],
+    }
+    for user in users_all:
+        # Scores and progress
+        scores = sorted(user.scores, key=lambda s: s.created_at)
+        progresses = user.study_progress
+
+        # Avg exam score
+        avg_score = sum(s.score for s in scores) / len(scores) if scores else 0
+        metrics["avg_exam_score"].append(round(avg_score, 2))
+
+        # Total time spent
+        time_spent = sum([getattr(sp, "time_spent", 0) for sp in progresses])
+        metrics["total_time_spent"].append(round(time_spent, 2))
+
+        # Completion rate
+        courses_assigned = len(progresses)
+        courses_completed = sum(1 for sp in progresses if getattr(sp, "progress_percentage", 0) >= 100)
+        completion_rate = (courses_completed / courses_assigned * 100) if courses_assigned else 0
+        metrics["completion_rate"].append(round(completion_rate, 2))
+
+        # Exams taken
+        exams_taken = len(scores)
+        metrics["exams_taken"].append(exams_taken)
+
+        # Avg attempts per exam (if attempt tracking)
+        exam_ids = set()
+        attempts = 0
+        for s in scores:
+            exam_ids.add(s.exam_id)
+            attempts += getattr(s, "attempt", 1)
+        avg_attempts = (attempts / len(exam_ids)) if exam_ids else 0
+        metrics["avg_attempts_per_exam"].append(round(avg_attempts, 2))
+
+        # Score improvement (last - first)
+        if len(scores) >= 2:
+            score_improvement = scores[-1].score - scores[0].score
+        else:
+            score_improvement = 0
+        metrics["score_improvement"].append(round(score_improvement, 2))
+
+        # Last activity days ago
+        last_dates = [s.created_at for s in scores] + [sp.completion_date for sp in progresses if sp.completion_date]
+        last_dates = [d for d in last_dates if d]
+        if last_dates:
+            last_activity = max(last_dates)
+            days_ago = (today - last_activity.date()).days
+        else:
+            days_ago = None
+        metrics["last_activity_days_ago"].append(days_ago if days_ago is not None else "")
+
+        # Labels
+        metrics["user_labels"].append(f"{user.first_name} {user.last_name}")
+        metrics["department"].append(user.department.name if user.department else "N/A")
+
+    axis_options = [
+        {"key": "avg_exam_score", "label": "Avg Exam Score"},
+        {"key": "total_time_spent", "label": "Total Time Spent"},
+        {"key": "completion_rate", "label": "Completion Rate"},
+        {"key": "exams_taken", "label": "Exams Taken"},
+        {"key": "avg_attempts_per_exam", "label": "Avg Attempts per Exam"},
+        {"key": "score_improvement", "label": "Score Improvement"},
+        {"key": "last_activity_days_ago", "label": "Last Activity (days ago)"},
+    ]
+    # Default axes
+    default_x = "avg_exam_score"
+    default_y = "total_time_spent"
+    default_z = "completion_rate"
 
     return render_template(
         'admin_analytics.html',
-        # timeframe
-        period=period, periods=[30,60,90],
-        # summary
+        period=period, periods=periods,
         total_users=total_users,
         active_users=active_users,
-        avg_exam_score=round(avg_exam_score,2),
-        avg_course_progress=round(avg_course_progress,2),
-        # exam data
+        avg_exam_score=round(avg_exam_score, 2),
+        avg_course_progress=round(avg_course_progress, 2),
         exam_labels=exam_labels,
         exam_avg_scores=exam_avg_scores,
-        # pass/fail
         passed_count=passed_count,
         failed_count=failed_count,
         pass_pct=pass_pct,
         fail_pct=fail_pct,
-        # course progress
         course_labels=course_labels,
         course_avg_progress=course_avg_progress,
-        # timeseries
         ts_labels=ts_labels,
         ts_avg_scores=ts_avg_scores,
+        top_users=top_users,
+        start_date=start_date.strftime('%Y-%m-%d') if start_date else '',
+        end_date=end_date.strftime('%Y-%m-%d') if end_date else '',
+        axis_options=axis_options,
+        metrics=metrics,
+        default_x=default_x,
+        default_y=default_y,
+        default_z=default_z,
+    )
+
+@admin_routes.route('/admin/analytics/users')
+@login_required
+@admin_required
+def analytics_user_list():
+    # Filtering
+    q = request.args.get('q', '').strip()
+    dept_id = request.args.get('dept', '').strip()
+    sort = request.args.get('sort', '')
+
+    users_query = User.query
+    if q:
+        users_query = users_query.filter(
+            (User.first_name.ilike(f'%{q}%')) |
+            (User.last_name.ilike(f'%{q}%')) |
+            (User.employee_email.ilike(f'%{q}%'))
+        )
+    if dept_id:
+        users_query = users_query.filter(User.department_id == int(dept_id))
+
+    users = users_query.order_by(User.last_name, User.first_name).all()
+    # Gather stats
+    user_stats = []
+    for user in users:
+        exams_taken = len(user.scores)
+        avg_score = round(sum([s.score for s in user.scores]) / exams_taken, 2) if exams_taken else 0
+        courses_taken = len(user.study_progress)
+        avg_progress = round(sum([sp.progress_percentage for sp in user.study_progress]) / courses_taken, 2) if courses_taken else 0
+        user_stats.append({
+            'user': user,
+            'exams_taken': exams_taken,
+            'avg_score': avg_score,
+            'courses_taken': courses_taken,
+            'avg_progress': avg_progress
+        })
+    # Sorting
+    if sort == 'score_desc':
+        user_stats.sort(key=lambda x: x['avg_score'], reverse=True)
+    elif sort == 'score_asc':
+        user_stats.sort(key=lambda x: x['avg_score'])
+    elif sort == 'progress_desc':
+        user_stats.sort(key=lambda x: x['avg_progress'], reverse=True)
+    elif sort == 'progress_asc':
+        user_stats.sort(key=lambda x: x['avg_progress'])
+
+    departments = Department.query.order_by(Department.name).all()
+    return render_template('admin_analytics_users.html', user_stats=user_stats, departments=departments, search_query=q, dept_id=dept_id, sort=sort, departments_list=departments)
+
+@admin_routes.route('/admin/analytics/user/<int:user_id>')
+@login_required
+@admin_required
+def analytics_user_detail(user_id):
+    user = User.query.get_or_404(user_id)
+    # Exams: show all attempts, with date
+    exam_scores = (
+        db.session.query(Exam.title, UserScore.score, UserScore.created_at)
+        .join(UserScore, UserScore.exam_id == Exam.id)
+        .filter(UserScore.user_id == user_id)
+        .order_by(UserScore.created_at)
+        .all()
+    )
+    course_progress = (
+        db.session.query(StudyMaterial.title, UserProgress.progress_percentage, UserProgress.completion_date)
+        .join(UserProgress, UserProgress.study_material_id == StudyMaterial.id)
+        .filter(UserProgress.user_id == user_id)
+        .all()
+    )
+    exam_titles = [e[0] for e in exam_scores]
+    exam_scores_list = [e[1] for e in exam_scores]
+    exam_dates = [e[2].strftime('%Y-%m-%d') if e[2] else '' for e in exam_scores]
+    course_titles = [c[0] for c in course_progress]
+    course_percents = [c[1] for c in course_progress]
+    # Timeline, sorted
+    timeline = sorted(
+        [(e[2], f"Exam: {e[0]}", e[1]) for e in exam_scores] +
+        [(c[2], f"Course: {c[0]}", c[1]) for c in course_progress if c[2]],
+        key=lambda x: x[0] or datetime.min
+    )
+    return render_template(
+        'admin_analytics_user_detail.html',
+        user=user,
+        exam_titles=exam_titles,
+        exam_scores=exam_scores_list,
+        exam_dates=exam_dates,
+        course_titles=course_titles,
+        course_percents=course_percents,
+        timeline=timeline
     )
 
 # Deactivate User
@@ -704,7 +935,6 @@ def activate_user(user_id):
         flash("Failed to activate user.", "error")
     return redirect(url_for('admin_routes.view_users'))
 
-# Delete User
 @admin_routes.route('/admin/user/delete/<int:user_id>', methods=['POST'])
 @login_required
 @super_admin_required
@@ -716,30 +946,50 @@ def delete_user(user_id):
         flash(f"User {user.first_name} {user.last_name} has been deleted.", "success")
     except Exception as e:
         db.session.rollback()
-        flash("Failed to delete user.", "error")
+        current_app.logger.error(f"Cascade-delete failed for user {user.id}: {e}")
+        flash("Failed to delete user. Please try again.", "error")
     return redirect(url_for('admin_routes.view_analytics'))
 
-@admin_routes.route('/admin/reports/download')
+# --- Admin Reports Dashboard ---
+@admin_routes.route('/admin/reports', methods=['GET'])
 @login_required
-@admin_required
+def reports_landing():
+    # Example: Custom data for your landing table (replace with your own query/data)
+    custom_table = [
+        {"name": "Total Users", "value": User.query.filter(User.deleted_at.is_(None)).count()},
+        {"name": "Total Departments", "value": Department.query.count()},
+        {"name": "Total Courses", "value": StudyMaterial.query.count()},
+        {"name": "Total Exams", "value": Exam.query.count()},
+    ]
+    search = request.args.get('search', '').strip()
+    return render_template("admin_reports_landing.html", custom_table=custom_table, search=search)
+
+@admin_routes.route('/admin/reports/download', methods=['GET', 'POST'])
+@login_required
 def download_report():
     """
-    Download CSV for type in ['course_progress','exam_performance','special_exams','audit_logs']
-    Optional ?search= filter.
+    Download CSV for type in [
+        'course_progress','exam_performance','special_exams','audit_logs','users',
+        'departments','courses','exams','leaderboard','inactive_users','custom'
+    ]
+    Optional ?search= filter. For custom: Accepts ?type=custom&report_model=users&fields=id&fields=first_name, etc.
     """
     rpt_type = request.args.get('type')
     search   = request.args.get('search', '').strip()
+    report_model = request.args.get('report_model')
+    fields = request.args.getlist('fields')
 
     si = io.StringIO()
     cw = csv.writer(si)
+
+    # 1. Extended Preset Reports
 
     if rpt_type == 'course_progress':
         cw.writerow(['User ID','Name','Total Courses','Avg Progress (%)'])
         users = User.query.order_by(User.join_date.desc()).all()
         for u in users:
             total = UserProgress.query.filter_by(user_id=u.id).count()
-            avg   = db.session.query(func.avg(UserProgress.progress_percentage))\
-                               .filter_by(user_id=u.id).scalar() or 0
+            avg   = db.session.query(func.avg(UserProgress.progress_percentage)).filter_by(user_id=u.id).scalar() or 0
             cw.writerow([u.id, f"{u.first_name} {u.last_name}", total, round(avg,2)])
         filename = 'course_progress.csv'
 
@@ -748,10 +998,8 @@ def download_report():
         users = User.query.order_by(User.join_date.desc()).all()
         for u in users:
             total  = UserScore.query.filter_by(user_id=u.id).count()
-            avg    = db.session.query(func.avg(UserScore.score))\
-                                .filter_by(user_id=u.id).scalar() or 0
-            passed = UserScore.query.filter_by(user_id=u.id)\
-                                    .filter(UserScore.score>=56).count()
+            avg    = db.session.query(func.avg(UserScore.score)).filter_by(user_id=u.id).scalar() or 0
+            passed = UserScore.query.filter_by(user_id=u.id).filter(UserScore.score>=56).count()
             cw.writerow([u.id, f"{u.first_name} {u.last_name}", total, round(avg,2), passed])
         filename = 'exam_performance.csv'
 
@@ -763,7 +1011,6 @@ def download_report():
         ])
         records = SpecialExamRecord.query
         if search:
-            # filter by user name or email
             records = records.join(User).filter(or_(
                 User.first_name.ilike(f'%{search}%'),
                 User.last_name.ilike(f'%{search}%'),
@@ -781,23 +1028,19 @@ def download_report():
         filename = 'special_exams.csv'
 
     elif rpt_type == 'audit_logs':
-        # Combined Events + FailedLogins
         cw.writerow([
             'Record Type','Timestamp','User/Email',
             'Description','IP Address','User Agent'
         ])
-        # --- Events ---
         ev_q = Event.query
         if search:
             ev_q = ev_q.filter(Event.description.ilike(f'%{search}%'))
         for ev in ev_q.order_by(Event.date.desc()).all():
             ts = ev.date.strftime('%Y-%m-%d %H:%M:%S') if ev.date else ''
             cw.writerow(['EVENT', ts, '', ev.description or '', '', ''])
-        # --- Failed Logins ---
         fl_q = FailedLogin.query
         if search:
             fl_q = fl_q.filter(FailedLogin.email.ilike(f'%{search}%'))
-        # determine timestamp column
         ts_col = None
         for col in ('timestamp','created_at','attempted_at','logged_at'):
             if hasattr(FailedLogin, col):
@@ -806,7 +1049,6 @@ def download_report():
         if ts_col is not None:
             fl_q = fl_q.order_by(ts_col.desc())
         for fl in fl_q.all():
-            # pick whichever timestamp exists
             ts = None
             for col in (fl.timestamp if hasattr(fl, 'timestamp') else None,
                         getattr(fl, 'created_at', None),
@@ -826,9 +1068,200 @@ def download_report():
             ])
         filename = 'audit_logs.csv'
 
+    elif rpt_type == 'users':
+        cw.writerow(['User ID','First Name','Last Name','Email','Department','Join Date'])
+        q = User.query
+        if search:
+            q = q.filter(or_(
+                User.first_name.ilike(f'%{search}%'),
+                User.last_name.ilike(f'%{search}%'),
+                User.employee_email.ilike(f'%{search}%')
+            ))
+        users = q.order_by(User.join_date.desc()).all()
+        for u in users:
+            cw.writerow([
+                u.id,
+                u.first_name,
+                u.last_name,
+                u.employee_email,
+                u.department.name if u.department else '',
+                u.join_date.strftime('%Y-%m-%d') if u.join_date else '',
+            ])
+        filename = 'users.csv'
+
+    elif rpt_type == 'departments':
+        cw.writerow(['Department','User Count','Avg Exam Score','Avg Progress','Completion Rate'])
+        departments = Department.query.all()
+        for d in departments:
+            d_users = User.query.filter_by(department_id=d.id).all()
+            ids = [u.id for u in d_users]
+            if not ids:
+                continue
+            avg_score = db.session.query(func.avg(UserScore.score)).filter(UserScore.user_id.in_(ids)).scalar() or 0
+            avg_progress = db.session.query(func.avg(UserProgress.progress_percentage)).filter(UserProgress.user_id.in_(ids)).scalar() or 0
+            total_assigned = UserProgress.query.filter(UserProgress.user_id.in_(ids)).count()
+            total_completed = UserProgress.query.filter(UserProgress.user_id.in_(ids), UserProgress.progress_percentage >= 100).count()
+            completion_rate = (total_completed/total_assigned*100) if total_assigned else 0
+            cw.writerow([
+                d.name,
+                len(ids),
+                round(avg_score,2),
+                round(avg_progress,2),
+                round(completion_rate,2)
+            ])
+        filename = 'departments.csv'
+
+    elif rpt_type == 'courses':
+        cw.writerow(['Course','Assigned','Completed','Avg Progress','Avg Exam Score'])
+        courses = StudyMaterial.query.all()
+        for c in courses:
+            progress = UserProgress.query.filter_by(study_material_id=c.id)
+            assigned = progress.count()
+            completed = progress.filter(UserProgress.progress_percentage >= 100).count()
+            avg_progress = progress.with_entities(func.avg(UserProgress.progress_percentage)).scalar() or 0
+            user_ids = [p.user_id for p in progress.all()]
+            avg_score = db.session.query(func.avg(UserScore.score)).filter(UserScore.user_id.in_(user_ids)).scalar() or 0
+            cw.writerow([
+                c.title,
+                assigned,
+                completed,
+                round(avg_progress,2),
+                round(avg_score,2)
+            ])
+        filename = 'courses.csv'
+
+    elif rpt_type == 'exams':
+        cw.writerow(['Exam','Attempts','Avg Score','Pass Rate (%)','Top Performer'])
+        exams = Exam.query.all()
+        for ex in exams:
+            scores = UserScore.query.filter_by(exam_id=ex.id)
+            attempts = scores.count()
+            avg_score = scores.with_entities(func.avg(UserScore.score)).scalar() or 0
+            pass_count = scores.filter(UserScore.score >= 56).count()
+            pass_rate = (pass_count/attempts*100) if attempts else 0
+            top_score = scores.order_by(UserScore.score.desc()).first()
+            top_user = f"{top_score.user.first_name} {top_score.user.last_name}" if top_score and top_score.user else ""
+            cw.writerow([
+                ex.title,
+                attempts,
+                round(avg_score,2),
+                round(pass_rate,2),
+                top_user
+            ])
+        filename = 'exams.csv'
+
+    elif rpt_type == 'leaderboard':
+        cw.writerow(['User','Email','Department','Courses Completed','Avg Score','Time Spent (min)'])
+        users = User.query.filter(User.deleted_at.is_(None)).all()
+        for u in users:
+            completed = UserProgress.query.filter_by(user_id=u.id).filter(UserProgress.progress_percentage >= 100).count()
+            avg_score = db.session.query(func.avg(UserScore.score)).filter_by(user_id=u.id).scalar() or 0
+            time_spent = db.session.query(func.sum(UserProgress.time_spent)).filter_by(user_id=u.id).scalar() or 0
+            cw.writerow([
+                f"{u.first_name} {u.last_name}",
+                u.employee_email,
+                u.department.name if u.department else '',
+                completed,
+                round(avg_score,2),
+                int(time_spent) if time_spent else 0
+            ])
+        filename = 'leaderboard.csv'
+
+    elif rpt_type == 'inactive_users':
+        cw.writerow(['User','Email','Department'])
+        users = User.query.filter(User.deleted_at.is_(None)).all()
+        inactive_days = 30
+        today = datetime.utcnow().date()
+        for u in users:
+            progress_dates = [p.completion_date for p in getattr(u, 'study_progress', []) if p.completion_date]
+            score_dates = [s.created_at for s in getattr(u, 'scores', []) if s.created_at]
+            activity_dates = []
+            if hasattr(u, 'last_login') and u.last_login:
+                activity_dates.append(u.last_login)
+            activity_dates.extend(progress_dates)
+            activity_dates.extend(score_dates)
+            last_activity = max(activity_dates) if activity_dates else None
+            if not last_activity or (today - last_activity.date()).days > inactive_days:
+                cw.writerow([
+                    f"{u.first_name} {u.last_name}",
+                    u.employee_email,
+                    u.department.name if u.department else '',
+                ])
+        filename = 'inactive_users.csv'
+
+    # 3. Fully Custom Report
+    elif rpt_type == 'custom' and report_model and fields:
+        REPORT_MODELS = {
+            "users": {
+                "model": User,
+                "fields": {
+                    "id": lambda u: u.id,
+                    "first_name": lambda u: u.first_name,
+                    "last_name": lambda u: u.last_name,
+                    "employee_email": lambda u: u.employee_email,
+                    "department": lambda u: u.department.name if u.department else '',
+                    "join_date": lambda u: u.join_date.strftime('%Y-%m-%d') if u.join_date else '',
+                }
+            },
+            "course_progress": {
+                "model": UserProgress,
+                "fields": {
+                    "user_id": lambda up: up.user_id,
+                    "user": lambda up: f"{up.user.first_name} {up.user.last_name}" if up.user else '',
+                    "course": lambda up: up.study_material.title if up.study_material else '',
+                    "progress_percentage": lambda up: up.progress_percentage,
+                    "completion_date": lambda up: up.completion_date.strftime('%Y-%m-%d') if up.completion_date else '',
+                }
+            },
+            "exam_scores": {
+                "model": UserScore,
+                "fields": {
+                    "user_id": lambda us: us.user_id,
+                    "user": lambda us: f"{us.user.first_name} {us.user.last_name}" if us.user else '',
+                    "exam": lambda us: us.exam.title if us.exam else '',
+                    "score": lambda us: us.score,
+                    "created_at": lambda us: us.created_at.strftime('%Y-%m-%d') if us.created_at else '',
+                }
+            },
+            "departments": {
+                "model": Department,
+                "fields": {
+                    "id": lambda d: d.id,
+                    "name": lambda d: d.name,
+                }
+            },
+            # Add more as needed
+        }
+        if report_model not in REPORT_MODELS:
+            flash("Invalid report model.", "error")
+            return redirect(url_for('admin_routes.custom_report'))
+
+        allowed_fields = REPORT_MODELS[report_model]["fields"]
+        selected_fields = [f for f in fields if f in allowed_fields]
+        if not selected_fields:
+            flash("No valid fields selected.", "error")
+            return redirect(url_for('admin_routes.custom_report'))
+
+        # Header
+        cw.writerow([f.replace("_", " ").title() for f in selected_fields])
+
+        # Query & write
+        Model = REPORT_MODELS[report_model]["model"]
+        q = Model.query
+        if report_model == "users" and search:
+            q = q.filter(or_(
+                User.first_name.ilike(f'%{search}%'),
+                User.last_name.ilike(f'%{search}%'),
+                User.employee_email.ilike(f'%{search}%')
+            ))
+        objs = q.all()
+        for obj in objs:
+            cw.writerow([allowed_fields[f](obj) for f in selected_fields])
+        filename = f"{report_model}_custom.csv"
+
     else:
         flash("Invalid report type.", "error")
-        return redirect(url_for('admin_routes.generate_reports'))
+        return redirect(url_for('admin_routes.reports_dashboard'))
 
     # send CSV
     output = make_response(si.getvalue())
@@ -836,6 +1269,50 @@ def download_report():
     output.headers["Content-type"] = "text/csv"
     return output
 
+
+@admin_routes.route('/admin/reports/custom')
+@login_required
+def custom_report():
+    """
+    UI to let admins build a custom report (choose model, columns, filters)
+    """
+    REPORT_MODELS = {
+        "users": [
+            ("id", "User ID"),
+            ("first_name", "First Name"),
+            ("last_name", "Last Name"),
+            ("employee_email", "Email"),
+            ("department", "Department"),
+            ("join_date", "Join Date"),
+        ],
+        "course_progress": [
+            ("user_id", "User ID"),
+            ("user", "User"),
+            ("course", "Course"),
+            ("progress_percentage", "Progress (%)"),
+            ("completion_date", "Completed On"),
+        ],
+        "exam_scores": [
+            ("user_id", "User ID"),
+            ("user", "User"),
+            ("exam", "Exam"),
+            ("score", "Score"),
+            ("created_at", "Completed At"),
+        ],
+        "departments": [
+            ("id", "Department ID"),
+            ("name", "Department Name"),
+        ],
+        "courses": [
+            ("id", "Course ID"),
+            ("title", "Course Title"),
+        ],
+        "exams": [
+            ("id", "Exam ID"),
+            ("title", "Exam Title"),
+        ],
+    }
+    return render_template("admin_custom_report.html", report_models=REPORT_MODELS)
 # ──────────────── 1) VIEW AND ASSIGN ROLES ─────────────────
 
 @admin_routes.route('/admin/roles')
@@ -959,3 +1436,329 @@ def bulk_user_action():
 
     db.session.commit()
     return redirect(url_for('admin_routes.view_users'))
+
+@admin_routes.route('/admin/exam_requests', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def manage_exam_requests():
+    from_date_str = request.args.get('from_date', '')
+    to_date_str   = request.args.get('to_date', '')
+
+    # --- Handle Approve/Reject POST ---
+    if request.method == 'POST':
+        req_id = request.form.get('request_id')
+        action = request.form.get('action')  # approve or reject
+        req = ExamAccessRequest.query.get_or_404(req_id)
+        if req.status != 'pending':
+            flash("Request already processed.", "warning")
+        else:
+            req.status = 'approved' if action == 'approve' else 'rejected'
+            req.reviewed_at = datetime.utcnow()
+            db.session.commit()
+            flash(f"Request {action}ed successfully.", "success")
+        return redirect(url_for('admin_routes.manage_exam_requests'))
+
+    # --- Build query with optional filters ---
+    query = ExamAccessRequest.query.options(
+        db.joinedload(ExamAccessRequest.user)
+    ).order_by(ExamAccessRequest.requested_at.desc())
+
+    try:
+        if from_date_str:
+            from_date = datetime.strptime(from_date_str, "%Y-%m-%d")
+            query = query.filter(ExamAccessRequest.requested_at >= from_date)
+        if to_date_str:
+            to_date = datetime.strptime(to_date_str, "%Y-%m-%d")
+            query = query.filter(ExamAccessRequest.requested_at <= to_date)
+    except ValueError:
+        flash("Invalid date format. Use YYYY-MM-DD.", "danger")
+
+    all_requests = query.all()
+
+    # --- Attach readable exam titles ---
+    special_titles = {
+        9991: "Special Exam Paper 1",
+        9992: "Special Exam Paper 2"
+    }
+
+    for r in all_requests:
+        if r.exam_id in special_titles:
+            r.exam_title = special_titles[r.exam_id]
+        else:
+            exam = Exam.query.get(r.exam_id)
+            r.exam_title = exam.title if exam else "Unknown Exam"
+
+    return render_template(
+        'admin_exam_requests.html',
+        requests=all_requests,
+        from_date=from_date_str,
+        to_date=to_date_str
+    )
+
+# ------------------------------------------------------------
+# 1) Summary: list users & count of wrong answers
+# ------------------------------------------------------------
+@admin_routes.route('/incorrect_summary')
+@login_required
+@admin_required
+def incorrect_summary():
+    summary = (
+        db.session.query(
+            User.id,
+            User.first_name,
+            User.last_name,
+            User.employee_email,
+            func.count(IncorrectAnswer.id).label('wrong_count')
+        )
+        .join(IncorrectAnswer, IncorrectAnswer.user_id == User.id)
+        .group_by(User.id)
+        .order_by(desc('wrong_count'))
+        .all()
+    )
+    return render_template('incorrect_summary.html', data=summary)
+
+
+# ------------------------------------------------------------
+# 2) Detail: either paginated or full list for one user
+# ------------------------------------------------------------
+@admin_routes.route('/incorrect_answers')
+@login_required
+@admin_required
+def view_incorrect_answers():
+    # 1) Grab parameters
+    user_id  = request.args.get('user_id', type=int)
+    page     = request.args.get('page', 1, type=int)
+    per_page = 40
+
+    # 2) Validate user_id
+    if not user_id:
+        flash("Please select a user first.", "warning")
+        return redirect(url_for('admin_routes.incorrect_summary'))
+    user = User.query.get_or_404(user_id)
+
+    # 3) Build subquery: for each question, find the latest answered_at
+    last_wrong_sq = (
+        db.session.query(
+            IncorrectAnswer.question_id,
+            func.max(IncorrectAnswer.answered_at).label('last_wrong')
+        )
+        .filter(IncorrectAnswer.user_id == user_id)
+        .group_by(IncorrectAnswer.question_id)
+        .subquery()
+    )
+
+    # 4) Join to get full details for only those “last wrong” rows
+    detailed_q = (
+        db.session.query(
+            last_wrong_sq.c.last_wrong.label('answered_at'),
+            Exam.title.label('exam_title'),
+            IncorrectAnswer.special_paper,
+            Question.id.label('question_id'),
+            Question.question_text,
+            IncorrectAnswer.user_answer,
+            IncorrectAnswer.correct_answer
+        )
+        .join(
+            IncorrectAnswer,
+            and_(
+                IncorrectAnswer.question_id == last_wrong_sq.c.question_id,
+                IncorrectAnswer.answered_at  == last_wrong_sq.c.last_wrong
+            )
+        )
+        .join(Question, IncorrectAnswer.question_id == Question.id)
+        .outerjoin(Exam,   IncorrectAnswer.exam_id       == Exam.id)
+        # sort by the subquery’s max timestamp
+        .order_by(desc(last_wrong_sq.c.last_wrong))
+    )
+
+    # 5) Paginate over unique questions
+    pagination = detailed_q.paginate(page=page, per_page=per_page, error_out=False)
+    records    = pagination.items
+
+    # 6) Render
+    return render_template(
+        'incorrect_details.html',
+        user       = user,
+        records    = records,
+        pagination = pagination
+    )
+
+@admin_routes.route('/incorrect_answers/clear', methods=['POST'])
+@login_required
+@admin_required
+def clear_incorrect_answers():
+    # 1) Read and validate the incoming user_id
+    user_id = request.form.get('user_id', type=int)
+    if not user_id:
+        flash("No user specified to clear.", "warning")
+        return redirect(url_for('admin_routes.incorrect_summary'))
+
+    user = User.query.get_or_404(user_id)
+
+    # 2) Bulk‐delete all that user’s incorrect answers
+    deleted_count = (
+        IncorrectAnswer.query
+        .filter_by(user_id=user_id)
+        .delete(synchronize_session=False)
+    )
+    db.session.commit()
+
+    # 3) Feedback and redirect back to the detail view (now empty)
+    flash(f"Cleared {deleted_count} incorrect answers for {user.first_name} {user.last_name}.", "success")
+    return redirect(url_for('admin_routes.view_incorrect_answers', user_id=user_id))
+
+# --- Manage Level-Area Gating Rules ---
+@admin_routes.route('/level_areas')
+@login_required
+@admin_required
+def manage_level_areas():
+    q = (
+        db.session.query(LevelArea)
+          .join(Level,    Level.id    == LevelArea.level_id)
+          .join(Category, Category.id == LevelArea.category_id)
+          .join(Area,     Area.id     == LevelArea.area_id)
+          .outerjoin(Exam, Exam.id     == LevelArea.required_exam_id)
+          .options(
+              joinedload(LevelArea.level),
+              joinedload(LevelArea.category),
+              joinedload(LevelArea.area),
+              joinedload(LevelArea.required_exam),  # ← use the real relationship name
+          )
+          .order_by(
+              Level.level_number,
+              Category.name,
+              Area.name
+          )
+    )
+    level_areas = q.all()
+
+    levels     = Level.query.order_by(Level.level_number).all()
+    categories = Category.query.order_by(Category.name).all()
+    areas      = Area.query.order_by(Area.name).all()
+    exams      = Exam.query.order_by(Exam.title).all()
+
+    return render_template(
+        'admin_level_areas.html',
+        level_areas=level_areas,
+        levels=levels,
+        categories=categories,
+        areas=areas,
+        exams=exams
+    )
+
+# Create
+@admin_routes.route('/level_areas/create', methods=['POST'])
+@login_required
+@admin_required
+def create_level_area():
+    la = LevelArea(
+        level_id         = request.form.get('level_id', type=int),
+        category_id      = request.form.get('category_id', type=int),
+        area_id          = request.form.get('area_id', type=int),
+        required_exam_id = request.form.get('required_exam_id', type=int)
+    )
+    db.session.add(la)
+    db.session.commit()
+    flash("Level-area rule added.", "success")
+    return redirect(url_for('admin_routes.manage_level_areas'))
+
+# Edit
+@admin_routes.route('/level_areas/<int:id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def edit_level_area(id):
+    la = LevelArea.query.get_or_404(id)
+    la.level_id         = request.form.get('level_id', type=int)
+    la.category_id      = request.form.get('category_id', type=int)
+    la.area_id          = request.form.get('area_id', type=int)
+    la.required_exam_id = request.form.get('required_exam_id', type=int)
+    db.session.commit()
+    flash("Level-area rule updated.", "success")
+    return redirect(url_for('admin_routes.manage_level_areas'))
+
+# Delete
+@admin_routes.route('/level_areas/<int:id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_level_area(id):
+    la = LevelArea.query.get_or_404(id)
+    db.session.delete(la)
+    db.session.commit()
+    flash("Level-area rule removed.", "warning")
+    return redirect(url_for('admin_routes.manage_level_areas'))
+
+
+# — List all associations, plus data for the add-form dropdowns
+@admin_routes.route('/admin/user_clients')
+@login_required
+@admin_required
+def manage_user_clients():
+    users   = User.query.options(joinedload(User.clients)) \
+                       .order_by(User.first_name, User.last_name).all()
+    clients = Client.query.order_by(Client.name).all()
+    return render_template(
+        'admin_user_clients.html',
+        users=users,
+        clients=clients
+    )
+
+# — Add a new link
+@admin_routes.route('/admin/user_clients/add', methods=['POST'])
+@login_required
+@admin_required
+def add_user_client():
+    user_id   = request.form.get('user_id', type=int)
+    client_id = request.form.get('client_id', type=int)
+    user   = User.query.get_or_404(user_id)
+    client = Client.query.get_or_404(client_id)
+
+    if client not in user.clients:
+        user.clients.append(client)
+        db.session.commit()
+        flash('Client added to user.', 'success')
+    else:
+        flash('That user already has this client.', 'warning')
+
+    return redirect(url_for('admin_routes.manage_user_clients'))
+
+# — Edit (swap) an existing link
+@admin_routes.route('/admin/user_clients/edit', methods=['POST'])
+@login_required
+@admin_required
+def edit_user_client():
+    user_id        = request.form.get('user_id', type=int)
+    old_client_id  = request.form.get('old_client_id', type=int)
+    new_client_id  = request.form.get('new_client_id', type=int)
+
+    user       = User.query.get_or_404(user_id)
+    old_client = Client.query.get_or_404(old_client_id)
+    new_client = Client.query.get_or_404(new_client_id)
+
+    if old_client in user.clients:
+        user.clients.remove(old_client)
+    if new_client not in user.clients:
+        user.clients.append(new_client)
+
+    db.session.commit()
+    flash('User’s client updated.', 'success')
+    return redirect(url_for('admin_routes.manage_user_clients'))
+
+# — Delete an existing link
+@admin_routes.route('/admin/user_clients/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_user_client():
+    user_id   = request.form.get('user_id', type=int)
+    client_id = request.form.get('client_id', type=int)
+
+    user   = User.query.get_or_404(user_id)
+    client = Client.query.get_or_404(client_id)
+
+    if client in user.clients:
+        user.clients.remove(client)
+        db.session.commit()
+        flash('Client removed from user.', 'warning')
+    else:
+        flash('Association not found.', 'danger')
+
+    return redirect(url_for('admin_routes.manage_user_clients'))

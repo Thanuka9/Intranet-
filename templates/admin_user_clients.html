@@ -1,0 +1,105 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+  <h2>User ↔ Client Associations</h2>
+
+  <!-- Add new link -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">Add New Association</h5>
+      <form
+        action="{{ url_for('admin_routes.add_user_client') }}"
+        method="post"
+        class="row g-2 align-items-center"
+      >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="col-auto">
+          <select name="user_id" class="form-select form-select-sm" required>
+            <option value="">Select user…</option>
+            {% for u in users %}
+              <option value="{{ u.id }}">
+                {{ u.first_name }} {{ u.last_name }} (#{{ u.id }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-auto">
+          <select name="client_id" class="form-select form-select-sm" required>
+            <option value="">Select client…</option>
+            {% for c in clients %}
+              <option value="{{ c.id }}">{{ c.name }} (#{{ c.id }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-sm btn-success">Add</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Existing associations -->
+  <table class="table table-bordered table-striped">
+    <thead>
+      <tr>
+        <th>User ID</th>
+        <th>User Name</th>
+        <th>Client ID</th>
+        <th>Client Name</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+        {% if u.clients %}
+          {% for c in u.clients %}
+            <tr>
+              <td>{{ u.id }}</td>
+              <td>{{ u.first_name }} {{ u.last_name }}</td>
+              <td>{{ c.id }}</td>
+              <td>{{ c.name }}</td>
+              <td>
+                <!-- Edit form -->
+                <form
+                  action="{{ url_for('admin_routes.edit_user_client') }}"
+                  method="post"
+                  class="d-inline"
+                >
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="user_id" value="{{ u.id }}">
+                  <input type="hidden" name="old_client_id" value="{{ c.id }}">
+                  <div class="input-group input-group-sm">
+                    <select name="new_client_id" class="form-select form-select-sm">
+                      {% for x in clients %}
+                        <option value="{{ x.id }}" {% if x.id == c.id %}selected{% endif %}>
+                          {{ x.name }} (#{{ x.id }})
+                        </option>
+                      {% endfor %}
+                    </select>
+                    <button class="btn btn-primary btn-sm">Save</button>
+                  </div>
+                </form>
+                <!-- Delete form -->
+                <form
+                  action="{{ url_for('admin_routes.delete_user_client') }}"
+                  method="post"
+                  class="d-inline ms-1"
+                >
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="user_id" value="{{ u.id }}">
+                  <input type="hidden" name="client_id" value="{{ c.id }}">
+                  <button class="btn btn-danger btn-sm">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td>{{ u.id }}</td>
+            <td>{{ u.first_name }} {{ u.last_name }}</td>
+            <td colspan="3" class="text-center text-muted">No client assigned</td>
+          </tr>
+        {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

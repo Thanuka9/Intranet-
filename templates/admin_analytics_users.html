@@ -1,0 +1,105 @@
+{% extends 'admin_base.html' %}
+{% block title %}User Analytics Directory{% endblock %}
+{% block content %}
+
+<h1 class="mb-4">User Analytics Directory</h1>
+
+<!-- Filter/Search Bar -->
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-4">
+    <input type="text" name="q" class="form-control" placeholder="Search by name/email..." value="{{ request.args.get('q', '') }}">
+  </div>
+  <div class="col-md-3">
+    <select name="dept" class="form-select">
+      <option value="">All Departments</option>
+      {% for dept in departments %}
+        <option value="{{ dept.id }}" {% if request.args.get('dept') == dept.id|string %}selected{% endif %}>{{ dept.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <select name="sort" class="form-select">
+      <option value="">Sort by…</option>
+      <option value="score_desc" {% if request.args.get('sort') == 'score_desc' %}selected{% endif %}>Score ⬇️</option>
+      <option value="score_asc" {% if request.args.get('sort') == 'score_asc' %}selected{% endif %}>Score ⬆️</option>
+      <option value="progress_desc" {% if request.args.get('sort') == 'progress_desc' %}selected{% endif %}>Progress ⬇️</option>
+      <option value="progress_asc" {% if request.args.get('sort') == 'progress_asc' %}selected{% endif %}>Progress ⬆️</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-primary w-100">Filter</button>
+  </div>
+</form>
+
+<!-- Directory Table -->
+<div class="table-responsive">
+<table class="table table-hover align-middle table-bordered">
+  <thead class="table-light sticky-top">
+    <tr>
+      <th>User</th>
+      <th>Email</th>
+      <th>Department</th>
+      <th>Designation</th>
+      <th>Exams</th>
+      <th>Avg Score</th>
+      <th>Courses</th>
+      <th>Avg Progress</th>
+      <th>Join Date</th>
+      <th>Details</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for entry in user_stats %}
+    <tr>
+      <td>
+        <div class="d-flex align-items-center">
+          {% if entry.user.profile_picture %}
+            <img src="data:image/png;base64,{{ entry.user.profile_picture|b64encode }}" class="rounded-circle me-2" style="width:32px;height:32px;">
+          {% else %}
+            <div class="avatar-circle me-2">{{ entry.user.first_name[0] }}{{ entry.user.last_name[0] }}</div>
+          {% endif %}
+          {{ entry.user.first_name }} {{ entry.user.last_name }}
+        </div>
+      </td>
+      <td>{{ entry.user.employee_email }}</td>
+      <td>{{ entry.user.department.name if entry.user.department else '-' }}</td>
+      <td>{{ entry.user.designation.title if entry.user.designation else '-' }}</td>
+      <td>{{ entry.exams_taken }}</td>
+      <td>
+        <span class="fw-bold {% if entry.avg_score >= 80 %}text-success{% elif entry.avg_score < 50 %}text-danger{% else %}text-secondary{% endif %}">
+          {{ entry.avg_score }}%
+        </span>
+      </td>
+      <td>{{ entry.courses_taken }}</td>
+      <td>
+        <div class="progress" style="height:18px;">
+          <div class="progress-bar
+            {% if entry.avg_progress >= 80 %}bg-success
+            {% elif entry.avg_progress < 50 %}bg-danger
+            {% else %}bg-warning{% endif %}"
+            role="progressbar"
+            style="width: {{ entry.avg_progress }}%;">
+            {{ entry.avg_progress }}%
+          </div>
+        </div>
+      </td>
+      <td>{{ entry.user.join_date.strftime('%Y-%m-%d') if entry.user.join_date else '-' }}</td>
+      <td>
+        <a href="{{ url_for('admin_routes.analytics_user_detail', user_id=entry.user.id) }}" class="btn btn-sm btn-outline-primary" title="View detailed analytics"><i class="bi bi-bar-chart"></i> View</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<a href="{{ url_for('admin_routes.view_analytics') }}" class="btn btn-outline-secondary mt-3">&larr; Back to Dashboard</a>
+
+<style>
+.avatar-circle {
+  width:32px; height:32px; background:#6c757d; color:#fff; display:flex; align-items:center; justify-content:center;
+  border-radius:50%; font-weight:bold; font-size:1.1rem;
+}
+</style>
+
+{% endblock %}

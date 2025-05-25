@@ -16,15 +16,54 @@
     />
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
     <style>
-      /* Global Styles */
+      :root {
+        --brand-red: #ba1e24;
+        --brand-dark: #23272f;
+        --brand-blue: #2563eb;
+        --brand-green: #22c55e;
+        --brand-yellow: #ffbe0b;
+        --brand-purple: #6f42c1;
+        --brand-orange: #fd7e14;
+        --brand-teal: #20c997;
+        --brand-pink: #e83e8c;
+        --brand-brown: #634242;
+        --brand-cyan: #0dcaf0;
+        --brand-gray: #adb5bd;
+        --brand-bg: #f9f9f9;
+        --brand-light: #fff;
+        --brand-shadow: 0 4px 18px rgba(44, 62, 80, 0.09);
+        --card-radius: 0.7rem;
+        --transition: 0.22s cubic-bezier(0.26, 1, 0.48, 1);
+        --main-text: #23272f;
+        --card-text: #23272f;
+        --logo-black: #23272f;
+        --nav-bg: #fff;
+        --footer-bg: #23272f;
+      }
+      .dark-theme {
+        --brand-bg: #191c22;
+        --brand-light: #23252b;
+        --brand-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
+        --main-text: #f2f2f2;
+        --card-text: #f2f2f2;
+        --logo-black: #fff;
+        --nav-bg: #181b20;
+        --footer-bg: #181b20;
+      }
+      html,
       body {
-        background-color: #f9f9f9;
-        font-family: Arial, sans-serif;
+        min-height: 100vh;
+        background: var(--brand-bg);
+        color: var(--main-text);
+        font-family: "Inter", Arial, sans-serif;
         margin: 0;
         display: flex;
         flex-direction: column;
-        min-height: 100vh;
       }
       /* Top Bar */
       .top-bar {
@@ -32,19 +71,9 @@
         justify-content: space-between;
         align-items: center;
         padding: 0.5rem 1rem;
-        background: #fff;
+        background: var(--nav-bg);
         border-bottom: 1px solid #ddd;
-      }
-      .back-btn-top {
-        background: #6c757d;
-        color: #fff;
-        padding: 0.35rem 0.75rem;
-        border-radius: 0.25rem;
-        text-decoration: none;
-        transition: background 0.3s;
-      }
-      .back-btn-top:hover {
-        background: #5a6268;
+        box-shadow: 0 2px 8px rgba(44, 62, 80, 0.04);
       }
       .logo-section {
         display: flex;
@@ -55,71 +84,261 @@
         margin-right: 0.75rem;
       }
       .logo {
-        font-size: 1.4rem;
+        font-size: 1.45rem;
         font-weight: bold;
+        letter-spacing: 0.04em;
+        display: flex;
+        align-items: center;
       }
       .logo .black {
-        color: #000;
+        color: var(--logo-black);
+        transition: color 0.2s;
       }
       .logo .red {
-        color: #ba1e24;
+        color: var(--brand-red);
       }
       .btn-logout {
-        background: #ff4d4d;
+        background: var(--brand-red);
         color: #fff;
         padding: 0.35rem 0.75rem;
-        border-radius: 0.25rem;
+        border-radius: 0.32rem;
+        font-weight: 600;
         text-decoration: none;
-        transition: background 0.3s;
+        border: none;
+        transition: background var(--transition), color var(--transition);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }
       .btn-logout:hover {
-        background: #ff1a1a;
+        background: #960c12;
+        color: #fff;
       }
-
+      .btn.btn-dark {
+        background-color: var(--brand-dark);
+        border: none;
+      }
+      .btn.btn-dark:hover {
+        background-color: #12141a;
+      }
+      /* Floating Dark Mode Toggle */
+      .theme-toggle-fab {
+        position: fixed;
+        right: 32px;
+        bottom: 65px;
+        z-index: 1200;
+        background: var(--nav-bg);
+        color: #ffe66d;
+        border: none;
+        border-radius: 50%;
+        width: 35px;
+        height: 35px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.09);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+        opacity: 0.9;
+      }
+      .theme-toggle-fab:hover,
+      .theme-toggle-fab:focus-visible {
+        background: #24262e;
+        color: #fffbe6;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.16);
+      }
+      @media (max-width: 650px) {
+        .theme-toggle-fab {
+          right: 10px;
+          bottom: 67px;
+          width: 31px;
+          height: 31px;
+          font-size: 1.06rem;
+        }
+      }
       /* Main Container */
       .container {
         flex: 1;
         margin: 2rem auto;
         max-width: 1200px;
-        background: #fff;
+        background: var(--brand-light);
+        color: var(--main-text);
         padding: 2rem;
-        border-radius: 0.5rem;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: var(--card-radius);
+        box-shadow: var(--brand-shadow);
+        transition: background 0.3s, color 0.3s;
       }
-
       /* Dashboard Cards */
       .row.g-3 .card {
-        transition: transform 0.2s, box-shadow 0.2s;
+        transition: transform var(--transition), box-shadow var(--transition),
+          background 0.3s, color 0.3s;
+        border-radius: var(--card-radius);
+        box-shadow: var(--brand-shadow);
+        font-weight: 500;
+        color: var(--card-text);
       }
       .row.g-3 .card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+        transform: translateY(-5px) scale(1.02);
+        box-shadow: 0 9px 32px rgba(44, 62, 80, 0.13);
       }
-
+      .card-title {
+        font-size: 1.04rem;
+        margin-bottom: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        color: var(--card-text);
+      }
+      .card .card-body {
+        padding-bottom: 1rem;
+      }
+      /* Card colors for clarity */
+      .card.bg-primary {
+        background: var(--brand-blue) !important;
+        color: #fff !important;
+      }
+      .card.bg-success {
+        background: var(--brand-green) !important;
+        color: #fff !important;
+      }
+      .card.bg-info {
+        background: var(--brand-cyan) !important;
+        color: #23272f !important;
+      }
+      .card.bg-warning {
+        background: var(--brand-yellow) !important;
+        color: #23272f !important;
+      }
+      .card.bg-purple {
+        background: var(--brand-purple) !important;
+        color: #fff !important;
+      }
+      .card.bg-teal {
+        background: var(--brand-teal) !important;
+        color: #fff !important;
+      }
+      .card.bg-pink {
+        background: var(--brand-pink) !important;
+        color: #fff !important;
+      }
+      .card.bg-brown {
+        background: var(--brand-brown) !important;
+        color: #fff !important;
+      }
       /* Admin Tools Nav */
       .nav-section {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.5rem;
+        gap: 0.7rem;
         justify-content: center;
-        margin: 2rem 0;
+        margin: 2.2rem 0 1.8rem 0;
       }
       .nav-section .btn {
-        min-width: 140px;
-        transition: transform 0.2s, box-shadow 0.2s;
+        min-width: 148px;
+        font-weight: 600;
+        border: none;
+        border-radius: 0.45rem;
+        box-shadow: 0 2px 7px rgba(44, 62, 80, 0.05);
+        transition: transform var(--transition), box-shadow var(--transition),
+          background var(--transition), color var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .nav-section .btn:focus-visible {
+        outline: 2px solid #ffdd57;
       }
       .nav-section .btn:hover {
         transform: translateY(-2px) scale(1.03);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
+        filter: brightness(1.04);
       }
-
+      .nav-section .btn-info {
+        background: var(--brand-cyan);
+        color: #23272f;
+      }
+      .nav-section .btn-dark {
+        background: var(--brand-dark);
+        color: #fff;
+      }
+      .nav-section .btn-primary {
+        background: var(--brand-blue);
+        color: #fff;
+      }
+      .nav-section .btn-success {
+        background: var(--brand-green);
+        color: #fff;
+      }
+      .nav-section .btn-warning {
+        background: var(--brand-yellow);
+        color: #23272f;
+      }
+      .nav-section .btn-danger {
+        background: var(--brand-red);
+        color: #fff;
+      }
+      .nav-section .btn-secondary {
+        background: var(--brand-gray);
+        color: #23272f;
+      }
+      .nav-section .btn-purple {
+        background: var(--brand-purple);
+        color: #fff;
+      }
+      .nav-section .btn-teal {
+        background: var(--brand-teal);
+        color: #fff;
+      }
+      .nav-section .btn-orange {
+        background: var(--brand-orange);
+        color: #fff;
+      }
+      .nav-section .btn-pink {
+        background: var(--brand-pink);
+        color: #fff;
+      }
+      .nav-section .btn-brown {
+        background: var(--brand-brown);
+        color: #fff;
+      }
+      .nav-section .btn-outline {
+        background: #fff;
+        color: #23272f;
+        border: 1px solid #dee2e6;
+      }
+      @media (max-width: 650px) {
+        .nav-section {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .nav-section .btn {
+          min-width: 100%;
+        }
+      }
       /* Footer */
       footer {
-        background: #343a40;
+        background: var(--footer-bg);
         color: #fff;
         text-align: center;
         padding: 1rem 0;
         margin-top: auto;
+        letter-spacing: 0.01em;
+        font-size: 1.03rem;
+      }
+      /* Responsive container and cards */
+      @media (max-width: 900px) {
+        .container {
+          padding: 1rem;
+        }
+      }
+      @media (max-width: 600px) {
+        .container {
+          padding: 0.7rem;
+        }
+        .row.g-3 .card {
+          font-size: 0.97rem;
+        }
       }
     </style>
   </head>
@@ -127,14 +346,12 @@
   <body>
     <!-- Top Bar -->
     <div class="top-bar">
-      <!-- After -->
       <a
         href="{{ url_for('general_routes.hr_management') }}"
         class="btn btn-sm btn-dark"
       >
-        <i class="fas fa-arrow-left"></i> Back to HR Management
+        <i class="fas fa-arrow-left" aria-hidden="true"></i> Back to Management
       </a>
-
       <div class="logo-section">
         <img
           src="{{ url_for('static', filename='images/logo.png') }}"
@@ -145,21 +362,31 @@
         </div>
       </div>
       <a href="{{ url_for('auth_routes.logout') }}" class="btn-logout">
-        <i class="fas fa-sign-out-alt"></i> Logout
+        <i class="fas fa-sign-out-alt" aria-hidden="true"></i> Logout
       </a>
     </div>
 
+    <!-- Floating Dark Mode Toggle -->
+    <button
+      class="theme-toggle-fab"
+      id="themeToggle"
+      aria-label="Toggle dark mode"
+    >
+      <i class="fas fa-moon"></i>
+    </button>
+
     <!-- Page Content -->
     <div class="container">
-      <h1 class="text-center">Admin Dashboard</h1>
+      <h1 class="text-center mb-4">Admin Dashboard</h1>
 
       <!-- Metrics Row 1 -->
       <div class="row g-3 mb-4">
-        <!-- Users Card -->
         <div class="col-md-3">
-          <div class="card text-white bg-primary h-100">
+          <div class="card bg-primary text-white h-100">
             <div class="card-body">
-              <h6 class="card-title"><i class="fas fa-users"></i> Users</h6>
+              <h6 class="card-title">
+                <i class="fas fa-users" aria-hidden="true"></i> Users
+              </h6>
               <p><strong>{{ total_users }}</strong> Total</p>
               <p>
                 <a
@@ -173,34 +400,33 @@
             </div>
           </div>
         </div>
-        <!-- Exams Card -->
         <div class="col-md-3">
-          <div class="card text-white bg-success h-100">
+          <div class="card bg-success text-white h-100">
             <div class="card-body">
               <h6 class="card-title">
-                <i class="fas fa-graduation-cap"></i> Exams
+                <i class="fas fa-graduation-cap" aria-hidden="true"></i> Exams
               </h6>
               <p><strong>{{ total_exams }}</strong> Total</p>
               <p>Avg Score: <strong>{{ average_exam_score }}%</strong></p>
             </div>
           </div>
         </div>
-        <!-- Courses Card -->
         <div class="col-md-3">
-          <div class="card text-white bg-danger h-100">
+          <div class="card bg-info text-dark h-100">
             <div class="card-body">
-              <h6 class="card-title"><i class="fas fa-book"></i> Courses</h6>
+              <h6 class="card-title">
+                <i class="fas fa-book" aria-hidden="true"></i> Courses
+              </h6>
               <p><strong>{{ total_study_materials }}</strong> Total</p>
               <p><strong>{{ restricted_courses }}</strong> Restricted</p>
             </div>
           </div>
         </div>
-        <!-- Special Exams Card -->
         <div class="col-md-3">
-          <div class="card text-white bg-dark h-100">
+          <div class="card bg-warning text-dark h-100">
             <div class="card-body">
               <h6 class="card-title">
-                <i class="fas fa-award"></i> Special Exams
+                <i class="fas fa-award" aria-hidden="true"></i> Special Exams
               </h6>
               <p><strong>{{ special_exam_count }}</strong> Records</p>
               <p>
@@ -214,36 +440,45 @@
 
       <!-- Metrics Row 2 -->
       <div class="row g-3 mb-4">
-        <!-- Designations Card -->
         <div class="col-md-3">
-          <div class="card bg-secondary text-white h-100">
+          <div class="card bg-purple text-white h-100">
             <div class="card-body">
               <h6 class="card-title">
-                <i class="fas fa-id-badge"></i> Designations
+                <i class="fas fa-id-badge" aria-hidden="true"></i> Designations
               </h6>
               <p><strong>{{ total_designations }}</strong></p>
             </div>
           </div>
         </div>
-        <!-- Clients Card -->
         <div class="col-md-3">
-          <div class="card bg-warning text-dark h-100">
+          <div class="card bg-teal text-white h-100">
             <div class="card-body">
               <h6 class="card-title">
-                <i class="fas fa-handshake"></i> Clients
+                <i class="fas fa-handshake" aria-hidden="true"></i> Clients
               </h6>
               <p><strong>{{ total_clients }}</strong></p>
             </div>
           </div>
         </div>
-        <!-- Questions Card -->
         <div class="col-md-3">
-          <div class="card bg-light text-dark h-100">
+          <div class="card bg-pink text-white h-100">
             <div class="card-body">
               <h6 class="card-title">
-                <i class="fas fa-question-circle"></i> Questions
+                <i class="fas fa-question-circle" aria-hidden="true"></i>
+                Questions
               </h6>
               <p><strong>{{ total_questions }}</strong></p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-brown text-white h-100">
+            <div class="card-body">
+              <h6 class="card-title">
+                <i class="fas fa-layer-group" aria-hidden="true"></i> Level
+                Areas
+              </h6>
+              <p><strong>{{ total_level_areas or 0 }}</strong></p>
             </div>
           </div>
         </div>
@@ -251,41 +486,86 @@
 
       <!-- Admin Tools Nav -->
       <div class="nav-section">
-        <a href="{{ url_for('admin_routes.view_users') }}" class="btn btn-info">
-          <i class="fas fa-users"></i> Manage Users
+        <a
+          href="{{ url_for('admin_routes.view_users') }}"
+          class="btn btn-info"
+          title="Manage users"
+        >
+          <i class="fas fa-users" aria-hidden="true"></i> Manage Users
         </a>
-        <a href="{{ url_for('admin_routes.view_roles') }}" class="btn btn-dark">
-          <i class="fas fa-user-shield"></i> Manage Roles
+        <a
+          href="{{ url_for('admin_routes.view_roles') }}"
+          class="btn btn-dark"
+          title="Manage roles"
+        >
+          <i class="fas fa-user-shield" aria-hidden="true"></i> Manage Roles
         </a>
         <a
           href="{{ url_for('admin_routes.view_courses') }}"
           class="btn btn-primary"
+          title="Manage courses"
         >
-          <i class="fas fa-book-open"></i> Manage Courses
+          <i class="fas fa-book-open" aria-hidden="true"></i> Manage Courses
         </a>
         <a
           href="{{ url_for('admin_routes.view_exams') }}"
           class="btn btn-success"
+          title="Manage exams"
         >
-          <i class="fas fa-file-alt"></i> Manage Exams
+          <i class="fas fa-file-alt" aria-hidden="true"></i> Manage Exams
         </a>
         <a
           href="{{ url_for('admin_routes.view_analytics') }}"
           class="btn btn-warning"
+          title="Analytics"
         >
-          <i class="fas fa-chart-line"></i> Analytics
+          <i class="fas fa-chart-line" aria-hidden="true"></i> Analytics
         </a>
         <a
           href="{{ url_for('admin_routes.generate_reports') }}"
           class="btn btn-danger"
+          title="View reports"
         >
-          <i class="fas fa-chart-bar"></i> View Reports
+          <i class="fas fa-chart-bar" aria-hidden="true"></i> View Reports
         </a>
         <a
           href="{{ url_for('admin_routes.view_audit_logs') }}"
           class="btn btn-secondary"
+          title="Audit logs"
         >
-          <i class="fas fa-history"></i> Audit Logs
+          <i class="fas fa-history" aria-hidden="true"></i> Audit Logs
+        </a>
+        <a
+          href="{{ url_for('admin_routes.manage_exam_requests') }}"
+          class="btn btn-purple"
+          title="Exam requests"
+        >
+          <i class="fas fa-envelope-open-text" aria-hidden="true"></i> Exam
+          Requests
+        </a>
+        <a
+          href="{{ url_for('admin_routes.incorrect_summary') }}"
+          class="btn btn-teal"
+          title="Incorrect answers summary"
+        >
+          <i class="fas fa-exclamation-circle" aria-hidden="true"></i> Incorrect
+          Answers
+        </a>
+        <a
+          href="{{ url_for('admin_routes.manage_level_areas') }}"
+          class="btn btn-brown"
+          title="Manage level areas"
+        >
+          <i class="fas fa-layer-group" aria-hidden="true"></i> Manage Level
+          Areas
+        </a>
+        <a
+          href="{{ url_for('admin_routes.manage_user_clients') }}"
+          class="btn btn-orange"
+          title="Manage user-clients"
+        >
+          <i class="fas fa-user-friends" aria-hidden="true"></i> Manage
+          User–Clients
         </a>
       </div>
 
@@ -327,14 +607,14 @@
         </div>
         <div class="col-12">
           <button class="btn btn-success">
-            <i class="fas fa-lock"></i> Set Restrictions
+            <i class="fas fa-lock" aria-hidden="true"></i> Set Restrictions
           </button>
         </div>
       </form>
     </div>
 
     <!-- Footer -->
-    <footer>Collective Intranet © {{ current_year or 2024 }}</footer>
+    <footer>Collective Intranet© 2024</footer>
 
     <!-- Access Denied Modal -->
     <div
@@ -356,7 +636,7 @@
             ></button>
           </div>
           <div class="modal-body text-center">
-            <i class="fas fa-ban display-1 text-danger"></i>
+            <i class="fas fa-ban display-1 text-danger" aria-hidden="true"></i>
             <p class="mt-3">
               You don’t have permission to perform that action.
             </p>
@@ -370,20 +650,50 @@
       </div>
     </div>
 
-    <!-- Bootstrap JS (load before trigger) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- Trigger the modal if we flashed an access_denied -->
     <script>
+      // Dark mode toggle
+      const themeToggle = document.getElementById('themeToggle');
+      const body = document.body;
+      function setTheme(theme) {
+        if (theme === 'dark') {
+          body.classList.add('dark-theme');
+          themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        } else {
+          body.classList.remove('dark-theme');
+          themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+        }
+        localStorage.setItem('theme', theme);
+      }
+      themeToggle?.addEventListener('click', () => {
+        setTheme(body.classList.contains('dark-theme') ? 'light' : 'dark');
+      });
+      (() => {
+        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        setTheme(savedTheme);
+      })();
+
       {% with msgs = get_flashed_messages(category_filter=['access_denied']) %}
         {% if msgs %}
           window.addEventListener('load', () => {
-            new bootstrap.Modal(
-              document.getElementById('accessDeniedModal')
-            ).show();
+            const modal = document.getElementById('accessDeniedModal');
+            if (modal) {
+              new bootstrap.Modal(modal).show();
+            }
           });
         {% endif %}
       {% endwith %}
+
+      // Keep session alive by pinging the backend every 5 minutes
+      setInterval(() => {
+        fetch('/ping', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+      }, 300000); // 5 minutes
     </script>
   </body>
 </html>

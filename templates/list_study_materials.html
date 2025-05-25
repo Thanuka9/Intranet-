@@ -14,17 +14,48 @@
     />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+      :root {
+        /* Palette */
+        --color-primary: #007bff; /* default UI (buttons, headings) */
+        --color-accent: #d53a10; /* table header & any “danger” */
+        --color-success: #28a745;
+        --color-warning: #ffc107;
+
+        /* Neutrals */
+        --color-light: #f4f6f9;
+        --color-lighter: #ffffff;
+        --color-grey: #e0e0e0;
+        --color-border: #ddd;
+        --color-dark: #343a40;
+
+        /* Typography */
+        --font-base: "Segoe UI", sans-serif;
+      }
+
+      /* Fade-in keyframe */
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
       body {
-        background-color: #f4f6f9;
-        font-family: "Segoe UI", sans-serif;
+        background-color: var(--color-light);
+        font-family: var(--font-base);
         margin: 0;
         display: flex;
         flex-direction: column;
         min-height: 100vh;
       }
+
       .top-bar {
-        background-color: #ffffff;
-        border-bottom: 1px solid #ddd;
+        background: var(--color-lighter);
+        border-bottom: 1px solid var(--color-border);
         padding: 10px 20px;
         display: flex;
         justify-content: space-between;
@@ -42,63 +73,157 @@
         color: #000;
       }
       .brand .red {
-        color: red;
+        color: var(--color-accent);
       }
+
       .main-content {
         flex: 1;
         padding: 20px;
       }
       .container-custom {
-        background: #ffffff;
+        background: var(--color-lighter);
         padding: 20px;
         border-radius: 10px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         max-width: 1200px;
         margin: auto;
+        animation: fadeIn 0.5s ease-out;
       }
+
       h1 {
         font-size: 1.8rem;
         margin-bottom: 20px;
         text-align: center;
         font-weight: bold;
-        color: #007bff;
+        color: var(--color-primary);
       }
+
+      /* Filter buttons */
+      .filter-btn {
+        margin: 0.25rem;
+        transition: transform 0.2s;
+      }
+      .filter-btn:hover {
+        transform: scale(1.05);
+      }
+      .filter-btn i {
+        margin-right: 0.3rem;
+      }
+
+      /* Table header = RED accent */
+      .table thead {
+        background-color: var(--color-accent);
+        color: var(--color-lighter);
+      }
+      .table th,
+      .table td {
+        vertical-align: middle;
+        text-align: center;
+        border-color: var(--color-border);
+      }
+      .table tbody tr {
+        transition: background-color 0.2s;
+      }
+      .table tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.03);
+      }
+
+      /* Chart hover-scale */
       .progress-chart-container {
         position: relative;
         width: 100px;
         height: 100px;
         margin: auto;
+        transition: transform 0.2s;
+      }
+      .progress-chart-container:hover {
+        transform: scale(1.08);
       }
       .progress-percentage {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        font-size: 14px;
+        font-size: 0.875rem;
         font-weight: bold;
-        color: #28a745;
+        color: var(--color-success);
       }
-      .table thead {
-        background-color: #007bff;
-        color: white;
-      }
-      .table th,
-      .table td {
-        vertical-align: middle;
-        text-align: center;
-      }
+
+      /* Buttons */
       .btn-sm {
-        padding: 6px 12px;
+        padding: 0.375rem 0.75rem;
       }
+      .btn-primary {
+        background-color: var(--color-primary);
+        border-color: var(--color-primary);
+      }
+      .btn-primary:hover,
+      .btn-primary:focus {
+        background-color: #0069d9;
+        border-color: #0062cc;
+        color: var(--color-lighter);
+      }
+
+      .btn-success {
+        background-color: var(--color-success);
+        border-color: var(--color-success);
+      }
+      .btn-success:hover,
+      .btn-success:focus {
+        background-color: #218838;
+        border-color: #1e7e34;
+        color: var(--color-lighter);
+      }
+
+      /* Accent-red button */
+      .btn-accent {
+        background-color: var(--color-accent);
+        border-color: var(--color-accent);
+        color: var(--color-lighter);
+      }
+      .btn-accent:hover,
+      .btn-accent:focus {
+        background-color: red;
+        border-color: red;
+      }
+
+      /* Outline filters use primary */
+      .btn-outline-primary {
+        color: var(--color-primary);
+        border-color: var(--color-primary);
+      }
+      .btn-outline-primary:hover,
+      .btn-outline-primary:focus {
+        background-color: var(--color-primary);
+        color: var(--color-lighter);
+      }
+
+      .btn-outline-success {
+        color: var(--color-success);
+        border-color: var(--color-success);
+      }
+      .btn-outline-success:hover,
+      .btn-outline-success:focus {
+        background-color: var(--color-success);
+        color: var(--color-lighter);
+      }
+
+      .btn-outline-warning {
+        color: var(--color-warning);
+        border-color: var(--color-warning);
+      }
+      .btn-outline-warning:hover,
+      .btn-outline-warning:focus {
+        background-color: var(--color-warning);
+        color: var(--color-dark);
+      }
+
       footer {
-        background-color: #343a40;
-        color: white;
+        background-color: var(--color-dark);
+        color: var(--color-lighter);
         text-align: center;
         padding: 10px 0;
-        font-size: 0.9rem;
-      }
-      .filter-btn {
-        margin: 5px;
+        font-size: 0.875rem;
       }
     </style>
   </head>
@@ -107,9 +232,10 @@
     <div class="top-bar">
       <a
         href="{{ url_for('study_material_routes.study_materials') }}"
-        class="btn btn-secondary"
-        >Back</a
+        class="btn btn-secondary btn-sm"
       >
+        <i class="fas fa-arrow-left"></i> Back
+      </a>
       <div class="d-flex align-items-center">
         <img src="/static/images/logo.png" alt="Logo" />
         <div class="brand">
@@ -127,7 +253,7 @@
         <div class="mb-4 text-end">
           <a
             href="{{ url_for('study_material_routes.upload_page') }}"
-            class="btn btn-success"
+            class="btn btn-success btn-sm"
           >
             <i class="fas fa-upload"></i> Upload Study Material
           </a>
@@ -140,19 +266,19 @@
             class="btn btn-outline-primary filter-btn"
             onclick="filterTable('all')"
           >
-            All
+            <i class="fas fa-th-list"></i> All
           </button>
           <button
             class="btn btn-outline-success filter-btn"
             onclick="filterTable('completed')"
           >
-            Completed
+            <i class="fas fa-check-circle"></i> Completed
           </button>
           <button
             class="btn btn-outline-warning filter-btn"
             onclick="filterTable('incomplete')"
           >
-            Incomplete
+            <i class="fas fa-hourglass-half"></i> Incomplete
           </button>
         </div>
 
@@ -172,7 +298,7 @@
           <tbody>
             {% for material in materials %}
             <tr
-              data-progress="{{ 'completed' if progress_data[loop.index0].progress_percentage == 100 else 'incomplete' }}"
+              data-progress="{% if progress_data[loop.index0].progress_percentage == 100 %}completed{% else %}incomplete{% endif %}"
             >
               <td><i class="fas fa-id-badge"></i> {{ material.id }}</td>
               <td><i class="fas fa-book"></i> {{ material.title }}</td>
@@ -184,10 +310,7 @@
               <td>
                 <div class="progress-chart-container">
                   <canvas id="progress-chart-{{ material.id }}"></canvas>
-                  <div
-                    class="progress-percentage"
-                    id="progress-percentage-{{ material.id }}"
-                  >
+                  <div class="progress-percentage">
                     {{ progress_data[loop.index0].progress_percentage }}%
                   </div>
                 </div>
@@ -196,7 +319,7 @@
                 {% if progress_data[loop.index0].progress_percentage > 0 %}
                 <a
                   href="{{ url_for('study_material_routes.view_course', course_id=material.id) }}"
-                  class="btn btn-primary btn-sm"
+                  class="btn btn-accent btn-sm"
                 >
                   <i class="fas fa-eye"></i> View Course
                 </a>
@@ -204,7 +327,7 @@
                 <form
                   action="{{ url_for('study_material_routes.start_course', course_id=material.id) }}"
                   method="POST"
-                  style="display: inline"
+                  class="d-inline"
                   onsubmit="event.preventDefault(); startCourseRedirect(this, {{ material.id }});"
                 >
                   <input
@@ -243,8 +366,11 @@
     <!-- Scripts -->
     <script>
       const progressData = {{ progress_data | tojson }};
-      progressData.forEach((data) => {
-        const ctx = document.getElementById(`progress-chart-${data.course_id}`).getContext("2d");
+      progressData.forEach(data => {
+        const ctx = document
+          .getElementById(`progress-chart-${data.course_id}`)
+          .getContext("2d");
+
         new Chart(ctx, {
           type: "doughnut",
           data: {
@@ -252,51 +378,71 @@
             datasets: [{
               data: [data.progress_percentage, 100 - data.progress_percentage],
               backgroundColor: ["#28a745", "#e0e0e0"],
-              borderWidth: 1,
-            }],
+              borderWidth: 0
+            }]
           },
           options: {
             responsive: true,
+            cutout: "70%",
+            animation: { animateRotate: true, animateScale: true },
             plugins: {
               legend: { display: false },
               tooltip: {
-                enabled: true,
                 callbacks: {
-                  label: function(context) {
-                    return `${context.label}: ${context.parsed}%`;
-                  }
+                  label: ({ label, parsed }) => `${label}: ${parsed}%`
                 }
-              },
-            },
-            cutout: "70%",
-            animation: { animateRotate: true, animateScale: true },
-          },
+              }
+            }
+          }
         });
       });
 
       function filterTable(type) {
-        const rows = document.querySelectorAll("#studyTable tbody tr");
-        rows.forEach(row => {
-          if (type === 'all') {
-            row.style.display = '';
-          } else {
-            row.style.display = row.getAttribute('data-progress') === type ? '' : 'none';
-          }
-        });
+        document
+          .querySelectorAll("#studyTable tbody tr")
+          .forEach(row => {
+            row.style.display =
+              type === "all" || row.dataset.progress === type
+                ? ""
+                : "none";
+          });
       }
 
       function startCourseRedirect(form, courseId) {
         const formData = new FormData(form);
         fetch(form.action, { method: "POST", body: formData })
-          .then((response) => response.json())
-          .then((data) => {
-            if (data.success || data.message === "Course already started") {
+          .then(res => res.json())
+          .then(data => {
+            if (data.success || data.message === "Course already started")
               window.location.href = `/study_materials/view_course/${courseId}`;
-            }
           })
-          .catch((error) => console.error("Error starting course:", error));
+          .catch(err => console.error("Error starting course:", err));
       }
+
+      // Access Denied Modal Trigger
+      {% with msgs = get_flashed_messages(category_filter=['access_denied']) %}
+        {% if msgs %}
+          window.addEventListener('load', () => {
+            const modal = document.getElementById('accessDeniedModal');
+            if (modal) {
+              new bootstrap.Modal(modal).show();
+            }
+          });
+        {% endif %}
+      {% endwith %}
+
+      // AFK Session Keep-Alive Ping
+      setInterval(() => {
+        fetch('/ping', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+      }, 300000); // every 5 minutes
     </script>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
   </body>
 </html>

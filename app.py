@@ -1,65 +1,48 @@
 from flask import Flask, render_template, jsonify, request
 from extensions import db, login_manager, mail, scheduler
-from auth_routes import auth_routes            # Authentication Blueprint
-from general_routes import general_routes      # General routes Blueprint
-from profile_routes import profile_routes      # Profile management Blueprint
-from task_routes import task_routes            # Task management Blueprint
-from exams_routes import exams_routes          # Exams routes Blueprint
-from study_material_routes import study_material_routes  # Study Material Blueprint
-from admin_routes import admin_routes          # Admin routes Blueprint
-from management_routes import management_routes  # Management routes Blueprint
-from special_exams_routes import special_exams_routes  # Special exams Blueprint
+from auth_routes import auth_routes
+from general_routes import general_routes
+from profile_routes import profile_routes
+from task_routes import task_routes
+from exams_routes import exams_routes
+from study_material_routes import study_material_routes
+from admin_routes import admin_routes
+from management_routes import management_routes
+from special_exams_routes import special_exams_routes
 from models import User
 from flask_wtf import CSRFProtect
 from flask_migrate import Migrate
-from mongodb_operations import initialize_mongodb, setup_collections  # MongoDB init
+from mongodb_operations import initialize_mongodb, setup_collections
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from dotenv import load_dotenv
+from flask import session, redirect, url_for, request
+from datetime import datetime, timedelta
 import os
 import logging
 
-# Import Flask-Talisman for security headers (optional, disabled for now)
-# from flask_talisman import Talisman
+# Load environment variables from .env file
+load_dotenv(override=True)
 
-# Import Flask-Limiter for rate limiting
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-
-from flask import Flask
-
+# Initialize Flask app
 app = Flask(
     __name__,
-    static_folder='static',       # folder on disk
-    static_url_path='/static'     # URL prefix
+    static_folder='static',
+    static_url_path='/static'
 )
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Initialize Flask app
-app = Flask(__name__)
-
-# ----------------------------------------------------------------------
-# (DISABLED FOR NOW) Set up Content Security Policy (CSP) using Flask-Talisman:
-# ----------------------------------------------------------------------
-# csp = {
-#     'default-src': ["'self'"],
-#     'style-src': ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
-#     'script-src': ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
-#     'font-src': ["'self'", "https://cdnjs.cloudflare.com"],
-#     'connect-src': ["'self'", "https://date.nager.at"]
-# }
-# Talisman(app, content_security_policy=csp, content_security_policy_report_uri='/csp-violation-report')
-
 # ----------------------------------------------------------------------
 # Enable the Scheduler API 
 # ----------------------------------------------------------------------
 app.config['SCHEDULER_API_ENABLED'] = True
-app.config['SCHEDULER_API_PREFIX']  = '/jobs'
-app.config['SCHEDULER_TIMEZONE']    = 'UTC'
+app.config['SCHEDULER_API_PREFIX'] = '/jobs'
+app.config['SCHEDULER_TIMEZONE'] = 'UTC'
 
 # ----------------------------------------------------------------------
-# Set up global rate limiting using Redis as the storage backend:
+# Set up global rate limiting using Redis
 # ----------------------------------------------------------------------
 limiter = Limiter(
     key_func=get_remote_address,
@@ -75,29 +58,27 @@ csrf = CSRFProtect()
 csrf.init_app(app)
 
 # ----------------------------------------------------------------------
-# Application Configuration:
+# Application Configuration
 # ----------------------------------------------------------------------
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-default-secret-key')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key')
 
-# ✅ Restored the original database URI (without ?sslmode=require)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
     'DATABASE_URL', 'postgresql://postgres:root@localhost/collectivercm'
 )
-
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # ----------------------------------------------------------------------
-# Flask-Mail Configuration:
+# Flask-Mail Configuration
 # ----------------------------------------------------------------------
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', 'thanuka.ellepola@gmail.com')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', 'gtkz lpyc ygon rbul')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'thanuka.ellepola@gmail.com')
+app.config['MAIL_SERVER']         = os.getenv('MAIL_SERVER')
+app.config['MAIL_PORT']           = int(os.getenv('MAIL_PORT'))
+app.config['MAIL_USE_TLS']        = os.getenv('MAIL_USE_TLS') == 'True'
+app.config['MAIL_USERNAME']       = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD']       = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
 
 # ----------------------------------------------------------------------
-# Initialize Extensions: SQLAlchemy, Login Manager, Mail, Migrate
+# Initialize Extensions
 # ----------------------------------------------------------------------
 db.init_app(app)
 login_manager.init_app(app)
@@ -106,7 +87,7 @@ mail.init_app(app)
 migrate = Migrate(app, db)
 
 # ----------------------------------------------------------------------
-# MongoDB Initialization:
+# MongoDB Initialization
 # ----------------------------------------------------------------------
 try:
     mongo_client, mongo_db = initialize_mongodb()
@@ -123,7 +104,7 @@ scheduler.init_app(app)
 scheduler.start()
 
 # ----------------------------------------------------------------------
-# Register Blueprints:
+# Register Blueprints
 # ----------------------------------------------------------------------
 app.register_blueprint(auth_routes, url_prefix='/auth')
 app.register_blueprint(general_routes)
@@ -136,27 +117,14 @@ app.register_blueprint(management_routes, url_prefix='/management')
 app.register_blueprint(special_exams_routes)
 
 # ----------------------------------------------------------------------
-# Define Routes:
+# Root Route
 # ----------------------------------------------------------------------
 @app.route('/')
 def root():
     return render_template('home.html')
 
-
 # ----------------------------------------------------------------------
-# CSP Violation Report Endpoint (DISABLED FOR NOW):
-# ----------------------------------------------------------------------
-# @app.route('/csp-violation-report', methods=['POST'])
-# def csp_violation_report():
-#     violation_report = request.get_json()
-#     if violation_report:
-#         logging.warning("CSP Violation Report: %s", violation_report)
-#         print("CSP Violation Report:", violation_report)
-#     return ('', 204)
-
-
-# ----------------------------------------------------------------------
-# Add Global Security Headers:
+# Security Headers
 # ----------------------------------------------------------------------
 @app.after_request
 def add_security_headers(response):
@@ -165,9 +133,8 @@ def add_security_headers(response):
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     return response
 
-
 # ----------------------------------------------------------------------
-# User Loader for Flask-Login:
+# User Loader
 # ----------------------------------------------------------------------
 @login_manager.user_loader
 def load_user(user_id):
@@ -177,24 +144,49 @@ def load_user(user_id):
         logging.error(f"Error loading user: {e}")
         return None
 
-
 # ----------------------------------------------------------------------
-# Error Handlers:
+# Error Handlers
 # ----------------------------------------------------------------------
 @app.errorhandler(404)
 def page_not_found(e):
     logging.warning("404 - Page not found.")
     return render_template('404.html'), 404
 
-
 @app.errorhandler(500)
 def internal_error(e):
     logging.error(f"500 - Internal server error: {e}")
     return render_template('500.html'), 500
 
+# ----------------------------------------------------------------------
+#Timeout Handling
+# ----------------------------------------------------------------------
+@app.before_request
+def check_afk_timeout():
+    # Don't check AFK for static files or login/logout routes
+    if request.endpoint in ['static', 'auth_routes.login', 'auth_routes.logout']:
+        return
+
+    if 'user_id' in session:
+        now = datetime.utcnow()
+        last_activity = session.get('last_activity')
+        
+        if last_activity:
+            last_activity = datetime.strptime(last_activity, '%Y-%m-%d %H:%M:%S.%f')
+            if now - last_activity > timedelta(minutes=15):
+                session.clear()
+                return redirect(url_for('auth_routes.login'))
+        
+        session['last_activity'] = now.strftime('%Y-%m-%d %H:%M:%S.%f')
+
+@app.route('/ping', methods=['POST'])
+def ping():
+    if 'user_id' in session:
+        session['last_activity'] = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')
+    return '', 204
+
 
 # ----------------------------------------------------------------------
-# Utility Route: List all routes in the application
+# List All Routes
 # ----------------------------------------------------------------------
 @app.route('/routes')
 def list_routes():
@@ -203,9 +195,8 @@ def list_routes():
         for rule in app.url_map.iter_rules()
     ])
 
-
 # ----------------------------------------------------------------------
-# Main Entry Point:
+# Main Entry Point
 # ----------------------------------------------------------------------
 if __name__ == '__main__':
     env = os.getenv('FLASK_ENV', 'development')

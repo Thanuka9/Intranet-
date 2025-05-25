@@ -1,0 +1,234 @@
+{% extends 'admin_base.html' %} {% block title %}User Analytics{% endblock %} {%
+block content %}
+<h2 class="mb-4">User: {{ user.first_name }} {{ user.last_name }}</h2>
+<div class="row mb-4">
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <strong>Email:</strong> {{ user.employee_email }}<br />
+        <strong>Department:</strong> {{ user.department.name if user.department
+        else '-' }}<br />
+        <strong>Designation:</strong> {{ user.designation.title if
+        user.designation else '-' }}<br />
+        <strong>Join Date:</strong> {{ user.join_date.strftime('%Y-%m-%d') if
+        user.join_date else '-' }}<br />
+        <strong>Current Level:</strong> {{ user.get_current_level() }}
+      </div>
+    </div>
+  </div>
+</div>
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-header">Exam Scores</div>
+      <div class="card-body">
+        {% if exam_titles|length == 1 %}
+        <div class="text-center mb-4">
+          <canvas id="gaugeChart" width="200" height="100"></canvas>
+          <div class="mt-2">
+            <span
+              class="fw-bold fs-4 {% if exam_scores[0] >= 80 %}text-success{% elif exam_scores[0] < 50 %}text-danger{% else %}text-secondary{% endif %}"
+            >
+              {{ exam_scores[0] }}%
+            </span>
+            <span class="ms-2">({{ exam_titles[0] }})</span>
+          </div>
+        </div>
+        {% else %}
+        <canvas id="userExamChart"></canvas>
+        {% endif %}
+        <table class="table table-sm mt-3">
+          <thead>
+            <tr>
+              <th>Exam</th>
+              <th>Score</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for i in range(exam_titles|length) %}
+            <tr>
+              <td>{{ exam_titles[i] }}</td>
+              <td>
+                <span
+                  class="{% if exam_scores[i] >= 80 %}text-success{% elif exam_scores[i] < 50 %}text-danger{% else %}text-secondary{% endif %}"
+                >
+                  {{ exam_scores[i] }}%
+                </span>
+              </td>
+              <td>{{ exam_dates[i] }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-header">Course Progress</div>
+      <div class="card-body">
+        <canvas id="userCourseChart"></canvas>
+        <table class="table table-sm mt-3">
+          <thead>
+            <tr>
+              <th>Course</th>
+              <th>Progress</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for i in range(course_titles|length) %}
+            <tr>
+              <td>{{ course_titles[i] }}</td>
+              <td>
+                <div class="progress" style="height: 16px">
+                  <div
+                    class="progress-bar {% if course_percents[i] >= 80 %}bg-success {% elif course_percents[i] < 50 %}bg-danger {% else %}bg-warning{% endif %}"
+                    role="progressbar"
+                    style="width: {{ course_percents[i] }}%"
+                  >
+                    {{ course_percents[i] }}%
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mb-4">
+  <h4>Activity Timeline</h4>
+  <ul class="timeline">
+    {% for event in timeline %}
+    <li>
+      <strong>{{ event[1] }}</strong> – {{ event[2] }} {% if event[0] %}<span
+        class="text-muted"
+        >({{ event[0].strftime('%Y-%m-%d') }})</span
+      >{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+<a
+  href="{{ url_for('admin_routes.analytics_user_list') }}"
+  class="btn btn-outline-secondary"
+  >&larr; Back to User List</a
+>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<script>
+  const examTitles = {{ exam_titles|tojson }};
+  const examScores = {{ exam_scores|tojson }};
+  const courseTitles = {{ course_titles|tojson }};
+  const coursePercents = {{ course_percents|tojson }};
+
+  document.addEventListener('DOMContentLoaded', () => {
+    {% if exam_titles|length > 1 %}
+    new Chart(document.getElementById('userExamChart'), {
+      type: 'bar',
+      data: {
+        labels: examTitles,
+        datasets: [{
+          label: 'Score (%)',
+          data: examScores,
+          backgroundColor: examScores.map(score =>
+            score >= 80 ? '#27ae60' : (score < 50 ? '#e74c3c' : '#f39c12'))
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        scales: { x: { beginAtZero: true, max: 100 } },
+        plugins: {
+          datalabels: {
+            anchor: 'end',
+            align: 'right',
+            formatter: Math.round,
+            color: '#333'
+          }
+        }
+      },
+      plugins: [ChartDataLabels]
+    });
+    {% elif exam_titles|length == 1 %}
+    // Gauge chart for single exam (using doughnut with rotation)
+    const ctx = document.getElementById('gaugeChart').getContext('2d');
+    const score = examScores[0];
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Score', 'Remaining'],
+        datasets: [{
+          data: [score, 100-score],
+          backgroundColor: [
+            score >= 80 ? '#27ae60' : (score < 50 ? '#e74c3c' : '#f39c12'),
+            '#e0e0e0'
+          ],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        rotation: Math.PI,
+        circumference: Math.PI,
+        cutout: '70%',
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false },
+          datalabels: {
+            display: false
+          }
+        }
+      }
+    });
+    {% endif %}
+
+    // Course progress
+    new Chart(document.getElementById('userCourseChart'), {
+      type: 'bar',
+      data: {
+        labels: courseTitles,
+        datasets: [{
+          label: 'Progress (%)',
+          data: coursePercents,
+          backgroundColor: coursePercents.map(p =>
+            p >= 80 ? '#27ae60' : (p < 50 ? '#e74c3c' : '#f39c12'))
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        scales: { x: { beginAtZero: true, max: 100 } },
+        plugins: { legend: { display: false } }
+      }
+    });
+  });
+</script>
+<style>
+  /* Simple vertical timeline style */
+  .timeline {
+    list-style: none;
+    padding-left: 0;
+  }
+  .timeline li {
+    border-left: 2px solid #bdc3c7;
+    margin-left: 10px;
+    padding-left: 16px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .timeline li:before {
+    content: "";
+    position: absolute;
+    left: -7px;
+    top: 7px;
+    width: 10px;
+    height: 10px;
+    background: #2980b9;
+    border-radius: 50%;
+  }
+</style>
+{% endblock %}

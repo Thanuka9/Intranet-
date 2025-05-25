@@ -15,7 +15,7 @@ from sqlalchemy.dialects.postgresql import ARRAY
 # -------------------------------
 user_task_association = Table(
     'user_task_association', db.Model.metadata,
-    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
+    Column('user_id', Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
     Column('task_id', Integer, ForeignKey('tasks.id'), primary_key=True)
 )
 
@@ -24,7 +24,7 @@ user_task_association = Table(
 # -------------------------------------
 user_roles = Table(
     'user_roles', db.Model.metadata,
-    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
+    Column('user_id', Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
     Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True)
 )
 
@@ -33,16 +33,8 @@ user_roles = Table(
 # -------------------------------------
 user_clients = Table(
   'user_clients', db.Model.metadata,
-  Column('user_id',   Integer, ForeignKey('users.id'),   primary_key=True),
+  Column('user_id',   Integer, ForeignKey('users.id', ondelete='CASCADE'),   primary_key=True),
   Column('client_id', Integer, ForeignKey('clients.id'), primary_key=True),
-)
-# ------------------------------------------
-# Association table between modules and roles
-# -------------------------------------------
-module_roles = Table(
-    'module_roles', db.Model.metadata,
-    Column('module_id', Integer, ForeignKey('modules.id'), primary_key=True),
-    Column('role_id',   Integer, ForeignKey('roles.id'),   primary_key=True)
 )
 
 # -------------------------------------
@@ -193,7 +185,7 @@ class UserProgress(db.Model):
     __tablename__ = 'user_progress'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     study_material_id = db.Column(db.Integer, db.ForeignKey('study_materials.id'), nullable=False, index=True)
     pages_visited = db.Column(db.Integer, default=0)  # Pages visited by the user
     progress_percentage = db.Column(db.Integer, default=0)  # Progress percentage
@@ -206,7 +198,7 @@ class UserProgress(db.Model):
     level_id = db.Column(db.Integer, db.ForeignKey('levels.id'), nullable=True, index=True)
 
     # Relationships
-    user = db.relationship("User", back_populates="study_progress")
+    user = db.relationship("User", back_populates="study_progress", passive_deletes=True)
     study_material = db.relationship("StudyMaterial", back_populates="user_progress")
     level = db.relationship("Level", back_populates="user_progress")  # New relationship
 
@@ -254,7 +246,7 @@ class UserLevelProgress(db.Model):
     __tablename__ = 'user_level_progress'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     level_id = db.Column(db.Integer, db.ForeignKey('levels.id'), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
     area_id = db.Column(db.Integer, ForeignKey('areas.id'), nullable=False)
@@ -263,7 +255,7 @@ class UserLevelProgress(db.Model):
     best_score = db.Column(db.Float)
 
     # Relationships
-    user = db.relationship("User", back_populates="level_progress")
+    user = db.relationship("User", back_populates="level_progress", passive_deletes=True)
     level = db.relationship("Level", back_populates="user_level_progress")
     category = db.relationship("Category")
     area = db.relationship("Area", back_populates="user_level_progress")
@@ -289,7 +281,8 @@ class User(db.Model, UserMixin):
     employee_id = Column(String(20), unique=True, nullable=False)
     join_date = Column(Date, nullable=False)
     profile_picture = Column(LargeBinary, nullable=True)
-
+    deleted_at        = Column(DateTime, nullable=True)
+    last_login = db.Column(db.DateTime, nullable=True)
 
     # Using a relationship to link to the Department model
     department_id = Column(Integer, ForeignKey('departments.id'), nullable=True)
@@ -307,7 +300,8 @@ class User(db.Model, UserMixin):
     clients = relationship(
     "Client",
     secondary=user_clients,
-    back_populates="users"
+    back_populates="users",
+    passive_deletes=True
     )
 
     # ---------------------------------
@@ -335,41 +329,52 @@ class User(db.Model, UserMixin):
     created_exams = relationship(
         "Exam",
         back_populates="created_by_user",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        passive_deletes=True
     )
     tasks_assigned = relationship(
         "Task",
         foreign_keys='Task.assigned_by',
         back_populates="assigned_by_user",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        passive_deletes=True
     )
     tasks_received = relationship(
         "Task",
         secondary="user_task_association",
-        back_populates="assignees"
+        back_populates="assignees",
+        passive_deletes=True
     )
-
+    # ---------------------------------
+    # password_reset_requests
+    # ---------------------------------
+    password_reset_requests = db.relationship(
+        'PasswordResetRequest',
+        back_populates='user',
+        cascade='all, delete-orphan'
+    )
     # ---------------------------------
     # Event Management
     # ---------------------------------
     events = relationship(
         "Event",
         back_populates="user",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        passive_deletes=True
     )
 
     # ---------------------------------
     # Email Verification and 2FA
     # ---------------------------------
     is_verified = Column(Boolean, default=False)
-    verification_token = Column(String(36), unique=True, nullable=True)
+    verification_token    = Column(Text, nullable=True)
     two_fa_code = Column(String(6), nullable=True)
     two_fa_expiration = Column(DateTime, nullable=True)
 
     # ---------------------------------
     # Password Reset Fields
     # ---------------------------------
-    password_reset_token = Column(String(36), unique=True, nullable=True)
+    password_reset_token  = Column(Text, nullable=True)
     password_reset_expiration = Column(DateTime, nullable=True)
 
     # ---------------------------------
@@ -381,11 +386,15 @@ class User(db.Model, UserMixin):
         uselist=False,
         cascade="all, delete-orphan"
     )
+    # ---------------------------------
+    # Incorrect Answers Tracking
+    # ---------------------------------
+    incorrect_answers = relationship('IncorrectAnswer', back_populates='user', cascade='all, delete-orphan')
 
     # ---------------------------------
     # Role-based Access Control (RBAC)
     # ---------------------------------
-    roles = db.relationship("Role", secondary=user_roles, back_populates="users")
+    roles = db.relationship("Role", secondary=user_roles, back_populates="users", passive_deletes=True)
 
     # ---------------------------------
     # Curent Level
@@ -495,7 +504,7 @@ class Exam(db.Model):
     level_id = Column(Integer, ForeignKey('levels.id'), nullable=False)
     area_id = Column(Integer, ForeignKey('areas.id'), nullable=False)
     course_id = Column(Integer, ForeignKey('study_materials.id'), nullable=False)
-    created_by = Column(Integer, ForeignKey('users.id'), nullable=False)
+    created_by = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     category_id = Column(Integer, ForeignKey('categories.id'), nullable=False)
 
     # New Additions
@@ -505,12 +514,18 @@ class Exam(db.Model):
     # Relationships
     level = relationship("Level", back_populates="exams")
     area = relationship("Area", back_populates="exams")
-    created_by_user = relationship("User", back_populates="created_exams")
+    created_by_user = relationship("User", back_populates="created_exams", passive_deletes=True)
     course = relationship("StudyMaterial", back_populates="exams")
     category = relationship("Category", back_populates="exams")
     questions = relationship("Question", back_populates="exam", cascade="all, delete-orphan")
     scores = relationship("UserScore", back_populates="exam", cascade="all, delete-orphan")
-    level_areas = relationship("LevelArea", back_populates="exam", cascade="all, delete-orphan")
+    level_areas = relationship(
+        "LevelArea",
+        back_populates="required_exam",
+        foreign_keys="[LevelArea.required_exam_id]",
+        cascade="all, delete-orphan"
+    )
+
 
     def __repr__(self):
         level_num = self.level.level_number if self.level else 'N/A'
@@ -533,6 +548,7 @@ class Exam(db.Model):
             return user.designation.starting_level >= self.minimum_designation_level
         return False
 
+    incorrect_answers = relationship('IncorrectAnswer', back_populates='exam', cascade='all, delete-orphan')
 # -------------------------------
 # Question Model
 # -------------------------------
@@ -568,7 +584,7 @@ class UserScore(db.Model):
     __tablename__ = 'user_scores'
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     exam_id = Column(Integer, ForeignKey('exams.id'), nullable=False)
     area_id = Column(Integer, ForeignKey('areas.id'), nullable=False)
     level_id = Column(Integer, ForeignKey('levels.id'), nullable=False)  # Tracks Level
@@ -578,7 +594,7 @@ class UserScore(db.Model):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    user = relationship("User", back_populates="scores")
+    user = relationship("User", back_populates="scores", passive_deletes=True)
     exam = relationship("Exam", back_populates="scores")
     area = relationship("Area", back_populates="user_scores")  # Linked to Area
     level = relationship("Level", back_populates="user_scores")  # Linked to Level
@@ -590,6 +606,26 @@ class UserScore(db.Model):
         area_name = self.area.name if self.area else 'N/A'
         return (f"<UserScore(id={self.id}, user_id={self.user_id}, "
                 f"level={level_num}, area='{area_name}', score={self.score})>")
+    
+# -------------------------------
+# Exam Access Request Model
+# -------------------------------
+class ExamAccessRequest(db.Model):
+    __tablename__ = 'exam_access_requests'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    exam_id = db.Column(db.Integer, nullable=False)  # Supports both regular & special exams
+    status = db.Column(db.String(20), default='pending')  # pending | approved | rejected
+    requested_at = db.Column(db.DateTime, default=datetime.utcnow)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    used          = db.Column(db.Boolean, nullable=False, default=False)
+
+    user = db.relationship("User", backref="exam_requests")
+
+    @property
+    def is_special_exam(self):
+        return self.exam_id in (9991, 9992)
 
 #--------------------------------    
 # Task Model
@@ -606,13 +642,13 @@ class Task(db.Model):
     progress = db.Column(db.Integer, nullable=False, default=0)
 
     # Foreign Keys
-    assigned_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    completed_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    assigned_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'),nullable=False)
+    completed_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'),nullable=True)
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=True)
 
     # Relationships
-    assigned_by_user = db.relationship("User", foreign_keys=[assigned_by], back_populates="tasks_assigned")
-    completed_by_user = db.relationship("User", foreign_keys=[completed_by])
+    assigned_by_user = db.relationship("User", foreign_keys=[assigned_by], back_populates="tasks_assigned", passive_deletes=True)
+    completed_by_user = db.relationship("User", foreign_keys=[completed_by], passive_deletes=True)
     client = db.relationship("Client", back_populates="tasks")
 
     assignees = db.relationship(
@@ -707,8 +743,8 @@ class Event(db.Model):
     description = Column(Text, nullable=True)
     date = Column(Date, nullable=False)
 
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    user = relationship("User", back_populates="events")
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    user = relationship("User", back_populates="events", passive_deletes=True)
 
     def __repr__(self):
         return f"<Event(id={self.id}, title='{self.title}', date={self.date}, user_id={self.user_id})>"
@@ -737,21 +773,34 @@ class Area(db.Model):
 class LevelArea(db.Model):
     __tablename__ = 'level_areas'
 
-    id = Column(Integer, primary_key=True)
-    level_id = Column(Integer, ForeignKey('levels.id'), nullable=False)
-    category_id = Column(Integer, ForeignKey('categories.id'), nullable=False)
-    area_id = Column(Integer, ForeignKey('areas.id'), nullable=False)  
+    id               = Column(Integer, primary_key=True)
+    level_id         = Column(Integer, ForeignKey('levels.id'), nullable=False)
+    category_id      = Column(Integer, ForeignKey('categories.id'), nullable=False)
+    area_id          = Column(Integer, ForeignKey('areas.id'), nullable=False)
     required_exam_id = Column(Integer, ForeignKey('exams.id'), nullable=True)
 
     # Relationships
-    level = relationship("Level", back_populates="level_areas")
-    category = relationship("Category", back_populates="level_areas")
-    area = relationship("Area", back_populates="level_areas")  
-    exam = relationship("Exam", back_populates="level_areas")
+    level         = relationship("Level",    back_populates="level_areas")
+    category      = relationship("Category", back_populates="level_areas")
+    area          = relationship("Area",     back_populates="level_areas")
+    required_exam = relationship(
+        "Exam",
+        foreign_keys=[required_exam_id],
+        back_populates="level_areas",
+        lazy='joined'
+    )
+
+    @property
+    def exam(self):
+        """Alias for backward compatibility with existing code."""
+        return self.required_exam
 
     def __repr__(self):
-        return (f"<LevelArea(id={self.id}, level_id={self.level_id}, "
-                f"category_id={self.category_id}, required_exam_id={self.required_exam_id})>")
+        return (
+            f"<LevelArea(id={self.id}, level_id={self.level_id}, "
+            f"category_id={self.category_id}, area_id={self.area_id}, "
+            f"required_exam_id={self.required_exam_id})>"
+        )
 
 # -------------------------------
 # SpecialExamRecord Model
@@ -760,25 +809,27 @@ class SpecialExamRecord(db.Model):
     __tablename__ = 'special_exam_records'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
 
     # Paper 1 fields
     paper1_score = db.Column(db.Float, default=0.0)
     paper1_passed = db.Column(db.Boolean, default=False)
     paper1_time_spent = db.Column(db.Integer, default=0)  # in seconds
     paper1_completed_at = db.Column(db.DateTime, nullable=True)
+    paper1_attempts = db.Column(db.Integer, default=0)
 
     # Paper 2 fields
     paper2_score = db.Column(db.Float, default=0.0)
     paper2_passed = db.Column(db.Boolean, default=False)
     paper2_time_spent = db.Column(db.Integer, default=0)  # in seconds
     paper2_completed_at = db.Column(db.DateTime, nullable=True)
+    paper2_attempts = db.Column(db.Integer, default=0)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
 
     # Use back_populates on both sides of the relationship.
-    user = db.relationship("User", back_populates="special_exam_record", uselist=False)
+    user = db.relationship("User", back_populates="special_exam_record", uselist=False, passive_deletes=True)
 
     def __repr__(self):
         return f"<SpecialExamRecord(id={self.id}, user_id={self.user_id})>"
@@ -797,22 +848,53 @@ class Department(db.Model):
     
     def __repr__(self):
         return f"<Department(id={self.id}, name='{self.name}')>"
+    
 # -------------------------------------
-# Module Model
+#incorrect_answer Model
 # -------------------------------------
-class Module(db.Model):
-    __tablename__ = 'modules'
-    id          = Column(Integer, primary_key=True)
-    name        = Column(String(50), unique=True, nullable=False)
-    description = Column(String(255), nullable=True)
-    enabled     = Column(Boolean, default=True, nullable=False)
+from sqlalchemy import Text  # at the top
 
-    # === hierarchy ===
-    parent_id   = Column(Integer, ForeignKey('modules.id'), nullable=True)
-    parent      = relationship('Module', remote_side=[id], backref='children')
+class IncorrectAnswer(db.Model):
+    __tablename__ = 'incorrect_answers'
 
-    # === role-based access ===
-    roles       = relationship('Role', secondary=module_roles, backref='modules')
+    id             = db.Column(db.Integer, primary_key=True)
+    user_id        = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    exam_id        = db.Column(db.Integer, db.ForeignKey('exams.id', ondelete='CASCADE'), nullable=True, index=True)
+    special_paper  = db.Column(db.String(10), nullable=True, index=True)
+    question_id    = db.Column(db.Integer, nullable=False)
+    user_answer    = db.Column(Text, nullable=False)      # <-- now free-text
+    correct_answer = db.Column(Text, nullable=False)      # <-- now free-text
+    answered_at    = db.Column(db.DateTime, default=datetime.utcnow)
 
-    def __repr__(self):
-        return f"<Module {self.name}: {'ON' if self.enabled else 'OFF'}>"
+    __table_args__ = (
+        db.Index('ix_user_exam', 'user_id', 'exam_id'),
+    )
+
+    user = db.relationship('User', back_populates='incorrect_answers')
+    exam = db.relationship('Exam', back_populates='incorrect_answers')
+
+# -------------------------------------
+#PasswordResetRequest Model
+# -------------------------------------
+class PasswordResetRequest(db.Model):
+    __tablename__ = 'password_reset_request'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='CASCADE'),
+        nullable=False
+    )
+    token = db.Column(db.String(128), nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    timestamp = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    # back-reference to User
+    user = db.relationship(
+        'User',
+        back_populates='password_reset_requests'
+    )

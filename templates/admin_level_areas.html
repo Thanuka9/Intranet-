@@ -1,0 +1,130 @@
+{% extends 'admin_base.html' %}
+{% block title %}Manage Level Areas{% endblock %}
+
+{% block content %}
+  <div class="mb-4">
+    <h1>Manage Level Areas</h1>
+  </div>
+
+  <!-- Create New Rule -->
+  <div class="card mb-5">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Add New Level-Area Rule</h2>
+      <form method="POST" action="{{ url_for('admin_routes.create_level_area') }}" class="row g-3 align-items-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="col-md-3">
+          <label for="level_id" class="form-label">Level</label>
+          <select id="level_id" name="level_id" class="form-select" required>
+            {% for lvl in levels %}
+              <option value="{{ lvl.id }}">Level {{ lvl.level_number }}: {{ lvl.title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="category_id" class="form-label">Category</label>
+          <select id="category_id" name="category_id" class="form-select" required>
+            {% for cat in categories %}
+              <option value="{{ cat.id }}">{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="area_id" class="form-label">Area</label>
+          <select id="area_id" name="area_id" class="form-select" required>
+            {% for ar in areas %}
+              <option value="{{ ar.id }}">{{ ar.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="required_exam_id" class="form-label">Required Exam</label>
+          <select id="required_exam_id" name="required_exam_id" class="form-select">
+            <option value="">— None —</option>
+            {% for ex in exams %}
+              <option value="{{ ex.id }}">{{ ex.title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-primary">Add Rule</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Existing Rules -->
+  <table class="table table-bordered table-hover mb-5">
+    <thead class="table-light">
+      <tr>
+        <th>#</th>
+        <th>Level</th>
+        <th>Category</th>
+        <th>Area</th>
+        <th>Exam</th>
+        <th class="text-center">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for la in level_areas %}
+        <tr>
+          <td>{{ la.id }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('admin_routes.edit_level_area', id=la.id) }}" class="d-flex">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <select name="level_id" class="form-select form-select-sm me-2">
+                {% for lvl in levels %}
+                  <option value="{{ lvl.id }}" {% if lvl.id == la.level_id %}selected{% endif %}>
+                    Level {{ lvl.level_number }}: {{ lvl.title }}
+                  </option>
+                {% endfor %}
+              </select>
+          </td>
+          <td>
+              <select name="category_id" class="form-select form-select-sm me-2">
+                {% for cat in categories %}
+                  <option value="{{ cat.id }}" {% if cat.id == la.category_id %}selected{% endif %}>
+                    {{ cat.name }}
+                  </option>
+                {% endfor %}
+              </select>
+          </td>
+          <td>
+              <select name="area_id" class="form-select form-select-sm me-2">
+                {% for ar in areas %}
+                  <option value="{{ ar.id }}" {% if ar.id == la.area_id %}selected{% endif %}>
+                    {{ ar.name }}
+                  </option>
+                {% endfor %}
+              </select>
+          </td>
+          <td>
+              <select name="required_exam_id" class="form-select form-select-sm me-2">
+                <option value="" {% if not la.required_exam_id %}selected{% endif %}>— None —</option>
+                {% for ex in exams %}
+                  <option value="{{ ex.id }}" {% if la.required_exam_id == ex.id %}selected{% endif %}>
+                    {{ ex.title }}
+                  </option>
+                {% endfor %}
+              </select>
+          </td>
+          <td class="text-center">
+              <button type="submit" class="btn btn-sm btn-success me-1" title="Save Changes">
+                <i class="fas fa-save"></i>
+              </button>
+            </form>
+            <form method="POST" action="{{ url_for('admin_routes.delete_level_area', id=la.id) }}" class="d-inline-block">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-danger" title="Delete Rule">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="6" class="text-center text-muted">No level-area rules defined yet.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

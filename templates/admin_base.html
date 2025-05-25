@@ -195,12 +195,42 @@
         >
           <i class="fas fa-user-shield"></i> Roles
         </a>
+        <a
+          href="{{ url_for('admin_routes.manage_exam_requests') }}"
+          class="btn"
+          style="background: #6f42c1; color: #fff; border: 1px solid #6741d9"
+        >
+          <i class="fas fa-envelope-open-text"></i> Exam Requests
+        </a>
+        <a
+          href="{{ url_for('admin_routes.incorrect_summary') }}"
+          class="btn"
+          style="background: #20c997; color: #fff; border: 1px solid #198754"
+        >
+          <i class="fas fa-exclamation-circle"></i> Incorrect Answers
+        </a>
+
+        <a
+          href="{{ url_for('admin_routes.manage_level_areas') }}"
+          class="btn"
+          style="background: #322aa8; color: #fff; border: 1px solid #198754"
+        >
+          <i class="fas fa-layer-group"></i> Manage Level Areas
+        </a>
+
+        <a
+          href="{{ url_for('admin_routes.manage_user_clients') }}"
+          class="btn btn-sm"
+          style="background: #634242; color: #fff; border: 1px solid #322aa8"
+        >
+          <i class="fas fa-user-friends"></i> Manage User–Clients
+        </a>
       </div>
 
       {% block content %}{% endblock %}
     </div>
 
-    <footer>&copy; {{ current_year or 2024 }} Collective Intranet</footer>
+    <footer>Collective Intranet© 2024</footer>
 
     <!-- Access Denied Modal -->
     <div
@@ -244,10 +274,24 @@
       {% with msgs = get_flashed_messages(category_filter=['access_denied']) %}
         {% if msgs %}
           window.addEventListener('load', () => {
-            new bootstrap.Modal(document.getElementById('accessDeniedModal')).show();
+            const modal = document.getElementById('accessDeniedModal');
+            if (modal) {
+              new bootstrap.Modal(modal).show();
+            }
           });
         {% endif %}
       {% endwith %}
+
+      // Keep session alive if user is active
+      setInterval(() => {
+        fetch('/ping', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+      }, 300000); // every 5 minutes
     </script>
   </body>
 </html>

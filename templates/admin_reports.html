@@ -1,7 +1,8 @@
 {% extends 'admin_base.html' %} {% block title %}Reports{% endblock %} {% block
 content %}
+
 <div class="container mt-4">
-  <h1 class="text-center mb-4">User Reports</h1>
+  <h1 class="text-center mb-4">User & Organization Reports</h1>
 
   <!-- Search Form -->
   <form method="get" class="row g-2 align-items-center mb-4">
@@ -10,7 +11,7 @@ content %}
         type="text"
         name="search"
         class="form-control"
-        placeholder="Search users…"
+        placeholder="Search users, departments…"
         value="{{ search }}"
       />
     </div>
@@ -19,119 +20,101 @@ content %}
     </div>
   </form>
 
-  <!-- Download Buttons -->
-  <div class="mb-4">
-    <a
-      href="{{ url_for('admin_routes.download_report', type='course_progress', search=search) }}"
-      class="btn btn-outline-primary me-2"
-    >
-      <i class="fas fa-file-csv"></i> Download Course Progress CSV
-    </a>
-    <a
-      href="{{ url_for('admin_routes.download_report', type='exam_performance', search=search) }}"
-      class="btn btn-outline-success me-2"
-    >
-      <i class="fas fa-file-csv"></i> Download Exam Performance CSV
-    </a>
-    <a
-      href="{{ url_for('admin_routes.download_report', type='special_exams', search=search) }}"
-      class="btn btn-outline-warning"
-    >
-      <i class="fas fa-file-csv"></i> Download Special Exams CSV
-    </a>
+  <!-- Improved Quick Stats: Always Show Stats -->
+  <h3 class="mb-3">Quick Stats</h3>
+  <div class="row mb-4">
+    {% if custom_table is defined and custom_table|length > 0 %} {% for stat in
+    custom_table %}
+    <div class="col-md-3 col-6 mb-3">
+      <div class="card text-center shadow-sm border-primary">
+        <div class="card-body">
+          <div class="mb-2" style="font-size: 2em">
+            {% if "User" in stat.name %}
+            <i class="fas fa-users"></i>
+            {% elif "Department" in stat.name %}
+            <i class="fas fa-building"></i>
+            {% elif "Course" in stat.name %}
+            <i class="fas fa-book"></i>
+            {% elif "Exam" in stat.name %}
+            <i class="fas fa-clipboard-check"></i>
+            {% else %}
+            <i class="fas fa-info-circle"></i>
+            {% endif %}
+          </div>
+          <h5 class="card-title">
+            {{ stat.value if stat.value is not none else 0 }}
+          </h5>
+          <p class="card-text">{{ stat.name }}</p>
+        </div>
+      </div>
+    </div>
+    {% endfor %} {% else %}
+    <div class="col-12">
+      <div class="alert alert-info text-center">No statistics available.</div>
+    </div>
+    {% endif %}
   </div>
 
-  <!-- Course Progress per User -->
-  <h3 class="mb-3">Course Progress by User</h3>
-  <table class="table table-bordered table-hover mb-5">
-    <thead class="table-light">
-      <tr>
-        <th>User</th>
-        <th>Total Courses</th>
-        <th>Avg Progress (%)</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% if course_progress_data %} {% for row in course_progress_data %}
-      <tr>
-        <td>{{ row.user_name }}</td>
-        <td>{{ row.total_courses }}</td>
-        <td>{{ row.avg_progress }}%</td>
-      </tr>
-      {% endfor %} {% else %}
-      <tr>
-        <td colspan="3" class="text-center">No course progress data.</td>
-      </tr>
-      {% endif %}
-    </tbody>
-  </table>
+  <!-- Download Section (unchanged) -->
+  <h3>Download Reports</h3>
+  <div class="list-group mb-4">
+    <a
+      href="{{ url_for('admin_routes.download_report', type='course_progress', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-chart-line me-2"></i> Course Progress</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='exam_performance', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-trophy me-2"></i> Exam Performance</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='special_exams', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-star-half-alt me-2"></i> Special Exams</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='users', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-user me-2"></i> Users</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='audit_logs', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-clipboard-list me-2"></i> Audit Logs</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='departments', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-building me-2"></i> Departments</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='courses', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-book me-2"></i> Courses</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='exams', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-clipboard-check me-2"></i> Exams</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='leaderboard', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-medal me-2"></i> Leaderboard</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='inactive_users', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-user-slash me-2"></i> Inactive Users</a
+    >
+  </div>
 
-  <!-- Exam Performance per User -->
-  <h3 class="mb-3">Exam Performance by User</h3>
-  <table class="table table-bordered table-hover mb-5">
-    <thead class="table-light">
-      <tr>
-        <th>User</th>
-        <th>Total Attempts</th>
-        <th>Avg Score (%)</th>
-        <th>Successful Attempts</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% if exam_performance_data %} {% for row in exam_performance_data %}
-      <tr>
-        <td>{{ row.user_name }}</td>
-        <td>{{ row.total_attempts }}</td>
-        <td>{{ row.avg_score }}%</td>
-        <td>{{ row.successful_attempts }}</td>
-      </tr>
-      {% endfor %} {% else %}
-      <tr>
-        <td colspan="4" class="text-center">No exam performance data.</td>
-      </tr>
-      {% endif %}
-    </tbody>
-  </table>
-
-  <!-- Special Exam Records -->
-  <h3 class="mb-3">Special Exam Records</h3>
-  <table class="table table-bordered table-hover mb-5">
-    <thead class="table-light">
-      <tr>
-        <th>User</th>
-        <th>Paper 1 Score</th>
-        <th>Paper 1 Status</th>
-        <th>Paper 2 Score</th>
-        <th>Paper 2 Status</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% if special_exam_records %} {% for r in special_exam_records %}
-      <tr>
-        <td>{{ r.user.first_name }} {{ r.user.last_name }}</td>
-        <td>{{ r.paper1_score }}%</td>
-        <td>
-          {% if r.paper1_passed %}
-          <span class="badge bg-success">Passed</span>
-          {% else %}
-          <span class="badge bg-danger">Failed</span>
-          {% endif %}
-        </td>
-        <td>{{ r.paper2_score }}%</td>
-        <td>
-          {% if r.paper2_passed %}
-          <span class="badge bg-success">Passed</span>
-          {% else %}
-          <span class="badge bg-danger">Failed</span>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %} {% else %}
-      <tr>
-        <td colspan="5" class="text-center">No special exam records.</td>
-      </tr>
-      {% endif %}
-    </tbody>
-  </table>
+  <a
+    href="{{ url_for('admin_routes.custom_report', search=search) }}"
+    class="btn btn-outline-info"
+  >
+    <i class="fas fa-sliders-h"></i> Custom Report Builder
+  </a>
 </div>
 {% endblock %}

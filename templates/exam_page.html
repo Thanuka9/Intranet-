@@ -254,10 +254,11 @@
                 form      = document.getElementById("examForm"),
                 timeInp   = document.getElementById("timeSpentInput");
 
-          let submitted   = false,
-              tabSwitches = 0,
-              current     = 0,
-              remaining   = {{ exam.duration }} * 60;
+          let submitted       = false,
+              tabSwitches     = 0,
+              navWarningShown = false,
+              current         = 0,
+              remaining       = {{ exam.duration }} * 60;
 
           function tick() {
             const m = String(Math.floor(remaining / 60)).padStart(2, '0'),
@@ -268,6 +269,7 @@
               form.submit();
             }
           }
+
           setInterval(tick, 1000);
           tick();
 
@@ -308,13 +310,17 @@
 
           // Anti-cheat
           document.addEventListener("contextmenu", e => { e.preventDefault(); alert("Right-click disabled."); });
-          ["copy","cut","paste"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); alert(ev + " disabled."); }));
+          ["copy", "cut", "paste"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); alert(`${ev} disabled.`); }));
+
           document.addEventListener("keydown", e => {
-            const k = e.key.toLowerCase(), c = e.keyCode;
-            if (["printscreen", "f5"].includes(k) || ((e.ctrlKey || e.metaKey) && ["r","u","i","c","v","x","s"].includes(k))) {
+            const k = e.key.toLowerCase();
+            if (
+              ["f12", "f5", "printscreen"].includes(k) ||
+              ((e.ctrlKey || e.metaKey) && ["r", "u", "i", "c", "v", "x", "s", "p"].includes(k))
+            ) {
               e.preventDefault();
               alert("Key disabled during exam.");
-              if (k === "f5" || ((e.ctrlKey || e.metaKey) && k === "r")) {
+              if (["f5", "r"].includes(k)) {
                 const fd = new FormData(form);
                 fd.append("time_spent", {{ exam.duration }} * 60 - remaining);
                 navigator.sendBeacon(form.action, fd);
@@ -330,21 +336,29 @@
                 submitted = true;
                 form.submit();
               } else {
-                alert("Switching tabs again will auto-submit.");
+                alert("🚨 Warning: Switching tabs again will auto-submit your exam.");
               }
             }
           });
 
+          // Enhanced page leave protection
           window.addEventListener("beforeunload", (e) => {
             if (!submitted) {
-              const fd = new FormData(form);
-              fd.append("time_spent", {{ exam.duration }} * 60 - remaining);
-              navigator.sendBeacon(form.action, fd);
-              e.preventDefault();
-              e.returnValue = '';
+              if (!navWarningShown) {
+                navWarningShown = true;
+                e.preventDefault();
+                e.returnValue = "Don't leave the exam page. You will be disqualified on the next attempt.";
+                alert("🚨 Don't leave the page. Next attempt will auto-submit.");
+              } else {
+                const fd = new FormData(form);
+                fd.append("time_spent", {{ exam.duration }} * 60 - remaining);
+                navigator.sendBeacon(form.action, fd);
+                submitted = true;
+              }
             }
           });
 
+          // Block back navigation
           history.pushState(null, "", location.href);
           window.addEventListener("popstate", () => {
             if (!submitted) {

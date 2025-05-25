@@ -20,7 +20,7 @@ from sqlalchemy import func
 task_routes = Blueprint('task_routes', __name__, url_prefix="/tasks")
 
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'docx', 'xlsx'}
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB per file
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 5MB per file
 MAX_EMAIL_FILE_SIZE = 25 * 1024 * 1024  # 25MB per file for email attachments
 MAX_TOTAL_SIZE = 100 * 1024 * 1024  # 100MB total
 
