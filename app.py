@@ -44,12 +44,20 @@ app.config['SCHEDULER_TIMEZONE'] = 'UTC'
 # ----------------------------------------------------------------------
 # Set up global rate limiting using Redis
 # ----------------------------------------------------------------------
+raw_redis_uri = os.getenv("REDIS_URI", "redis://localhost:6379")
+
+# Fix potential misconfiguration: REDIS_URI=rediss://...
+if raw_redis_uri.startswith("REDIS_URI="):
+    logging.warning("REDIS_URI appears to contain redundant prefix. Attempting to sanitize.")
+    raw_redis_uri = raw_redis_uri.split("=", 1)[1]
+
+# Apply to Flask-Limiter
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["1000 per day", "200 per hour"],
-    storage_uri=os.getenv("REDIS_URI", "redis://localhost:6379")
+    storage_uri=raw_redis_uri
 )
-limiter.init_app(app)
+
 
 # ----------------------------------------------------------------------
 # Enable CSRF Protection
