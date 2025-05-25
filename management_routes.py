@@ -3,7 +3,6 @@ from flask_login import login_required
 from datetime import date
 from admin_routes import admin_required 
 import logging
-
 from models import User, UserScore, SpecialExamRecord, db
 
 management_routes = Blueprint('management_routes', __name__)
@@ -31,13 +30,6 @@ def average_score(scores):
         return 0
     return round(sum(s.score for s in scores) / len(scores), 2)
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required
-from datetime import date
-from admin_routes import admin_required 
-import logging
-
-from models import User, UserScore, SpecialExamRecord, db
 
 management_routes = Blueprint('management_routes', __name__)
 
