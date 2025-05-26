@@ -18,5 +18,9 @@ scheduler = APScheduler()
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "collective_rcm")
 
+if not (MONGO_URI.startswith("mongodb://") or MONGO_URI.startswith("mongodb+srv://")):
+    print(f"Error: Invalid MONGO_URI: '{MONGO_URI}'. Falling back to default URI: mongodb://localhost:27017/{MONGO_DB_NAME}")
+    MONGO_URI = f"mongodb://localhost:27017/{MONGO_DB_NAME}"
+
 mongo_client = MongoClient(MONGO_URI)
 mongo_db = mongo_client[MONGO_DB_NAME]
