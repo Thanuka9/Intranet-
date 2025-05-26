@@ -11,7 +11,7 @@ from management_routes import management_routes
 from special_exams_routes import special_exams_routes
 from models import User
 from flask_wtf import CSRFProtect
-from flask_migrate import Migrate
+from flask_migrate import Migrate, upgrade as migrate_upgrade
 from mongodb_operations import initialize_mongodb, setup_collections
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -93,6 +93,10 @@ login_manager.init_app(app)
 login_manager.login_view = 'auth_routes.login'
 mail.init_app(app)
 migrate = Migrate(app, db)
+
+# --- automatically apply any pending migrations at startup ---
+with app.app_context():
+    migrate_upgrade()
 
 # ----------------------------------------------------------------------
 # MongoDB Initialization
