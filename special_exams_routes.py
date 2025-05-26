@@ -88,14 +88,46 @@ def submit_paper1():
         time_spent = (end_time - start_time).total_seconds()
 
         correct_answers = {
-            '1': 'd', '2': 'a', '3': 'c', '4': 'd', '5': 'b',
-            '6': 'c', '7': 'c', '8': 'b', '9': 'd', '10': 'a',
-            '11': 'c', '12': 'c', '13': 'a', '14': 'c', '15': 'b',
-            '16': 'd', '17': 'c', '18': 'b', '19': 'c', '20': 'd',
-            '21': 'b', '22': 'a', '23': 'b', '24': 'c', '25': 'c',
-            '26': 'b', '27': 'c', '28': 'a', '29': 'b', '30': 'd',
-            '31': 'a', '32': 'b', '33': 'd', '34': 'a', '35': 'b',
-            '36': 'a', '37': 'c', '38': 'b', '39': 'd', '40': 'a'
+            '0': 'd',
+            '1': 'a',
+            '2': 'c',
+            '3': 'd',
+            '4': 'b',
+            '5': 'c',
+            '6': 'c',
+            '7': 'b',
+            '8': 'd',
+            '9': 'a',
+            '10': 'c',
+            '11': 'c',
+            '12': 'a',
+            '13': 'c',
+            '14': 'b',
+            '15': 'd',
+            '16': 'c',
+            '17': 'b',
+            '18': 'c',
+            '19': 'd',
+            '20': 'b',
+            '21': 'a',
+            '22': 'b',
+            '23': 'c',
+            '24': 'c',
+            '25': 'b',
+            '26': 'c',
+            '27': 'a',
+            '28': 'b',
+            '29': 'd',
+            '30': 'a',
+            '31': 'b',
+            '32': 'd',
+            '33': 'a',
+            '34': 'b',
+            '35': 'a',
+            '36': 'c',
+            '37': 'b',
+            '38': 'd',
+            '39': 'a'
         }
 
         marks_per_question = 2.5
@@ -114,14 +146,14 @@ def submit_paper1():
 
         # ─── INCREMENT PAPER 1 ATTEMPTS ────────────────────────────
         record.paper1_attempts = (record.paper1_attempts or 0) + 1
-
+        ACCESS_ID = 9991
         # ─── RECORD EACH WRONG ANSWER ───────────────────────────────
         for q, ans in correct_answers.items():
             raw = data.get(f'answers[{q}]', '').strip()
             if raw.lower() != ans:
                 db.session.add(IncorrectAnswer(
                     user_id        = current_user.id,
-                    exam_id        = None,
+                    exam_id        = ACCESS_ID,
                     special_paper  = 'paper1',
                     question_id    = int(q),
                     user_answer    = raw,
@@ -230,15 +262,48 @@ def submit_paper2():
         time_spent = (end_time - start_time).total_seconds()
 
         correct_answers = {
-            '1': 'c', '2': 'd', '3': 'a', '4': 'c', '5': 'a',
-            '6': 'b', '7': 'b', '8': 'c', '9': 'd', '10': 'd',
-            '11': 'b', '12': 'c', '13': 'a', '14': 'd', '15': 'a',
-            '16': 'b', '17': 'c', '18': 'b', '19': 'b', '20': 'b',
-            '21': 'b', '22': 'c', '23': 'b', '24': 'd', '25': 'c',
-            '26': 'b', '27': 'b', '28': 'c', '29': 'b', '30': 'c',
-            '31': 'a', '32': 'b', '33': 'c', '34': 'a', '35': 'b',
-            '36': 'a', '37': 'd', '38': 'b', '39': 'b', '40': 'a'
+            '0':  'c',  # Q1
+            '1':  'd',  # Q2
+            '2':  'a',  # Q3
+            '3':  'c',  # Q4
+            '4':  'a',  # Q5
+            '5':  'b',  # Q6
+            '6':  'b',  # Q7
+            '7':  'c',  # Q8
+            '8':  'd',  # Q9
+            '9':  'd',  # Q10
+            '10': 'b',  # Q11
+            '11': 'c',  # Q12
+            '12': 'a',  # Q13
+            '13': 'd',  # Q14
+            '14': 'a',  # Q15
+            '15': 'b',  # Q16
+            '16': 'c',  # Q17
+            '17': 'b',  # Q18
+            '18': 'b',  # Q19
+            '19': 'b',  # Q20
+            '20': 'b',  # Q21
+            '21': 'c',  # Q22
+            '22': 'b',  # Q23
+            '23': 'd',  # Q24
+            '24': 'c',  # Q25
+            '25': 'b',  # Q26
+            '26': 'b',  # Q27
+            '27': 'c',  # Q28
+            '28': 'b',  # Q29
+            '29': 'c',  # Q30
+            '30': 'a',  # Q31
+            '31': 'b',  # Q32
+            '32': 'c',  # Q33
+            '33': 'a',  # Q34
+            '34': 'b',  # Q35
+            '35': 'a',  # Q36
+            '36': 'd',  # Q37
+            '37': 'b',  # Q38
+            '38': 'b',  # Q39
+            '39': 'a'   # Q40
         }
+
 
         marks_per_question = 2.5
         user_score = sum(
@@ -256,14 +321,14 @@ def submit_paper2():
 
         # ─── INCREMENT PAPER 2 ATTEMPTS ────────────────────────────
         record.paper2_attempts = (record.paper2_attempts or 0) + 1
-
+        ACCESS_ID = 9992
         # ─── RECORD EACH WRONG ANSWER ───────────────────────────────
         for q, ans in correct_answers.items():
             raw = data.get(f'answers[{q}]', '').strip()
             if raw.lower() != ans:
                 db.session.add(IncorrectAnswer(
                     user_id        = current_user.id,
-                    exam_id        = None,
+                    exam_id        = ACCESS_ID,
                     special_paper  = 'paper2',
                     question_id    = int(q),
                     user_answer    = raw,

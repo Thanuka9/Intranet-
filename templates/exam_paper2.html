@@ -13,7 +13,8 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
     <style>
-      html, body {
+      html,
+      body {
         height: 100%;
         margin: 0;
         font-family: "Segoe UI", sans-serif;
@@ -40,8 +41,12 @@
         font-size: 1.5rem;
         font-weight: 600;
       }
-      .brand .black { color: #000; }
-      .brand .red { color: red; }
+      .brand .black {
+        color: #000;
+      }
+      .brand .red {
+        color: red;
+      }
       .main-container {
         max-width: 900px;
         margin: 30px auto;
@@ -53,8 +58,14 @@
         animation: fadeIn 0.5s ease-in-out;
       }
       @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
       .header {
         text-align: center;
@@ -112,45 +123,19 @@
         padding: 15px 0;
         margin-top: auto;
       }
+      /* disable text selection on questions */
+      .question,
+      .question * {
+        user-select: none;
+      }
     </style>
   </head>
-    <!-- … existing HTML … -->
-
-  <!-- add this just before </body> -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const wrapper = document.getElementById('questionWrapper');
-      if (!wrapper) return;
-
-      // grab all question containers
-      const containers = Array.from(wrapper.querySelectorAll('.question-container'));
-
-      // Fisher–Yates shuffle
-      for (let i = containers.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [containers[i], containers[j]] = [containers[j], containers[i]];
-      }
-
-      // clear out and re-append in new order, re-numbering each heading
-      wrapper.innerHTML = '';
-      containers.forEach((qc, idx) => {
-        qc.dataset.questionIndex = idx;
-        const h3 = qc.querySelector('h3');
-        if (h3) {
-          // replace leading number in the question text
-          h3.textContent = h3.textContent.replace(/^\d+/, idx + 1);
-        }
-        wrapper.appendChild(qc);
-        // only the first one gets the “active” class
-        qc.classList.toggle('active', idx === 0);
-      });
-    });
-  </script>
-</body>
-
   <body>
     <div class="top-bar">
-      <a href="{{ url_for('exams_routes.list_exams') }}" class="btn btn-secondary">
+      <a
+        href="{{ url_for('exams_routes.list_exams') }}"
+        class="btn btn-secondary"
+      >
         <i class="fas fa-arrow-left"></i> Back
       </a>
       <div class="d-flex align-items-center">
@@ -159,7 +144,6 @@
           <span class="black">Collect</span><span class="red">ive</span>
         </div>
       </div>
-    </div>
     </div>
     <div class="container">
       <!-- Header Section -->
@@ -295,9 +279,7 @@
           <!-- Question 3 -->
           <div class="question-container" data-question-index="2">
             <div class="question">
-              <h3>
-                Which of the following is NOT a part of the RCM process?
-              </h3>
+              <h3>Which of the following is NOT a part of the RCM process?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -456,8 +438,8 @@
           <div class="question-container" data-question-index="5">
             <div class="question">
               <h3>
-                Which of the following would be considered a responsibility
-                of a "patient"?
+                Which of the following would be considered a responsibility of a
+                "patient"?
               </h3>
               <div class="form-check">
                 <input
@@ -618,8 +600,8 @@
           <div class="question-container" data-question-index="8">
             <div class="question">
               <h3>
-                Which status indicates that the insurance company has refused
-                to make a payment for the claim?
+                Which status indicates that the insurance company has refused to
+                make a payment for the claim?
               </h3>
               <div class="form-check">
                 <input
@@ -668,8 +650,8 @@
           <div class="question-container" data-question-index="9">
             <div class="question">
               <h3>
-                Which of the following factors can cause changes in fee
-                schedule rates?
+                Which of the following factors can cause changes in fee schedule
+                rates?
               </h3>
               <div class="form-check">
                 <input
@@ -935,8 +917,8 @@
           <div class="question-container" data-question-index="14">
             <div class="question">
               <h3>
-                Which of the following statements about manual payment
-                posting is true?
+                Which of the following statements about manual payment posting
+                is true?
               </h3>
               <div class="form-check">
                 <input
@@ -1054,9 +1036,7 @@
           <!-- Question 17 -->
           <div class="question-container" data-question-index="16">
             <div class="question">
-              <h3>
-                Where can claims get rejected during the billing process?
-              </h3>
+              <h3>Where can claims get rejected during the billing process?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -1220,8 +1200,7 @@
           <div class="question-container" data-question-index="19">
             <div class="question">
               <h3>
-                What does the Effective Date of an insurance policy
-                indicate?
+                What does the Effective Date of an insurance policy indicate?
               </h3>
               <div class="form-check">
                 <input
@@ -1328,9 +1307,9 @@
           <div class="question-container" data-question-index="21">
             <div class="question">
               <h3>
-                If a patient has a $6,000 out-of-pocket maximum and has
-                already paid $6,000 in medical expenses, how much will they owe
-                for additional medical services that year?
+                If a patient has a $6,000 out-of-pocket maximum and has already
+                paid $6,000 in medical expenses, how much will they owe for
+                additional medical services that year?
               </h3>
               <div class="form-check">
                 <input
@@ -1433,9 +1412,7 @@
           <!-- Question 24 -->
           <div class="question-container" data-question-index="23">
             <div class="question">
-              <h3>
-                In below, who is not referred to as a "provider" in RCM?
-              </h3>
+              <h3>In below, who is not referred to as a "provider" in RCM?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -1484,9 +1461,7 @@
           <!-- Question 25 -->
           <div class="question-container" data-question-index="24">
             <div class="question">
-              <h3>
-                Which of the following is NOT covered by Medicare Part B?
-              </h3>
+              <h3>Which of the following is NOT covered by Medicare Part B?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -1594,9 +1569,8 @@
           <div class="question-container" data-question-index="26">
             <div class="question">
               <h3>
-                Which of the following is a government health insurance
-                program designed for elderly citizens and certain disabled
-                individuals?
+                Which of the following is a government health insurance program
+                designed for elderly citizens and certain disabled individuals?
               </h3>
               <div class="form-check">
                 <input
@@ -1645,8 +1619,8 @@
           <div class="question-container" data-question-index="27">
             <div class="question">
               <h3>
-                If a spouse is covered under their partner’s insurance
-                policy, the spouse is referred to as the:
+                If a spouse is covered under their partner’s insurance policy,
+                the spouse is referred to as the:
               </h3>
               <div class="form-check">
                 <input
@@ -1695,8 +1669,8 @@
           <div class="question-container" data-question-index="28">
             <div class="question">
               <h3>
-                Which of the following statements is true about an
-                out-of-pocket maximum?
+                Which of the following statements is true about an out-of-pocket
+                maximum?
               </h3>
               <div class="form-check">
                 <input
@@ -2033,9 +2007,7 @@
           <!-- Question 35 -->
           <div class="question-container" data-question-index="34">
             <div class="question">
-              <h3>
-                Which of the following is NOT a method of performing VOB?
-              </h3>
+              <h3>Which of the following is NOT a method of performing VOB?</h3>
               <div class="form-check">
                 <input
                   type="radio"
@@ -2315,8 +2287,8 @@
           <div class="question-container" data-question-index="39">
             <div class="question">
               <h3>
-                A claim was billed to BCBS with a billed amount of $1500. As
-                per the patient's insurance plan, the allowable is $1200. The
+                A claim was billed to BCBS with a billed amount of $1500. As per
+                the patient's insurance plan, the allowable is $1200. The
                 patient has a Copay of $100 and the patient has 20%
                 co-insurance. Calculate the following: Insurance paid amount and
                 Total patient responsibility amount.
@@ -2367,21 +2339,10 @@
 
         <!-- Navigation Buttons -->
         <div class="navigation">
-          <button
-            type="button"
-            id="prevBtn"
-            class="btn btn-secondary"
-            onclick="prevQuestion()"
-            disabled
-          >
+          <button type="button" id="prevBtn" class="btn btn-secondary" disabled>
             Previous
           </button>
-          <button
-            type="button"
-            id="nextBtn"
-            class="btn btn-secondary"
-            onclick="nextQuestion()"
-          >
+          <button type="button" id="nextBtn" class="btn btn-secondary">
             Next
           </button>
         </div>
@@ -2403,213 +2364,241 @@
     <footer>Collective Intranet© 2024</footer>
 
     <!-- INSTRUCTION OVERLAY -->
-    <div id="instructionOverlay" style="
-          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-          background: #fff; z-index: 9999; overflow: auto;
-          display: flex; flex-direction: column; align-items: center; justify-content: center;
-          padding: 2rem;
-        ">
-      <div style="max-width: 600px; text-align: left;">
+    <div
+      id="instructionOverlay"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #fff;
+        z-index: 9999;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      "
+    >
+      <div style="max-width: 600px; text-align: left">
         <h2>Please Read These Rules Before Starting</h2>
         <ul>
           <li>No changing pages once the exam starts.</li>
-          <li>Copy/paste, right-click, screenshots and PrintScreen are disabled.</li>
+          <li>
+            Copy/paste, right-click, screenshots and PrintScreen are disabled.
+          </li>
           <li>Switching tabs twice will auto-submit and disqualify you.</li>
-          <li>Reloading or closing this tab will auto-submit your current answers.</li>
-          <li>You must pick an answer to move to the next question. If you're unsure, choose one — you can return and change it later.</li>
+          <li>
+            Reloading or closing this tab will auto-submit your current answers.
+          </li>
+          <li>
+            You must pick an answer to move to the next question. If you're
+            unsure, choose one — you can return and change it later.
+          </li>
         </ul>
-        <div style="margin-top: 1.5rem;">
+        <div style="margin-top: 1.5rem">
           <input type="checkbox" id="agreeCheckbox" />
-          <label for="agreeCheckbox">I have read and agree to these rules.</label>
+          <label for="agreeCheckbox"
+            >I have read and agree to these rules.</label
+          >
         </div>
-        <button id="agreeBtn" disabled style="
-              margin-top: 1rem; padding: 0.5rem 1rem; font-size: 1rem;
-            ">
+        <button
+          id="agreeBtn"
+          disabled
+          style="margin-top: 1rem; padding: 0.5rem 1rem; font-size: 1rem"
+        >
           Agree &amp; Start Exam
         </button>
       </div>
     </div>
 
- <!-- ALL EXAM JS: Shuffle, Timer, Navigation & Anti-Cheating -->
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // Overlay + one-time “agree” per session
-    const overlay  = document.getElementById('instructionOverlay'),
-          agreeCb  = document.getElementById('agreeCheckbox'),
-          agreeBtn = document.getElementById('agreeBtn');
-  
-    function startExam() {
-      // grab DOM elements
-      const wrapper   = document.getElementById('questionWrapper'),
-            timerEl   = document.getElementById('timer'),
-            prevBtn   = document.getElementById('prevBtn'),
-            nextBtn   = document.getElementById('nextBtn'),
-            submitBtn = document.getElementById('submitBtn'),
-            form      = document.getElementById('examForm'),
-            timeInp   = document.getElementById('timeSpentInput');
-  
-      let submitted   = false,
-          tabSwitches = 0,
-          current     = 0,
-          remaining   = 60 * 60; // ← 60 minutes
-  
-      // 1) Shuffle & Renumber
-      if (wrapper) {
-        const qs = Array.from(wrapper.querySelectorAll('.question-container'));
-        for (let i = qs.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [qs[i], qs[j]] = [qs[j], qs[i]];
-        }
-        wrapper.innerHTML = '';
-        qs.forEach((qc, idx) => {
-          const n = idx + 1;
-          qc.dataset.questionIndex = idx;
-          const h3 = qc.querySelector('h3');
-          if (h3) {
-            const raw = h3.textContent.replace(/^\d+\.\s*/, '').trim();
-            h3.textContent = `${n}. ${raw}`;
+    <!-- ALL EXAM JS: Shuffle, Timer, Navigation & Anti-Cheating -->
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        // Overlay + one-time “agree” per session
+        const overlay = document.getElementById("instructionOverlay"),
+          agreeCb = document.getElementById("agreeCheckbox"),
+          agreeBtn = document.getElementById("agreeBtn");
+
+        function startExam() {
+          // grab DOM elements
+          const wrapper = document.getElementById("questionWrapper"),
+            timerEl = document.getElementById("timer"),
+            prevBtn = document.getElementById("prevBtn"),
+            nextBtn = document.getElementById("nextBtn"),
+            submitBtn = document.getElementById("submitBtn"),
+            form = document.getElementById("examForm"),
+            timeInp = document.getElementById("timeSpentInput");
+
+          let submitted = false,
+            tabSwitches = 0,
+            current = 0,
+            remaining = 60 * 60; // 60 minutes
+
+          // grab all the question containers once
+          const questions = wrapper
+            ? Array.from(wrapper.querySelectorAll(".question-container"))
+            : [];
+
+          // 1) Shuffle & cosmetic renumber
+          function shuffleQuestions() {
+            for (let i = questions.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [questions[i], questions[j]] = [questions[j], questions[i]];
+            }
+            wrapper.innerHTML = "";
+            questions.forEach((qc, idx) => {
+              // update only the visible <h3> numbering
+              const h3 = qc.querySelector("h3");
+              if (h3) {
+                const raw = h3.textContent.replace(/^\d+\.\s*/, "").trim();
+                h3.textContent = `${idx + 1}. ${raw}`;
+              }
+              // show only the first question at start
+              qc.classList.toggle("active", idx === 0);
+              wrapper.appendChild(qc);
+            });
           }
-          qc.querySelectorAll('input[type="radio"]')
-            .forEach(i => i.name = `answers[${n}]`);
-          qc.classList.toggle('active', idx === 0);
-          wrapper.appendChild(qc);
-        });
-      }
-  
-      // 2) Countdown Timer
-      function tick() {
-        const m = String(Math.floor(remaining/60)).padStart(2,'0'),
-              s = String(remaining%60).padStart(2,'0');
-        timerEl.textContent = `Time Remaining: ${m}:${s}`;
-        if (remaining-- <= 0 && !submitted) {
-          submitted = true;
-          form.submit();
-        }
-      }
-      setInterval(tick,1000);
-      tick();
-  
-      // 3) Navigation & Validation
-      const questions = document.querySelectorAll('.question-container');
-      function show(i) {
-        questions.forEach((q,j) => q.classList.toggle('active', i===j));
-        prevBtn.disabled      = i===0;
-        nextBtn.style.display   = (i===questions.length-1) ? 'none' : 'inline-block';
-        submitBtn.style.display = (i===questions.length-1) ? 'inline-block' : 'none';
-      }
-      function answered(i) {
-        return Array.from(
-          document.querySelectorAll(
-            `.question-container[data-question-index='${i}'] input[type='radio']`
-          )
-        ).some(r=>r.checked);
-      }
-      nextBtn.onclick = () => {
-        if (!answered(current)) return alert('Please select an answer.');
-        if (current < questions.length - 1) show(++current);
-      };
-      prevBtn.onclick = () => { if (current>0) show(--current); };
-      show(0);
-  
-      form.addEventListener('submit', e => {
-        for (let i=0; i<questions.length; i++) {
-          if (!answered(i)) {
-            e.preventDefault();
-            show(i);
-            return alert(`Answer Question ${i+1}.`);
+
+          // 2) Show question #i
+          function show(i) {
+            questions.forEach((q, j) => q.classList.toggle("active", j === i));
+            prevBtn.disabled = i === 0;
+            nextBtn.style.display =
+              i === questions.length - 1 ? "none" : "inline-block";
+            submitBtn.style.display =
+              i === questions.length - 1 ? "inline-block" : "none";
+            current = i;
           }
-        }
-        timeInp.value = 60*60 - remaining;
-        submitted = true;
-      });
-  
-      // 4) Anti-Cheat & Forced-Submit on Unload/Back
-      // a) Tab switching
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden && !submitted) {
-          tabSwitches++;
-          if (tabSwitches>1) {
-            submitted = true;
-            form.submit();
-          } else {
-            alert('Switching tabs again will submit your exam.');
+
+          // 3) Has the user answered question #i?
+          function answered(i) {
+            return !!questions[i].querySelector('input[type="radio"]:checked');
           }
+
+          // 4) startExam wiring
+          if (wrapper) shuffleQuestions();
+          show(0);
+
+          nextBtn.addEventListener("click", () => {
+            if (!answered(current)) {
+              return alert("Please select an answer.");
+            }
+            if (current < questions.length - 1) {
+              show(current + 1);
+            }
+          });
+          prevBtn.addEventListener("click", () => {
+            if (current > 0) show(current - 1);
+          });
+
+          // Timer countdown
+          const timerId = setInterval(() => {
+            remaining--;
+            const m = String(Math.floor(remaining / 60)).padStart(2, "0");
+            const s = String(remaining % 60).padStart(2, "0");
+            if (timerEl) timerEl.textContent = `Time Remaining: ${m}:${s}`;
+            if (remaining <= 0 && !submitted) {
+              clearInterval(timerId);
+              submitted = true;
+              form.submit();
+            }
+          }, 1000);
+
+          // Tab‐switch detection
+          document.addEventListener("visibilitychange", () => {
+            if (document.hidden && !submitted) {
+              tabSwitches++;
+              if (tabSwitches > 1) {
+                submitted = true;
+                form.submit();
+              } else {
+                alert("Switching tabs again will submit your exam.");
+              }
+            }
+          });
+
+          // Block right-click
+          document.addEventListener("contextmenu", (e) => e.preventDefault());
+
+          // Block copy/cut/paste
+          ["copy", "cut", "paste"].forEach((ev) =>
+            document.addEventListener(ev, (e) => {
+              e.preventDefault();
+              alert("Copy/Cut/Paste disabled.");
+            })
+          );
+
+          // Block PrintScreen / reload / devtools / shortcuts
+          document.addEventListener("keydown", (e) => {
+            const k = e.key.toLowerCase(),
+              c = e.keyCode;
+            if (
+              e.key === "PrintScreen" ||
+              c === 116 ||
+              ((e.ctrlKey || e.metaKey) && k === "r") ||
+              ((e.ctrlKey || e.metaKey) && e.shiftKey && k === "i") ||
+              ((e.ctrlKey || e.metaKey) &&
+                ["c", "x", "v", "u", "s", "p"].includes(k))
+            ) {
+              e.preventDefault();
+              alert("Exam shortcuts & screenshot disabled.");
+              if (c === 116 || ((e.ctrlKey || e.metaKey) && k === "r")) {
+                const fd = new FormData(form);
+                fd.append("time_spent", 60 * 60 - remaining);
+                navigator.sendBeacon(form.action, fd);
+                submitted = true;
+              }
+            }
+          });
+
+          // beforeunload → sendBeacon + warning
+          window.addEventListener("beforeunload", (e) => {
+            if (!submitted) {
+              const fd = new FormData(form);
+              fd.append("time_spent", 60 * 60 - remaining);
+              navigator.sendBeacon(form.action, fd);
+              e.preventDefault();
+              e.returnValue = "";
+            }
+          });
+
+          // back-button → force submit
+          history.pushState(null, "", location.href);
+          window.addEventListener("popstate", () => {
+            if (!submitted) {
+              const fd = new FormData(form);
+              fd.append("time_spent", 60 * 60 - remaining);
+              navigator.sendBeacon(form.action, fd);
+              submitted = true;
+            }
+            history.pushState(null, "", location.href);
+          });
+        }
+
+        // MAIN: show overlay or start directly
+        if (sessionStorage.getItem("examAgreed") === "yes") {
+          overlay.style.display = "none";
+          startExam();
+        } else {
+          overlay.style.display = "flex";
+          agreeBtn.disabled = true;
+          agreeCb.addEventListener(
+            "change",
+            () => (agreeBtn.disabled = !agreeCb.checked)
+          );
+          agreeBtn.addEventListener("click", () => {
+            sessionStorage.setItem("examAgreed", "yes");
+            overlay.style.display = "none";
+            startExam();
+          });
         }
       });
-  
-      // b) Block right-click
-      document.addEventListener('contextmenu', e => e.preventDefault());
-  
-      // c) Block copy/cut/paste
-      ['copy','cut','paste'].forEach(ev =>
-        document.addEventListener(ev, e => {
-          e.preventDefault();
-          alert('Copy/Cut/Paste disabled.');
-        })
-      );
-  
-      // d) Block PrintScreen, reload, DevTools, shortcuts
-      document.addEventListener('keydown', e => {
-        const k = e.key.toLowerCase(), c=e.keyCode;
-        if (e.key==='PrintScreen'
-          || c===116   // F5
-          || ((e.ctrlKey||e.metaKey)&&k==='r')
-          || ((e.ctrlKey||e.metaKey)&&e.shiftKey&&k==='i')
-          || ((e.ctrlKey||e.metaKey)&&['c','x','v','u','s','p'].includes(k))
-        ) {
-          e.preventDefault();
-          alert('Exam shortcuts & screenshot disabled.');
-          if (c===116||((e.ctrlKey||e.metaKey)&&k==='r')) {
-            // use beacon to send partial answers before reload
-            const fd = new FormData(form);
-            fd.append('time_spent', 60*60 - remaining);
-            navigator.sendBeacon(form.action, fd);
-            submitted = true;
-          }
-        }
-      });
-  
-      // e) beforeunload → sendBeacon + warning
-      window.addEventListener('beforeunload', e => {
-        if (!submitted) {
-          const fd = new FormData(form);
-          fd.append('time_spent', 60*60 - remaining);
-          navigator.sendBeacon(form.action, fd);
-          e.preventDefault();
-          e.returnValue = '';
-        }
-      });
-  
-      // f) back-button → force submit
-      history.pushState(null, '', location.href);
-      window.addEventListener('popstate', () => {
-        if (!submitted) {
-          const fd = new FormData(form);
-          fd.append('time_spent', 60*60 - remaining);
-          navigator.sendBeacon(form.action, fd);
-          submitted = true;
-        }
-        history.pushState(null, '', location.href);
-      });
-    }
-  
-    // MAIN: show overlay or start directly
-    if (sessionStorage.getItem('examAgreed')==='yes') {
-      overlay.style.display='none';
-      startExam();
-    } else {
-      overlay.style.display='flex';
-      agreeBtn.disabled = true;
-      agreeCb.addEventListener('change', () => agreeBtn.disabled = !agreeCb.checked);
-      agreeBtn.addEventListener('click', () => {
-        sessionStorage.setItem('examAgreed','yes');
-        overlay.style.display='none';
-        startExam();
-      });
-    }
-  });
-  </script>
-  
-  <!-- Bootstrap JS Bundle -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-  
+    </script>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>
