@@ -90,7 +90,7 @@ migrate = Migrate(app, db)
 
 # --- automatically apply any pending migrations at startup ---
 with app.app_context():
-    pass #migrate_upgrade()
+    import models
 
 # ----------------------------------------------------------------------
 # MongoDB Initialization
