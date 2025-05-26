@@ -5,6 +5,7 @@ from flask import (
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_mail import Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timedelta
 import logging
 
@@ -122,14 +123,46 @@ def register():
 
 @auth_routes.route('/verify/<token>')
 def verify_email(token):
-    user = User.query.filter_by(verification_token=token).first_or_404()
+    """Verifies a user's email address using a token.
+
+    This function is typically accessed via a link sent to the user's email
+    address during registration. It uses a timed serializer to validate the
+    token and, if valid, marks the user's email as verified in the database.
+
+    Args:
+        token (str): The verification token from the email link.
+
+    Returns:
+        werkzeug.wrappers.response.Response: Redirects to the login page
+        with a flash message indicating the outcome of the verification.
+    """
+    # Query the User model to find a user with the given verification token.
+    user = User.query.filter_by(verification_token=token).first()
+
+    # If no user is found with the token, it's invalid or expired.
+    if not user:
+        flash("Invalid or expired verification link.", "error")
+        return redirect(url_for('auth_routes.login'))
+
+    # Check if the user's email is already verified.
     if user.is_verified:
         flash("Already verified.", "info")
     else:
+        # If the user is not already verified, mark them as verified.
         user.is_verified = True
+        # Clear the verification token from the user's record.
         user.verification_token = None
-        db.session.commit()
-        flash("Email verified! You can now log in.", "success")
+        # Commit the changes to the database.
+        # This database commit will be refactored in a later step to be part of a larger transaction.
+        try:
+            db.session.commit()
+            flash("Email verified! You can now log in.", "success")
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            logging.error(f"Database error during email verification: {e}")
+            flash("Could not verify email. Please try again or contact support.", "error")
+
+    # Redirect the user to the login page, regardless of verification status.
     return redirect(url_for('auth_routes.login'))
 
 
