@@ -96,6 +96,7 @@ migrate = Migrate(app, db)
 
 # --- automatically apply any pending migrations at startup ---
 with app.app_context():
+    logging.info("Attempting migrate_upgrade() from app.py")
     migrate_upgrade()
 
 # ----------------------------------------------------------------------
