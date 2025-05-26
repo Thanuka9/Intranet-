@@ -73,8 +73,16 @@ def run_migrations_offline():
 
 
 def run_migrations_online():
-    """Run migrations in 'online' mode."""
+    """Run migrations in 'online' mode.
 
+    In this scenario we need to create an Engine
+    and associate a connection with the context.
+
+    """
+
+    # this callback is used to prevent an auto-migration from being generated
+    # when there are no changes to the schema
+    # reference: http://alembic.zzzcomputing.com/en/latest/cookbook.html
     def process_revision_directives(context, revision, directives):
         if getattr(config.cmd_opts, 'autogenerate', False):
             script = directives[0]
@@ -89,23 +97,14 @@ def run_migrations_online():
     connectable = get_engine()
 
     with connectable.connect() as connection:
-        # ── Skip legacy module tables ──
-        def include_object(object, name, type_, reflected, compare_to):
-            if type_ == "table" and name in ("modules", "module_roles"):
-                return False
-            return True
-
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),
-            include_object=include_object,
-            # compare_type is already in conf_args, so omit it here
             **conf_args
         )
 
         with context.begin_transaction():
             context.run_migrations()
-
 
 
 if context.is_offline_mode():

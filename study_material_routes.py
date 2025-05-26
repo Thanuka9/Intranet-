@@ -19,8 +19,6 @@ from flask import current_app
 from exams_routes import check_level_completion
 
 
-
-
 # Load environment variables
 load_dotenv()
 

@@ -3,7 +3,7 @@
 from app import app  # Import the Flask app from your main application file
 from models import db, Level
 
-def seed_levels():
+def run():
     levels = [
         {"level_number": 1, "title": "Beginner"},
         {"level_number": 2, "title": "Intermediate"},
@@ -24,5 +24,6 @@ def seed_levels():
 
 if __name__ == "__main__":
     # Wrap the seed function in the app context
+    from app import app
     with app.app_context():
-        seed_levels()
+        run()

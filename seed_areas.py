@@ -1,22 +1,10 @@
 #!/usr/bin/env python
-"""
-Seed script to populate the `areas` table with a predefined list of Area names,
-syncing the PostgreSQL sequence to avoid primary-key conflicts.
 
-Run this script from the project root:
-    $ python seed_areas.py
-
-Assumes:
-  - Your Flask app instance lives in `app.py` as `app`.
-  - `db` is imported from `extensions.py`.
-  - `Area` model is imported from `models.py`.
-"""
-from app import app
 from extensions import db
 from models import Area
 from sqlalchemy import text
+from app import app  # ✅ Import app globally
 
-# List of area names to seed into the database
 AREA_NAMES = [
     "Billing",
     "Posting",
@@ -28,9 +16,9 @@ AREA_NAMES = [
     "Study Materials"
 ]
 
-def seed_areas():
+def run():
     with app.app_context():
-        # Synchronize the PostgreSQL sequence for the `areas.id` column
+        # Sync PostgreSQL sequence
         seq_name = db.session.execute(
             text("SELECT pg_get_serial_sequence('areas', 'id')")
         ).scalar()
@@ -38,7 +26,6 @@ def seed_areas():
             text("SELECT COALESCE(MAX(id), 0) FROM areas")
         ).scalar()
         if seq_name:
-            # Set sequence to max(id) so next insert will use max_id+1
             db.session.execute(
                 text(f"SELECT setval('{seq_name}', {max_id}, true)")
             )
@@ -53,4 +40,4 @@ def seed_areas():
         print(f"[+] Added {added} new areas. ({len(AREA_NAMES)} total possible)")
 
 if __name__ == "__main__":
-    seed_areas()
+    run()

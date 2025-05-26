@@ -1,4 +1,6 @@
-from flask import Flask, render_template, jsonify, request
+import os
+import logging
+from flask import Flask, render_template, jsonify, request, session, redirect, url_for
 from extensions import db, login_manager, mail, scheduler
 from auth_routes import auth_routes
 from general_routes import general_routes
@@ -16,10 +18,7 @@ from mongodb_operations import initialize_mongodb, setup_collections
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
-from flask import session, redirect, url_for, request
 from datetime import datetime, timedelta
-import os
-import logging
 
 # Load environment variables from .env file
 load_dotenv(override=True)
@@ -45,19 +44,15 @@ app.config['SCHEDULER_TIMEZONE'] = 'UTC'
 # Set up global rate limiting using Redis
 # ----------------------------------------------------------------------
 raw_redis_uri = os.getenv("REDIS_URI", "redis://localhost:6379")
-
-# Fix potential misconfiguration: REDIS_URI=rediss://...
 if raw_redis_uri.startswith("REDIS_URI="):
     logging.warning("REDIS_URI appears to contain redundant prefix. Attempting to sanitize.")
     raw_redis_uri = raw_redis_uri.split("=", 1)[1]
-
-# Apply to Flask-Limiter
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["1000 per day", "200 per hour"],
     storage_uri=raw_redis_uri
 )
-
+limiter.init_app(app)
 
 # ----------------------------------------------------------------------
 # Enable CSRF Protection
@@ -69,7 +64,6 @@ csrf.init_app(app)
 # Application Configuration
 # ----------------------------------------------------------------------
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key')
-
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
     'DATABASE_URL', 'postgresql://postgres:root@localhost/collectivercm'
 )
@@ -96,7 +90,7 @@ migrate = Migrate(app, db)
 
 # --- automatically apply any pending migrations at startup ---
 with app.app_context():
-    migrate_upgrade()
+    pass #migrate_upgrade()
 
 # ----------------------------------------------------------------------
 # MongoDB Initialization
@@ -170,7 +164,7 @@ def internal_error(e):
     return render_template('500.html'), 500
 
 # ----------------------------------------------------------------------
-#Timeout Handling
+# Timeout Handling
 # ----------------------------------------------------------------------
 @app.before_request
 def check_afk_timeout():
@@ -196,7 +190,6 @@ def ping():
         session['last_activity'] = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')
     return '', 204
 
-
 # ----------------------------------------------------------------------
 # List All Routes
 # ----------------------------------------------------------------------
@@ -208,9 +201,25 @@ def list_routes():
     ])
 
 # ----------------------------------------------------------------------
+# Seed Runner (call once before app.run)
+# ----------------------------------------------------------------------
+def run_seed_once():
+    lock_file = "seed.lock"
+    if not os.path.exists(lock_file):
+        try:
+            from seed_all import run_all_seeds
+            run_all_seeds()
+            with open(lock_file, 'w') as f:
+                f.write("seeded")
+        except Exception as e:
+            print("Seeding failed:", e)
+
+# ----------------------------------------------------------------------
 # Main Entry Point
 # ----------------------------------------------------------------------
 if __name__ == '__main__':
+    with app.app_context():
+        run_seed_once()
     env = os.getenv('FLASK_ENV', 'development')
     debug_mode = True if env == 'development' else False
     app.run(debug=debug_mode)

@@ -16,7 +16,7 @@ designations = [
     {"title": "Director", "starting_level": 11},
 ]
 
-def seed_designations():
+def run():
     for idx, data in enumerate(designations, start=1):
         designation = Designation(
             id=idx,
@@ -30,4 +30,4 @@ def seed_designations():
 if __name__ == "__main__":
     from app import app
     with app.app_context():
-        seed_designations()
+        run()

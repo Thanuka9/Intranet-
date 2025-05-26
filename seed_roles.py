@@ -1,9 +1,9 @@
 # seed_roles.py
 from extensions import db
 from models import Role
-from app import app  # Adjust based on your app factory or main app file
 
-def seed_roles():
+
+def run():
     role_names = [
         "member",
         "admin",
@@ -23,5 +23,6 @@ def seed_roles():
     print("Roles seeded successfully.")
 
 if __name__ == "__main__":
+    from app import app
     with app.app_context():
-        seed_roles()
+        run()

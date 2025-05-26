@@ -3,7 +3,7 @@ from extensions import db
 from models import Client
 from app import app  # or from your_app_factory import create_app; app = create_app()
 
-def seed_clients():
+def run():
     client_names = [
         "MTW",
         "HA",
@@ -31,5 +31,6 @@ def seed_clients():
     print("Clients seeded successfully.")
 
 if __name__ == "__main__":
+    from app import app
     with app.app_context():
-        seed_clients()
+        run()

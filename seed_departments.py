@@ -1,9 +1,7 @@
-# seed_departments.py
-
-from app import app, db  # Import the already created app instance and db
+from extensions import db
 from models import Department
 
-with app.app_context():
+def run():
     departments = [
         "Billing",
         "Posting",
@@ -28,3 +26,8 @@ with app.app_context():
 
     db.session.commit()
     print("Seed data added successfully!")
+
+if __name__ == "__main__":
+    from app import app  # Only import here to avoid circular import
+    with app.app_context():
+        run()
