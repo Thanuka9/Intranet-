@@ -153,7 +153,7 @@ def submit_paper1():
             if raw.lower() != ans:
                 db.session.add(IncorrectAnswer(
                     user_id        = current_user.id,
-                    exam_id        = ACCESS_ID,
+                    exam_id        = None,
                     special_paper  = 'paper1',
                     question_id    = int(q),
                     user_answer    = raw,
@@ -328,7 +328,7 @@ def submit_paper2():
             if raw.lower() != ans:
                 db.session.add(IncorrectAnswer(
                     user_id        = current_user.id,
-                    exam_id        = ACCESS_ID,
+                    exam_id        = None,
                     special_paper  = 'paper2',
                     question_id    = int(q),
                     user_answer    = raw,
