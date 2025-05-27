@@ -1551,9 +1551,15 @@ def view_incorrect_answers():
     detailed_q = (
         db.session.query(
             last_wrong_sq.c.last_wrong.label('answered_at'),
-            Exam.title.label('exam_title'),
+            db.case(
+                [
+                    (IncorrectAnswer.special_paper.isnot(None),
+                     db.func.concat('Special Exam ', IncorrectAnswer.special_paper))
+                ],
+                else_=Exam.title
+            ).label('exam_title'),
             IncorrectAnswer.special_paper,
-            Question.id.label('question_id'),
+            IncorrectAnswer.question_id.label('question_id_val'), # Renamed to avoid clash if Question.id is also selected
             Question.question_text,
             IncorrectAnswer.user_answer,
             IncorrectAnswer.correct_answer
@@ -1561,13 +1567,14 @@ def view_incorrect_answers():
         .join(
             IncorrectAnswer,
             and_(
-                IncorrectAnswer.question_id == last_wrong_sq.c.question_id,
+                IncorrectAnswer.question_id == last_wrong_sq.c.question_id, # This uses the question_id from IncorrectAnswer via last_wrong_sq
                 IncorrectAnswer.answered_at  == last_wrong_sq.c.last_wrong
             )
         )
-        .join(Question, IncorrectAnswer.question_id == Question.id)
-        .outerjoin(Exam,   IncorrectAnswer.exam_id       == Exam.id)
-        # sort by the subquery’s max timestamp
+        # OUTER JOIN to Question table using IncorrectAnswer.question_id
+        .outerjoin(Question, IncorrectAnswer.question_id == Question.id)
+        # OUTER JOIN to Exam table
+        .outerjoin(Exam, IncorrectAnswer.exam_id == Exam.id)
         .order_by(desc(last_wrong_sq.c.last_wrong))
     )
 

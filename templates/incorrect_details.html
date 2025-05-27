@@ -27,12 +27,15 @@ Incorrect Answers{% endblock %} {% block content %}
         {% for r in records %}
         <tr>
           <td>{{ r.answered_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td>{{ r.exam_title }}</td>
+          <td>{{ r.question_id_val }}</td>
           <td>
-            {% if r.exam_title %} {{ r.exam_title }} {% elif r.special_paper %}
-            Special {{ r.special_paper|capitalize }} {% else %} – {% endif %}
+            {% if r.question_text %}
+              {{ r.question_text }}
+            {% else %}
+              N/A (Special Exam Question)
+            {% endif %}
           </td>
-          <td>{{ r.question_id }}</td>
-          <td>{{ r.question_text }}</td>
           <td>{{ r.user_answer }}</td>
           <td>{{ r.correct_answer }}</td>
         </tr>
