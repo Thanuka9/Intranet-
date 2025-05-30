@@ -24,15 +24,25 @@
       </div>
 
       <!-- Flash Messages -->
-      {% with messages = get_flashed_messages() %} {% if messages %}
-      <div class="alert alert-danger">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
         <ul>
-          {% for message in messages %}
-          <li>{{ message }}</li>
+          {% for category, message in messages %}
+            {% set alert_class = 'alert-secondary' %}
+            {% if category == 'success' %}
+              {% set alert_class = 'alert-success' %}
+            {% elif category == 'error' or category == 'danger' %}
+              {% set alert_class = 'alert-danger' %}
+            {% elif category == 'info' %}
+              {% set alert_class = 'alert-info' %}
+            {% elif category == 'warning' %}
+              {% set alert_class = 'alert-warning' %}
+            {% endif %}
+            <li class="alert {{ alert_class }}">{{ message }}</li>
           {% endfor %}
         </ul>
-      </div>
-      {% endif %} {% endwith %}
+      {% endif %}
+      {% endwith %}
 
       <!-- Login Form -->
       <form action="{{ url_for('auth_routes.login') }}" method="POST">
