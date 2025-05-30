@@ -2554,13 +2554,24 @@
             }
           });
 
+          // Add event listener for form submission
+          if (form) { // Ensure form element exists
+            form.addEventListener('submit', function() {
+              submitted = true; // Set submitted to true when the form submission process begins
+              if (timeInp) { // Ensure timeInp element exists (timeSpentInput)
+                // Calculate time spent, assuming 'remaining' is in seconds and total time was 60*60
+                timeInp.value = (60 * 60 - remaining);
+              }
+            });
+          }
+
           // beforeunload → sendBeacon + warning
           window.addEventListener("beforeunload", (e) => {
             if (!submitted) {
               const fd = new FormData(form);
               fd.append("time_spent", 60 * 60 - remaining);
               navigator.sendBeacon(form.action, fd);
-              e.preventDefault();
+              e.preventDefault(); // This triggers the warning
               e.returnValue = "";
             }
           });
