@@ -40,22 +40,34 @@ def allowed_file(filename):
 
 def save_task_document(file, task_id):
     filename = secure_filename(file.filename)
-    file_data = file.read()
-    if len(file_data) > MAX_FILE_SIZE:
+    current_app.logger.info(f"Attempting to save document: {filename} for task_id: {task_id}")
+
+    file_data = file.read() # Read file data to check size
+    file_size = len(file_data)
+
+    if file_size > MAX_FILE_SIZE:
+        current_app.logger.warning(f"File {filename} for task {task_id} rejected: size {file_size} bytes exceeds limit {MAX_FILE_SIZE} bytes.")
         flash("File size exceeds the limit of 5MB", "danger")
         return False
+
     task_document = TaskDocument(
         filename=filename,
         filetype=file.content_type,
-        data=file_data,
+        data=file_data, # Use the already read data
         task_id=task_id
     )
-    db.session.add(task_document)
-    return True
+    try:
+        db.session.add(task_document)
+        current_app.logger.info(f"Successfully added TaskDocument record for {filename} (task {task_id}) to session.")
+        return True
+    except Exception as e:
+        current_app.logger.error(f"Error adding TaskDocument {filename} for task {task_id} to DB session: {e}", exc_info=True)
+        # flash("Error saving document to database.", "danger") # Optional: flash message, but could be too noisy if other flashes exist
+        return False
 
 from extensions import scheduler, db
 from models import Task
-import logging
+# import logging # logging is already imported at the top level of the file
 
 def delete_completed_task(task_id):
     # APScheduler jobs run outside of any request, so we need an app context
@@ -199,10 +211,15 @@ def assign_task():
         # 4) Save attachments (5MB max each)
         for f in request.files.getlist('attachments'):
             if f and allowed_file(f.filename):
-                if not save_task_document(f, task.id):
+                current_app.logger.info(f"Processing attachment {f.filename} for new task (task_id: {task.id}, title: {title}) in assign_task.")
+                saved_successfully = save_task_document(f, task.id)
+                if not saved_successfully:
+                    current_app.logger.warning(f"Failed to save attachment {f.filename} for task {task.id} in assign_task. Triggering rollback.")
                     db.session.rollback()
-                    flash("One of your attachments exceeded 5MB and was rejected.", "danger")
+                    # Flash message is already handled by save_task_document or here if specific
+                    flash("One of your attachments could not be saved (e.g., size limit exceeded or DB error). Task not created.", "danger")
                     return redirect(url_for('task_routes.assign_task'))
+                current_app.logger.info(f"Successfully processed attachment {f.filename} for task {task.id} in assign_task.")
 
         # 5) Link assignees
         key = 'assignees' if task_type == 'internal' else 'external_assignees'
@@ -260,27 +277,39 @@ def view_task(task_id):
 
     if request.method == 'POST' and current_user in task.assignees:
         try:
-            # 1) Update status & progress
-            new_status      = request.form.get('status', task.status)
-            task.status     = new_status
-            task.progress   = STATUS_PROGRESS_MAP.get(new_status, task.progress)
+            # Get potential new status from the form
+            new_status_from_form = request.form.get('status')
+
+            process_email_attachments = True
+            # Check if email_attachments are present and if the status is NOT completion
+            if new_status_from_form and new_status_from_form != 'Complete! Ready to Go!' and \
+               request.files.getlist('email_attachments'):
+                flash("Files attached here are only sent with the completion email. To add permanent documents to this task, please use the 'Edit Task' page. No files were saved with the task this time.", "warning")
+                process_email_attachments = False
+
+            # 1) Update status & progress using the status from form if available, else existing task status
+            current_status_for_update = new_status_from_form if new_status_from_form else task.status
+            task.status     = current_status_for_update
+            task.progress   = STATUS_PROGRESS_MAP.get(current_status_for_update, task.progress)
 
             # 2) Collect any 2nd-step attachments for the completion email
             email_files = []
-            for f in request.files.getlist('email_attachments'):
-                if f and allowed_file(f.filename):
-                    f.seek(0, os.SEEK_END)
-                    if f.tell() > MAX_EMAIL_FILE_SIZE:
-                        flash("Each email attachment must be under 25 MB.", "danger")
-                        return redirect(url_for('task_routes.view_task', task_id=task_id))
-                    f.seek(0)
-                    email_files.append({
-                        "filename": secure_filename(f.filename),
-                        "filetype": f.content_type,
-                        "data": f.read()
-                    })
+            if process_email_attachments:
+                for f in request.files.getlist('email_attachments'):
+                    if f and allowed_file(f.filename):
+                        f.seek(0, os.SEEK_END)
+                        if f.tell() > MAX_EMAIL_FILE_SIZE:
+                            flash("Each email attachment must be under 25 MB.", "danger")
+                            return redirect(url_for('task_routes.view_task', task_id=task_id))
+                        f.seek(0)
+                        email_files.append({
+                            "filename": secure_filename(f.filename),
+                            "filetype": f.content_type,
+                            "data": f.read()
+                        })
 
             # 3) If marking complete...
+            # Check progress, which is now updated based on new_status_from_form
             if task.progress == 100:
                 task.status       = 'Complete! Ready to Go!'
                 task.completed_by = current_user.id
@@ -349,18 +378,36 @@ def edit_task(task_id):
             return redirect(url_for('task_routes.edit_task', task_id=task.id))
 
         for file in request.files.getlist('attachments'):
-            file.seek(0)
+            file.seek(0) # Reset pointer in case it was read by total_size calculation
             if file and allowed_file(file.filename):
-                if not save_task_document(file, task.id):
+                current_app.logger.info(f"Processing new attachment {file.filename} for task_id: {task_id} in edit_task.")
+                # Need to re-read the file for save_task_document as total_size check consumed it.
+                # save_task_document expects a FileStorage object, so we pass `file` directly.
+                # It will re-read it.
+                saved_successfully = save_task_document(file, task.id)
+                if not saved_successfully:
+                    current_app.logger.warning(f"Failed to save new attachment {file.filename} for task {task_id} in edit_task. Triggering rollback.")
                     db.session.rollback()
-                    flash("File upload failed due to size restrictions", "danger")
+                    # Flash message handled by save_task_document or here
+                    flash("File upload failed (e.g., size restrictions or DB error). Changes not saved.", "danger")
                     return redirect(url_for('task_routes.edit_task', task_id=task.id))
+                current_app.logger.info(f"Successfully processed new attachment {file.filename} for task {task_id} in edit_task.")
 
         attachment_ids_to_delete = request.form.getlist('delete_attachments')
+        if attachment_ids_to_delete:
+            current_app.logger.info(f"Attachments marked for deletion for task {task_id}: {attachment_ids_to_delete}")
         for attachment_id in attachment_ids_to_delete:
+            current_app.logger.info(f"Attempting to delete TaskDocument with id: {attachment_id} for task_id: {task_id}.")
             document = TaskDocument.query.filter_by(id=attachment_id, task_id=task.id).first()
             if document:
-                db.session.delete(document)
+                try:
+                    db.session.delete(document)
+                    current_app.logger.info(f"Successfully deleted TaskDocument {attachment_id} for task {task_id} from session.")
+                except Exception as e:
+                    current_app.logger.error(f"Error deleting TaskDocument {attachment_id} for task {task_id} from DB session: {e}", exc_info=True)
+                    # Potentially flash a message or decide if this error should halt the entire commit
+            else:
+                current_app.logger.warning(f"TaskDocument with id: {attachment_id} not found for task_id: {task_id} during deletion attempt.")
 
         try:
             db.session.commit()
@@ -436,6 +483,7 @@ def analytics_dashboard():
 
     # --- 1) Build a Plotly donut for completion rate ---
     incomplete_tasks = total_tasks - completed_tasks
+    active_tasks = incomplete_tasks # active_tasks is the same as incomplete_tasks
 
     import plotly.express as px
     from plotly.offline import plot
@@ -474,6 +522,7 @@ def analytics_dashboard():
         'analytics.html',
         total_tasks=total_tasks,
         completed_tasks=completed_tasks,
+        active_tasks=active_tasks, # Added active_tasks
         overdue_tasks=overdue_tasks,
         completion_chart=completion_chart,
         status_data=status_data,

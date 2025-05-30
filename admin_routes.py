@@ -710,6 +710,31 @@ def view_analytics():
         top_users_query = top_users_query.filter(UserScore.created_at >= start_date, UserScore.created_at <= end_date)
     top_users = top_users_query.group_by(User).order_by(func.avg(UserScore.score).desc()).limit(5).all()
 
+    # --- Special Exam Statistics ---
+    special_paper1_passed_count = date_filter(
+        SpecialExamRecord.query.filter_by(paper1_passed=True),
+        SpecialExamRecord.paper1_completed_at  # Assuming paper1_completed_at is the relevant date field
+    ).count()
+    special_paper2_passed_count = date_filter(
+        SpecialExamRecord.query.filter_by(paper2_passed=True),
+        SpecialExamRecord.paper2_completed_at  # Assuming paper2_completed_at is the relevant date field
+    ).count()
+    special_paper1_completed_count = date_filter(
+        SpecialExamRecord.query.filter(SpecialExamRecord.paper1_completed_at.isnot(None)),
+        SpecialExamRecord.paper1_completed_at
+    ).count()
+    special_paper2_completed_count = date_filter(
+        SpecialExamRecord.query.filter(SpecialExamRecord.paper2_completed_at.isnot(None)),
+        SpecialExamRecord.paper2_completed_at
+    ).count()
+
+    total_passed_exams = passed_count + special_paper1_passed_count + special_paper2_passed_count
+    # Consider total attempts for percentages.
+    # total_regular_exams_taken = pf_total (passed_count + failed_count)
+    # total_special_exams_taken = special_paper1_completed_count + special_paper2_completed_count
+    # total_overall_exams_taken = pf_total + special_paper1_completed_count + special_paper2_completed_count
+    # For simplicity, we'll just pass the counts and let the template decide on presentation.
+
     # --- Advanced 3D Scatter Metrics ---
     users_all = User.query.filter(User.deleted_at.is_(None)).all()
     metrics = {
@@ -810,6 +835,13 @@ def view_analytics():
         top_users=top_users,
         start_date=start_date.strftime('%Y-%m-%d') if start_date else '',
         end_date=end_date.strftime('%Y-%m-%d') if end_date else '',
+        # Special exam stats
+        special_paper1_passed_count=special_paper1_passed_count,
+        special_paper2_passed_count=special_paper2_passed_count,
+        special_paper1_completed_count=special_paper1_completed_count,
+        special_paper2_completed_count=special_paper2_completed_count,
+        total_passed_exams=total_passed_exams,  # New combined total
+        # Advanced 3D scatter metrics
         axis_options=axis_options,
         metrics=metrics,
         default_x=default_x,
@@ -894,6 +926,10 @@ def analytics_user_detail(user_id):
         [(c[2], f"Course: {c[0]}", c[1]) for c in course_progress if c[2]],
         key=lambda x: x[0] or datetime.min
     )
+
+    # Fetch Special Exam Record for the user
+    special_exam_record = SpecialExamRecord.query.filter_by(user_id=user.id).first()
+
     return render_template(
         'admin_analytics_user_detail.html',
         user=user,
@@ -902,7 +938,8 @@ def analytics_user_detail(user_id):
         exam_dates=exam_dates,
         course_titles=course_titles,
         course_percents=course_percents,
-        timeline=timeline
+        timeline=timeline,
+        special_exam_record=special_exam_record  # Add to context
     )
 
 # Deactivate User

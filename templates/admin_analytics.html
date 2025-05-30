@@ -186,15 +186,18 @@
   </div>
   <div class="col-md-6">
     <div class="card shadow-sm border-0 h-100">
-      <div class="card-header fw-bold bg-light"><i class="bi bi-pie-chart-fill"></i> Pass vs Fail</div>
-      <div class="card-body text-center">
-        <span class="badge bg-success fs-6 me-3"><i class="bi bi-check-circle-fill"></i> Passed: {{ pass_pct }}%</span>
-        <span class="badge bg-danger fs-6"><i class="bi bi-x-circle-fill"></i> Failed: {{ fail_pct }}%</span>
-        <div class="my-3">
+      <div class="card-header fw-bold bg-light"><i class="bi bi-pie-chart-fill"></i> Exam Pass/Fail (Regular Exams)</div>
+      <div class="card-body">
+        <p>Regular Exams Passed: <span class="fw-bold text-success">{{ passed_count }}</span></p>
+        <p>Regular Exams Failed: <span class="fw-bold text-danger">{{ failed_count }}</span></p>
+        <hr>
+        <p>Total Passed (All Types): <span class="fw-bold text-primary">{{ total_passed_exams }}</span></p>
+        <div class="my-3 text-center">
           <canvas
             id="passFailChart"
             height="140"
             style="max-width: 280px; margin: auto"
+            aria-label="Pass vs Fail doughnut chart for regular exams"
           ></canvas>
         </div>
       </div>
@@ -203,6 +206,19 @@
 </div>
 
 <div class="row mb-5 g-4">
+  <div class="col-md-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header fw-bold bg-light"><i class="bi bi-award"></i> Special Exam Statistics</div>
+      <div class="card-body">
+        <p>Paper 1 Passes: <span class="fw-bold text-success">{{ special_paper1_passed_count }}</span>
+           (Completions: <span class="fw-bold">{{ special_paper1_completed_count }}</span>)
+        </p>
+        <p>Paper 2 Passes: <span class="fw-bold text-success">{{ special_paper2_passed_count }}</span>
+           (Completions: <span class="fw-bold">{{ special_paper2_completed_count }}</span>)
+        </p>
+      </div>
+    </div>
+  </div>
   <div class="col-md-6">
     <div class="card shadow-sm border-0 h-100">
       <div class="card-header fw-bold bg-light"><i class="bi bi-graph-up-arrow"></i> Course Progress</div>

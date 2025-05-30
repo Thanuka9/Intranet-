@@ -113,6 +113,62 @@ block content %}
     {% endfor %}
   </ul>
 </div>
+
+<!-- Special Exam Results Section -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header">
+    <h4 class="mb-0">Special Exam Results</h4>
+  </div>
+  <div class="card-body">
+    {% if special_exam_record %}
+    <div class="row">
+      <div class="col-md-6">
+        <h5>Paper 1</h5>
+        <ul class="list-unstyled">
+          <li><strong>Score:</strong> {{ special_exam_record.paper1_score if special_exam_record.paper1_score is not none else 'N/A' }}</li>
+          <li><strong>Status:</strong>
+            {% if special_exam_record.paper1_completed_at %}
+              {% if special_exam_record.paper1_passed %}
+                <span class="badge bg-success">Passed</span>
+              {% else %}
+                <span class="badge bg-danger">Failed</span>
+              {% endif %}
+            {% else %}
+              <span class="badge bg-secondary">Not Attempted</span>
+            {% endif %}
+          </li>
+          <li><strong>Time Spent:</strong> {{ special_exam_record.paper1_time_spent ~ ' minutes' if special_exam_record.paper1_time_spent is not none else 'N/A' }}</li>
+          <li><strong>Completed At:</strong> {{ special_exam_record.paper1_completed_at.strftime('%Y-%m-%d %H:%M') if special_exam_record.paper1_completed_at else 'N/A' }}</li>
+          <li><strong>Attempts:</strong> {{ special_exam_record.paper1_attempts if special_exam_record.paper1_attempts is not none else 'N/A' }}</li>
+        </ul>
+      </div>
+      <div class="col-md-6">
+        <h5>Paper 2</h5>
+        <ul class="list-unstyled">
+          <li><strong>Score:</strong> {{ special_exam_record.paper2_score if special_exam_record.paper2_score is not none else 'N/A' }}</li>
+          <li><strong>Status:</strong>
+            {% if special_exam_record.paper2_completed_at %}
+              {% if special_exam_record.paper2_passed %}
+                <span class="badge bg-success">Passed</span>
+              {% else %}
+                <span class="badge bg-danger">Failed</span>
+              {% endif %}
+            {% else %}
+              <span class="badge bg-secondary">Not Attempted</span>
+            {% endif %}
+          </li>
+          <li><strong>Time Spent:</strong> {{ special_exam_record.paper2_time_spent ~ ' minutes' if special_exam_record.paper2_time_spent is not none else 'N/A' }}</li>
+          <li><strong>Completed At:</strong> {{ special_exam_record.paper2_completed_at.strftime('%Y-%m-%d %H:%M') if special_exam_record.paper2_completed_at else 'N/A' }}</li>
+          <li><strong>Attempts:</strong> {{ special_exam_record.paper2_attempts if special_exam_record.paper2_attempts is not none else 'N/A' }}</li>
+        </ul>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-muted">No special exam records found for this user.</p>
+    {% endif %}
+  </div>
+</div>
+
 <a
   href="{{ url_for('admin_routes.analytics_user_list') }}"
   class="btn btn-outline-secondary"

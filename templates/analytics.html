@@ -116,21 +116,28 @@
 
         <!-- Summary Cards -->
         <div class="row mb-5">
-          <div class="col-md-4 mb-3">
+          <div class="col-md-3 mb-3">
             <div class="card summary-card h-100">
               <i class="fas fa-tasks"></i>
-              <h5 class="mt-2">Total Tasks</h5>
+              <h5 class="mt-2">Total Tasks Assigned</h5>
               <p class="display-6 mb-0">{{ total_tasks or 0 }}</p>
             </div>
           </div>
-          <div class="col-md-4 mb-3">
+          <div class="col-md-3 mb-3">
             <div class="card summary-card h-100">
               <i class="fas fa-check-circle"></i>
               <h5 class="mt-2">Completed Tasks</h5>
               <p class="display-6 mb-0">{{ completed_tasks or 0 }}</p>
             </div>
           </div>
-          <div class="col-md-4 mb-3">
+          <div class="col-md-3 mb-3">
+            <div class="card summary-card h-100">
+              <i class="fas fa-hourglass-half"></i>
+              <h5 class="mt-2">Active Tasks</h5>
+              <p class="display-6 mb-0">{{ active_tasks or 0 }}</p>
+            </div>
+          </div>
+          <div class="col-md-3 mb-3">
             <div class="card summary-card h-100">
               <i class="fas fa-exclamation-triangle"></i>
               <h5 class="mt-2">Overdue Tasks</h5>

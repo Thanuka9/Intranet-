@@ -192,14 +192,17 @@
 
         <div class="mb-3">
           <label for="email_attachments" class="form-label">
-            <i class="fas fa-paperclip me-1"></i><strong>Attach Files for Completion Email</strong>
+            <i class="fas fa-paperclip me-1"></i><strong>Attach Files (for completion email only)</strong>
           </label>
           <input type="file"
                  class="form-control-file"
                  id="email_attachments"
                  name="email_attachments"
                  multiple>
-          <div class="form-text">Allowed: pdf, png, jpg, jpeg, docx, xlsx. Max total 25 MB.</div>
+          <div class="form-text">
+            These files are sent with the task completion email. To add permanent documents to the task itself, please <a href="{{ url_for('task_routes.edit_task', task_id=task.id) }}">edit the task</a>.
+            <br>Allowed: pdf, png, jpg, jpeg, docx, xlsx. Max total 25 MB.
+          </div>
         </div>
 
         <button type="submit" class="btn btn-primary">
