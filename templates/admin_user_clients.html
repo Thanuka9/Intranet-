@@ -1,105 +1,165 @@
 {% extends 'admin_base.html' %}
-{% block content %}
-  <h2>User ↔ Client Associations</h2>
+{% block title %}User–Client Associations{% endblock %}
 
-  <!-- Add new link -->
-  <div class="card mb-4">
+{% block content %}
+  <h1 class="mb-4">
+    <i class="bi bi-link-45deg"></i> User ↔ Client Associations
+  </h1>
+
+  {# Flash messages (success, error, etc.) #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="row mb-3">
+        <div class="col-12">
+          {% for category, text in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+              {{ text }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Add New Association -->
+  <div class="card mb-5 shadow-sm">
+    <div class="card-header bg-light fw-bold">
+      <i class="bi bi-plus-circle"></i> Add New Association
+    </div>
     <div class="card-body">
-      <h5 class="card-title">Add New Association</h5>
       <form
         action="{{ url_for('admin_routes.add_user_client') }}"
         method="post"
-        class="row g-2 align-items-center"
+        class="row g-3 align-items-end"
       >
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="col-auto">
-          <select name="user_id" class="form-select form-select-sm" required>
-            <option value="">Select user…</option>
+        <div class="col-sm-5">
+          <label for="userSelect" class="form-label small">User</label>
+          <select id="userSelect" name="user_id" class="form-select form-select-sm" required>
+            <option value="" disabled selected>Select user…</option>
             {% for u in users %}
               <option value="{{ u.id }}">
-                {{ u.first_name }} {{ u.last_name }} (#{{ u.id }})
+                {{ u.first_name }} {{ u.last_name }} (ID: {{ u.id }})
               </option>
             {% endfor %}
           </select>
         </div>
-        <div class="col-auto">
-          <select name="client_id" class="form-select form-select-sm" required>
-            <option value="">Select client…</option>
+        <div class="col-sm-5">
+          <label for="clientSelect" class="form-label small">Client</label>
+          <select id="clientSelect" name="client_id" class="form-select form-select-sm" required>
+            <option value="" disabled selected>Select client…</option>
             {% for c in clients %}
-              <option value="{{ c.id }}">{{ c.name }} (#{{ c.id }})</option>
+              <option value="{{ c.id }}">
+                {{ c.name }} (ID: {{ c.id }})
+              </option>
             {% endfor %}
           </select>
         </div>
-        <div class="col-auto">
-          <button type="submit" class="btn btn-sm btn-success">Add</button>
+        <div class="col-sm-2 d-grid">
+          <button type="submit" class="btn btn-success btn-sm">
+            <i class="bi bi-check-circle"></i> Add
+          </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Existing associations -->
-  <table class="table table-bordered table-striped">
-    <thead>
-      <tr>
-        <th>User ID</th>
-        <th>User Name</th>
-        <th>Client ID</th>
-        <th>Client Name</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for u in users %}
-        {% if u.clients %}
-          {% for c in u.clients %}
+  <!-- Existing Associations -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-light fw-bold">
+      <i class="bi bi-table"></i> Existing Associations
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-striped table-hover mb-0 align-middle">
+          <thead class="table-light">
             <tr>
-              <td>{{ u.id }}</td>
-              <td>{{ u.first_name }} {{ u.last_name }}</td>
-              <td>{{ c.id }}</td>
-              <td>{{ c.name }}</td>
-              <td>
-                <!-- Edit form -->
-                <form
-                  action="{{ url_for('admin_routes.edit_user_client') }}"
-                  method="post"
-                  class="d-inline"
-                >
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="user_id" value="{{ u.id }}">
-                  <input type="hidden" name="old_client_id" value="{{ c.id }}">
-                  <div class="input-group input-group-sm">
-                    <select name="new_client_id" class="form-select form-select-sm">
-                      {% for x in clients %}
-                        <option value="{{ x.id }}" {% if x.id == c.id %}selected{% endif %}>
-                          {{ x.name }} (#{{ x.id }})
-                        </option>
-                      {% endfor %}
-                    </select>
-                    <button class="btn btn-primary btn-sm">Save</button>
-                  </div>
-                </form>
-                <!-- Delete form -->
-                <form
-                  action="{{ url_for('admin_routes.delete_user_client') }}"
-                  method="post"
-                  class="d-inline ms-1"
-                >
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="user_id" value="{{ u.id }}">
-                  <input type="hidden" name="client_id" value="{{ c.id }}">
-                  <button class="btn btn-danger btn-sm">Delete</button>
-                </form>
-              </td>
+              <th scope="col">User ID</th>
+              <th scope="col">User Name</th>
+              <th scope="col">Client ID</th>
+              <th scope="col">Client Name</th>
+              <th scope="col" class="text-center">Actions</th>
             </tr>
-          {% endfor %}
-        {% else %}
-          <tr>
-            <td>{{ u.id }}</td>
-            <td>{{ u.first_name }} {{ u.last_name }}</td>
-            <td colspan="3" class="text-center text-muted">No client assigned</td>
-          </tr>
-        {% endif %}
-      {% endfor %}
-    </tbody>
-  </table>
+          </thead>
+          <tbody>
+            {# Loop through each user; if they have clients, list them; otherwise show a “none” row #}
+            {% for u in users %}
+              {% if u.clients %}
+                {% for c in u.clients %}
+                  <tr>
+                    <td>{{ u.id }}</td>
+                    <td>{{ u.first_name }} {{ u.last_name }}</td>
+                    <td>{{ c.id }}</td>
+                    <td>{{ c.name }}</td>
+                    <td class="text-center">
+                      <div class="d-flex justify-content-center gap-1">
+                        <!-- Edit Association -->
+                        <form
+                          action="{{ url_for('admin_routes.edit_user_client') }}"
+                          method="post"
+                          class="d-inline-block"
+                        >
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="user_id"      value="{{ u.id }}">
+                          <input type="hidden" name="old_client_id" value="{{ c.id }}">
+                          <div class="input-group input-group-sm">
+                            <select
+                              name="new_client_id"
+                              class="form-select form-select-sm"
+                              aria-label="Change client"
+                            >
+                              {% for x in clients %}
+                                <option value="{{ x.id }}" {% if x.id == c.id %}selected{% endif %}>
+                                  {{ x.name }} (ID: {{ x.id }})
+                                </option>
+                              {% endfor %}
+                            </select>
+                            <button
+                              type="submit"
+                              class="btn btn-primary"
+                              title="Save changes"
+                            >
+                              <i class="bi bi-save"></i>
+                            </button>
+                          </div>
+                        </form>
+
+                        <!-- Delete Association -->
+                        <form
+                          action="{{ url_for('admin_routes.delete_user_client') }}"
+                          method="post"
+                          class="d-inline-block"
+                          onsubmit="return confirm('Are you sure you want to remove this association?');"
+                        >
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="user_id"   value="{{ u.id }}">
+                          <input type="hidden" name="client_id" value="{{ c.id }}">
+                          <button
+                            type="submit"
+                            class="btn btn-danger btn-sm"
+                            title="Delete association"
+                          >
+                            <i class="bi bi-trash"></i>
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr class="table-secondary">
+                  <td>{{ u.id }}</td>
+                  <td>{{ u.first_name }} {{ u.last_name }}</td>
+                  <td colspan="3" class="text-center text-muted">
+                    No client assigned
+                  </td>
+                </tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 {% endblock %}

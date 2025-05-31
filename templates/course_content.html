@@ -33,6 +33,8 @@
         --pill-btn-color: #fff;
         --nav-btn-bg: #fff;
         --nav-btn-color: #377dff;
+        --collect-main: #181c22;
+        --ive-main: #dc3545;
       }
       body.dark-theme {
         --bg-main: #10141b;
@@ -55,6 +57,8 @@
         --pill-btn-color: #fff;
         --nav-btn-bg: #24293a;
         --nav-btn-color: #e0e0f0;
+        --collect-main: #ffd700; /* Bright yellow for Collect in dark mode */
+        --ive-main: #ff5252; /* A red visible on dark bg */
       }
       html,
       body {
@@ -276,6 +280,29 @@
       body.dark-theme a:visited {
         color: #ffd700;
       }
+      /* Fix for the logo text colors in both light and dark mode */
+      .logo-text {
+        font-weight: 600;
+        font-size: 1.25rem;
+        letter-spacing: 0.5px;
+        display: inline-block;
+        vertical-align: middle;
+      }
+      .logo-collect {
+        color: var(--collect-main);
+        transition: color 0.2s;
+      }
+      .logo-ive {
+        color: var(--ive-main);
+        transition: color 0.2s;
+      }
+      /* Optionally, ensure high contrast for the logo in all themes */
+      @media (forced-colors: active) {
+        .logo-collect,
+        .logo-ive {
+          color: CanvasText !important;
+        }
+      }
     </style>
   </head>
   <body>
@@ -304,9 +331,9 @@
       </div>
       <div class="d-flex align-items-center gap-2">
         <img src="/static/images/logo.png" alt="Logo" style="height: 28px" />
-        <span class="fw-semibold fs-5"
-          ><span class="text-dark">Collect</span
-          ><span class="text-danger">ive</span></span
+        <span class="logo-text"
+          ><span class="logo-collect">Collect</span
+          ><span class="logo-ive">ive</span></span
         >
       </div>
     </header>

@@ -2388,6 +2388,8 @@
       </form>
     </div>
 
+    <!-- ...your previous HTML... -->
+
     <footer>Collective Intranet© 2024</footer>
 
     <!-- INSTRUCTION OVERLAY -->
@@ -2581,16 +2583,44 @@
             }
           });
 
-          // beforeunload → sendBeacon + warning
-          window.addEventListener("beforeunload", (e) => {
-            if (!submitted) {
+          // Add event listener for form submission
+          if (form) {
+            form.addEventListener("submit", function () {
+              submitted = true;
+              if (timeInp) {
+                timeInp.value = 60 * 60 - remaining;
+              }
+              window.removeEventListener("beforeunload", handleBeforeUnload); // Remove warning on submit
+            });
+          }
+
+          // ---- Enhanced beforeunload logic tracking answers ----
+          let answeredQuestions = new Set();
+          const totalQuestions = 40;
+
+          // Track answer selections
+          document.querySelectorAll("input[type='radio']").forEach((input) => {
+            input.addEventListener("change", () => {
+              answeredQuestions.add(input.name);
+              if (answeredQuestions.size >= totalQuestions) {
+                window.removeEventListener("beforeunload", handleBeforeUnload);
+              }
+            });
+          });
+
+          // Define warning logic
+          function handleBeforeUnload(e) {
+            if (!submitted && answeredQuestions.size < totalQuestions) {
               const fd = new FormData(form);
               fd.append("time_spent", 60 * 60 - remaining);
               navigator.sendBeacon(form.action, fd);
               e.preventDefault();
               e.returnValue = "";
             }
-          });
+          }
+
+          // Register warning (initially active)
+          window.addEventListener("beforeunload", handleBeforeUnload);
 
           // back-button → force submit
           history.pushState(null, "", location.href);

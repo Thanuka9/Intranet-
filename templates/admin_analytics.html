@@ -1,5 +1,6 @@
 {% extends 'admin_base.html' %}
 {% block title %}Analytics Dashboard{% endblock %}
+
 {% block content %}
 <h1 class="mb-4">
   <i class="bi bi-bar-chart-line"></i>
@@ -7,13 +8,11 @@
 </h1>
 
 <!-- Filter Bar -->
-<form
-  method="get"
-  class="row g-2 mb-4 align-items-end"
-  aria-label="Dashboard filters"
->
+<form method="get" class="row g-2 mb-4 align-items-end" aria-label="Dashboard filters">
   <div class="col-12 col-md-2">
-    <label for="start_date" class="form-label mb-1"><i class="bi bi-calendar-date"></i> Custom Start</label>
+    <label for="start_date" class="form-label mb-1">
+      <i class="bi bi-calendar-date"></i> Custom Start
+    </label>
     <input
       type="date"
       id="start_date"
@@ -24,7 +23,9 @@
     />
   </div>
   <div class="col-12 col-md-2">
-    <label for="end_date" class="form-label mb-1"><i class="bi bi-calendar-date"></i> Custom End</label>
+    <label for="end_date" class="form-label mb-1">
+      <i class="bi bi-calendar-date"></i> Custom End
+    </label>
     <input
       type="date"
       id="end_date"
@@ -35,7 +36,10 @@
     />
   </div>
   <div class="col-12 col-md-8">
-    <label class="form-label mb-1"><i class="bi bi-clock-history"></i> Quick Ranges</label><br />
+    <label class="form-label mb-1">
+      <i class="bi bi-clock-history"></i> Quick Ranges
+    </label>
+    <br />
     <div class="btn-group" role="group" aria-label="Select period">
       <button
         type="submit"
@@ -62,53 +66,64 @@
   </div>
 </form>
 
-<!-- Summary Cards -->
-<div class="row mb-4 g-3">
-  <div class="col-6 col-md-3">
-    <div class="card text-white bg-info mb-3 shadow-sm border-0 h-100">
-      <div class="card-body text-center">
-        <h6 class="card-title"><i class="bi bi-people-fill"></i> Total Users</h6>
-        <h2 class="display-5 fw-bold">{{ total_users }}</h2>
+<!-- Summary Cards: Total Users, Active Users, Avg Exam, Avg Course, Avg Special -->
+<div class="row mb-4 gy-3">
+  <!-- Total Users -->
+  <div class="col-6 col-md-2">
+    <div class="card text-white bg-info h-100 shadow-sm animated fadeIn">
+      <div class="card-body text-center py-3">
+        <h6 class="card-title mb-1"><i class="bi bi-people-fill"></i> Total Users</h6>
+        <h2 class="fw-bold">{{ total_users }}</h2>
       </div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-white bg-primary mb-3 shadow-sm border-0 h-100">
-      <div class="card-body text-center">
-        <h6 class="card-title"><i class="bi bi-person-check-fill"></i> Active Users</h6>
-        <h2 class="display-5 fw-bold">{{ active_users }}</h2>
+  <!-- Active Users -->
+  <div class="col-6 col-md-2">
+    <div class="card text-white bg-primary h-100 shadow-sm animated fadeIn">
+      <div class="card-body text-center py-3">
+        <h6 class="card-title mb-1"><i class="bi bi-person-check-fill"></i> Active Users</h6>
+        <h2 class="fw-bold">{{ active_users }}</h2>
       </div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-white bg-success mb-3 shadow-sm border-0 h-100">
-      <div class="card-body text-center">
-        <h6 class="card-title"><i class="bi bi-award-fill"></i> Avg Exam Score</h6>
-        <h2 class="display-5 fw-bold">{{ avg_exam_score }}%</h2>
+  <!-- Avg Exam Score -->
+  <div class="col-6 col-md-2">
+    <div class="card text-white bg-success h-100 shadow-sm animated fadeIn">
+      <div class="card-body text-center py-3">
+        <h6 class="card-title mb-1"><i class="bi bi-award-fill"></i> Avg Exam Score</h6>
+        <h2 class="fw-bold">{{ avg_exam_score }}%</h2>
       </div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-dark bg-warning mb-3 shadow-sm border-0 h-100">
-      <div class="card-body text-center">
-        <h6 class="card-title"><i class="bi bi-journal-check"></i> Avg Course Progress</h6>
-        <h2 class="display-5 fw-bold">{{ avg_course_progress }}%</h2>
+  <!-- Avg Course Progress -->
+  <div class="col-6 col-md-2">
+    <div class="card text-dark bg-warning h-100 shadow-sm animated fadeIn">
+      <div class="card-body text-center py-3">
+        <h6 class="card-title mb-1"><i class="bi bi-journal-check"></i> Avg Course Progress</h6>
+        <h2 class="fw-bold">{{ avg_course_progress }}%</h2>
       </div>
     </div>
   </div>
+  <!-- Avg Special Exam -->
+  <div class="col-6 col-md-2">
+    <div class="card text-white bg-secondary h-100 shadow-sm animated fadeIn">
+      <div class="card-body text-center py-3">
+        <h6 class="card-title mb-1"><i class="bi bi-file-earmark-text"></i> Avg Special Exam</h6>
+        <h2 class="fw-bold">{{ special_avg_score }}%</h2>
+      </div>
+    </div>
+  </div>
+  <!-- (Empty placeholder to keep alignment) -->
+  <div class="col-6 col-md-2"></div>
 </div>
 
 <!-- Top Users Table -->
-<div class="card mb-5 shadow-sm border-0">
-  <div
-    class="card-header bg-light fw-bold d-flex align-items-center justify-content-between"
-  >
+<div class="card mb-5 shadow-sm">
+  <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center">
     <span><i class="bi bi-trophy"></i> Top 5 Users by Exam Score</span>
-    <a
-      href="{{ url_for('admin_routes.analytics_user_list') }}"
-      class="btn btn-sm btn-outline-secondary"
-      ><i class="bi bi-list-ul"></i> View All Users</a
-    >
+    <a href="{{ url_for('admin_routes.analytics_user_list') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-list-ul"></i> View All Users
+    </a>
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
@@ -123,41 +138,31 @@
           </tr>
         </thead>
         <tbody>
-          {% if top_users %} {% for u, avg_score in top_users %}
-          <tr>
-            <td>
-              <div class="d-flex align-items-center gap-2">
-                <span
-                  class="rounded-circle bg-secondary d-inline-block text-white text-center"
-                  style="
-                    width: 32px;
-                    height: 32px;
-                    line-height: 32px;
-                    font-weight: bold;
-                  "
-                  title="{{ u.first_name }} {{ u.last_name }}"
-                >
-                  {{ u.first_name|first }}{{ u.last_name|first }}
-                </span>
-                <span>{{ u.first_name }} {{ u.last_name }}</span>
-              </div>
-            </td>
-            <td><i class="bi bi-envelope-at"></i> {{ u.employee_email }}</td>
-            <td><i class="bi bi-building"></i> {{ u.department.name if u.department else '-' }}</td>
-            <td>
-              <span class="badge bg-success">{{ avg_score|round(2) }}%</span>
-            </td>
-            <td>
-              <a
-                href="{{ url_for('admin_routes.analytics_user_detail', user_id=u.id) }}"
-                class="btn btn-sm btn-outline-primary"
-                aria-label="View user details"
-              >
-                <i class="bi bi-search"></i> View
-              </a>
-            </td>
-          </tr>
-          {% endfor %} {% else %}
+          {% if top_users %}
+            {% for u, avg_score in top_users %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="rounded-circle bg-secondary d-inline-block text-white text-center"
+                        style="width: 32px; height: 32px; line-height: 32px; font-weight: bold;"
+                        title="{{ u.first_name }} {{ u.last_name }}">
+                    {{ u.first_name|first }}{{ u.last_name|first }}
+                  </span>
+                  <span>{{ u.first_name }} {{ u.last_name }}</span>
+                </div>
+              </td>
+              <td><i class="bi bi-envelope-at"></i> {{ u.employee_email }}</td>
+              <td><i class="bi bi-building"></i> {{ u.department.name if u.department else '-' }}</td>
+              <td><span class="badge bg-success">{{ avg_score|round(2) }}%</span></td>
+              <td>
+                <a href="{{ url_for('admin_routes.analytics_user_detail', user_id=u.id) }}"
+                   class="btn btn-sm btn-outline-primary" aria-label="View user details">
+                  <i class="bi bi-search"></i> View
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
           <tr>
             <td colspan="5" class="text-center text-muted">
               No user exam scores found for this period.
@@ -170,227 +175,257 @@
   </div>
 </div>
 
-<!-- Data Visualizations -->
-<div class="row mb-5 g-4">
-  <div class="col-md-6">
-    <div class="card shadow-sm border-0 h-100">
+<!-- Row: Average Exam Scores (Full 6 cols) -->
+<div class="row mb-4">
+  <div class="col-12 col-md-6">
+    <div class="card shadow-sm h-100">
       <div class="card-header fw-bold bg-light"><i class="bi bi-bar-chart-steps"></i> Average Exam Scores</div>
-      <div class="card-body">
-        <canvas
-          id="examChart"
-          height="180"
-          aria-label="Average Exam Scores"
-        ></canvas>
+      <div class="card-body" style="height: 280px;">
+        <canvas id="examChart"></canvas>
       </div>
     </div>
   </div>
-  <div class="col-md-6">
-    <div class="card shadow-sm border-0 h-100">
-      <div class="card-header fw-bold bg-light"><i class="bi bi-pie-chart-fill"></i> Pass vs Fail</div>
-      <div class="card-body text-center">
-        <span class="badge bg-success fs-6 me-3"><i class="bi bi-check-circle-fill"></i> Passed: {{ pass_pct }}%</span>
-        <span class="badge bg-danger fs-6"><i class="bi bi-x-circle-fill"></i> Failed: {{ fail_pct }}%</span>
-        <div class="my-3">
-          <canvas
-            id="passFailChart"
-            height="140"
-            style="max-width: 280px; margin: auto"
-          ></canvas>
+
+  <!-- Two mini Doughnuts: Reg & Spec Pass/Fail -->
+  <div class="col-12 col-md-6">
+    <div class="row gx-3 gy-4">
+      <!-- Regular Exams -->
+      <div class="col-12 col-lg-6">
+        <div class="card shadow-sm h-100">
+          <div class="card-header fw-bold bg-light"><i class="bi bi-pie-chart-fill"></i> Regular Exams</div>
+          <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
+            <canvas id="regPassFailChart" width="150" height="150"></canvas>
+            <div class="mt-2">
+              <span class="badge bg-success me-1"><i class="bi bi-check-circle-fill"></i> {{ pass_pct }}%</span>
+              <span class="badge bg-danger"><i class="bi bi-x-circle-fill"></i> {{ fail_pct }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Special Exams -->
+      <div class="col-12 col-lg-6">
+        <div class="card shadow-sm h-100">
+          <div class="card-header fw-bold bg-light"><i class="bi bi-pie-chart-fill"></i> Special Exams</div>
+          <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
+            <canvas id="specPassFailChart" width="150" height="150"></canvas>
+            <div class="mt-2">
+              <span class="badge bg-info me-1"><i class="bi bi-patch-question-fill"></i> {{ sp_pass_pct }}%</span>
+              <span class="badge bg-warning"><i class="bi bi-exclamation-circle-fill"></i> {{ sp_fail_pct }}%</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<div class="row mb-5 g-4">
-  <div class="col-md-6">
-    <div class="card shadow-sm border-0 h-100">
+<!-- Row: Course Progress & Score Trend -->
+<div class="row mb-5 gy-4">
+  <!-- Course Progress -->
+  <div class="col-12 col-md-6">
+    <div class="card shadow-sm h-100">
       <div class="card-header fw-bold bg-light"><i class="bi bi-graph-up-arrow"></i> Course Progress</div>
-      <div class="card-body">
-        <canvas
-          id="courseChart"
-          height="180"
-          aria-label="Course Progress"
-        ></canvas>
+      <div class="card-body" style="height: 280px;">
+        <canvas id="courseChart"></canvas>
       </div>
     </div>
   </div>
-  <div class="col-md-6">
-    <div class="card shadow-sm border-0 h-100">
+  <!-- Score Trend -->
+  <div class="col-12 col-md-6">
+    <div class="card shadow-sm h-100">
       <div class="card-header fw-bold bg-light">
-        <i class="bi bi-trending-up"></i> Score Trend {% if period == 'all' %} (All Time) {% else %} (Last {{
-        period }} Days) {% endif %}
+        <i class="bi bi-trending-up"></i>
+        Score Trend {% if period == 'all' %}(All Time){% else %}(Last {{ period }} Days){% endif %}
       </div>
-      <div class="card-body">
-        <canvas id="trendChart" height="180" aria-label="Score Trend"></canvas>
+      <div class="card-body" style="height: 280px;">
+        <canvas id="trendChart"></canvas>
       </div>
     </div>
   </div>
 </div>
 
-<!-- 3D Scatter Plot with Axis & Color Selection and Explanations -->
-<div class="row mb-5 g-4">
-  <div class="col-lg-9 col-12">
-    <div class="card shadow-sm border-0 h-100">
-      <div class="card-header fw-bold bg-light d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-scatter-chart"></i> 3D User Analytics: Explore Relationships</span>
-        <div class="d-flex gap-2 align-items-center">
-          <label class="form-label mb-0">X:</label>
-          <select id="scatter-x" class="form-select form-select-sm" style="width:auto">
-            {% for opt in axis_options %}
-            <option value="{{ opt.key }}" {% if opt.key == default_x %}selected{% endif %}>{{ opt.label }}</option>
-            {% endfor %}
-          </select>
-          <label class="form-label mb-0">Y:</label>
-          <select id="scatter-y" class="form-select form-select-sm" style="width:auto">
-            {% for opt in axis_options %}
-            <option value="{{ opt.key }}" {% if opt.key == default_y %}selected{% endif %}>{{ opt.label }}</option>
-            {% endfor %}
-          </select>
-          <label class="form-label mb-0">Z:</label>
-          <select id="scatter-z" class="form-select form-select-sm" style="width:auto">
-            {% for opt in axis_options %}
-            <option value="{{ opt.key }}" {% if opt.key == default_z %}selected{% endif %}>{{ opt.label }}</option>
-            {% endfor %}
-          </select>
-          <label class="form-label mb-0">Color:</label>
-          <select id="scatter-color" class="form-select form-select-sm" style="width:auto">
-            <option value="department" selected>Department</option>
-            {% for opt in axis_options %}
-            <option value="{{ opt.key }}">{{ opt.label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-      <div class="card-body">
-        <div id="scatter3d" style="height:400px;"></div>
-      </div>
-    </div>
-  </div>
-  <div class="col-lg-3 col-12">
-    <div class="card border-0 shadow-sm h-100">
-      <div class="card-header bg-light fw-bold"><i class="bi bi-info-circle"></i> What does this chart show?</div>
-      <div class="card-body small">
-        <ul class="mb-2">
-          <li><strong>Each point</strong>: A user</li>
-          <li><strong>X, Y, Z axes</strong>: Select metrics to compare (see below)</li>
-          <li><strong>Color</strong>: Group users by department or metric</li>
-          <li><strong>Hover</strong>: See user name and values</li>
-        </ul>
+<!-- Row: Full-width 3D Scatter + Description -->
+<div class="row mb-5">
+  <div class="col-12">
+    <div class="card shadow-sm h-100">
+      <div class="card-header fw-bold bg-light d-flex flex-wrap justify-content-between align-items-center">
         <div>
-          <strong>Metric explanations:</strong>
-          <ul class="ps-3 mb-0">
-            <li><strong>Avg Exam Score:</strong> Mean exam score for user</li>
-            <li><strong>Total Time Spent:</strong> Sum of time studying/training</li>
-            <li><strong>Completion Rate:</strong> % of assigned courses finished</li>
-            <li><strong>Exams Taken:</strong> Number of exams attempted</li>
-            <li><strong>Avg Attempts per Exam:</strong> Mean attempts per unique exam</li>
-            <li><strong>Score Improvement:</strong> Most recent minus first exam score</li>
-            <li><strong>Last Activity (days ago):</strong> Days since last activity</li>
-            <li><strong>Department:</strong> User's department</li>
-          </ul>
+          <i class="bi bi-scatter-chart"></i>
+          3D User Analytics: Explore Relationships
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <div>
+            <label class="form-label mb-0 small">X Axis</label>
+            <select id="scatter-x" class="form-select form-select-sm">
+              {% for opt in axis_options %}
+              <option value="{{ opt.key }}" {% if opt.key == default_x %}selected{% endif %}>
+                {{ opt.label }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label mb-0 small">Y Axis</label>
+            <select id="scatter-y" class="form-select form-select-sm">
+              {% for opt in axis_options %}
+              <option value="{{ opt.key }}" {% if opt.key == default_y %}selected{% endif %}>
+                {{ opt.label }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label mb-0 small">Z Axis</label>
+            <select id="scatter-z" class="form-select form-select-sm">
+              {% for opt in axis_options %}
+              <option value="{{ opt.key }}" {% if opt.key == default_z %}selected{% endif %}>
+                {{ opt.label }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label mb-0 small">Color By</label>
+            <select id="scatter-color" class="form-select form-select-sm">
+              <option value="department" selected>Department</option>
+              {% for opt in axis_options %}
+              <option value="{{ opt.key }}">{{ opt.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card-body row g-4">
+        <div class="col-lg-9 col-12">
+          <div id="scatter3d" style="width: 100%; height: 430px; min-height: 350px; border-radius: 18px; border: 1.5px solid #e3e3e3; background: linear-gradient(135deg, #f3f6fb 0%, #e4e9f7 100%);"></div>
+        </div>
+        <div class="col-lg-3 col-12">
+          <!-- 3D Chart Description & Tips -->
+          <div class="p-3 rounded-3 border bg-light h-100 shadow-sm" style="min-height: 325px;">
+            <div class="mb-2">
+              <span class="fs-5 fw-bold text-primary"><i class="bi bi-info-circle"></i> What is this 3D Chart?</span>
+              <div class="small mt-1 text-secondary">
+                <p>
+                  <strong>Visualize, compare, and cluster users in three dimensions at once.</strong>
+                  <br>
+                  <span class="text-dark">Use the dropdowns to select which metrics to analyze for X, Y, Z axes and coloring.</span>
+                </p>
+              </div>
+            </div>
+            <ul class="mb-2 small">
+              <li><b>Every dot</b> = one user.</li>
+              <li><b>Axes:</b> Choose any metrics (e.g. scores, progress, attempts).</li>
+              <li><b>Color:</b> Group by department or any metric.</li>
+              <li><b>Hover:</b> See user details instantly.</li>
+              <li><b>Zoom/Pan:</b> Drag, scroll, or double-click to reset view.</li>
+              <li class="text-success"><b>Discover:</b> Outliers, high performers, or clusters.</li>
+            </ul>
+            <div class="alert alert-primary py-2 px-3 small mb-0" style="font-size:0.95em;">
+              <strong>Pro tip:</strong> Try <b>Avg Special Exam Score</b> on an axis or as color to find users who excel in special assessments!
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Bootstrap Icons CDN -->
+<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-<!-- Plotly.js (Latest) -->
+<!-- Optional: Animate.css for subtle card fades (can remove if unwanted) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+<!-- Plotly.js for 3D Scatter -->
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-
 <script>
-  // All metrics as arrays keyed by metric name
-  const metrics = {{ metrics|tojson }};
-  const user_labels = metrics.user_labels;
-  const departments = metrics.department;
+  const metrics      = {{ metrics|tojson }};
+  const user_labels  = metrics.user_labels;
+  const departments  = metrics.department;
 
-  // Generate a color map for departments
-  function getDeptColorMap(departments) {
-    const unique = Array.from(new Set(departments));
+  function getDeptColorMap(depts) {
+    const unique = Array.from(new Set(depts));
     const palette = [
       "#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f",
       "#edc949", "#af7aa1", "#ff9da7", "#9c755f", "#bab0ab"
     ];
     let map = {};
-    unique.forEach((d, i) => map[d] = palette[i % palette.length]);
+    unique.forEach((d,i) => map[d] = palette[i % palette.length]);
     return map;
   }
 
   function getAxisLabel(key) {
     const opts = {{ axis_options|tojson }};
-    if(key === "department") return "Department";
+    if (key === 'department') return 'Department';
     return (opts.find(o => o.key === key) || {}).label || key;
   }
 
   function drawScatter3D(xkey, ykey, zkey, colorKey) {
-    let marker = { size: 8, opacity: 0.9, line: { width: 1, color: '#333' } };
-    let colors, colorTitle, showscale = false, colorBar = undefined;
+    const markerBase = { size: 7, opacity: 0.88, line: { width: 1, color: '#333' } };
 
-    if(colorKey === "department") {
-      // Color by department
+    if (colorKey === 'department') {
       const deptMap = getDeptColorMap(departments);
-      colors = departments.map(dep => deptMap[dep]);
-      colorTitle = "Department";
-      marker.color = colors;
-      marker.colorscale = undefined;
-      marker.showscale = false;
-      // Create legend traces for departments
-      let data = [];
-      for(const dept in deptMap) {
-        let idxs = departments.map((d,i) => d===dept?i:-1).filter(i=>i!==-1);
-        data.push({
-          x: idxs.map(i=>metrics[xkey][i]),
-          y: idxs.map(i=>metrics[ykey][i]),
-          z: idxs.map(i=>metrics[zkey][i]),
+      const traces = Object.entries(deptMap).map(([dept, colorHex]) => {
+        const idxs = departments.map((d,i) => d === dept ? i : -1).filter(i => i !== -1);
+        return {
+          x: idxs.map(i => metrics[xkey][i]),
+          y: idxs.map(i => metrics[ykey][i]),
+          z: idxs.map(i => metrics[zkey][i]),
           mode: 'markers',
           type: 'scatter3d',
           name: dept,
-          text: idxs.map(i=>user_labels[i]),
-          marker: {...marker, color: deptMap[dept]},
-        });
-      }
-      var layout = {
+          text: idxs.map(i => user_labels[i]),
+          marker: { ...markerBase, color: colorHex }
+        };
+      });
+
+      const layout = {
+        title: '',
         scene: {
           xaxis: { title: getAxisLabel(xkey) },
           yaxis: { title: getAxisLabel(ykey) },
           zaxis: { title: getAxisLabel(zkey) }
         },
-        legend: { title: {text:"Department"}, orientation: "v" },
-        margin: { l:0, r:0, b:0, t:30 }
+        margin: { l: 0, r: 0, b: 0, t: 0 },
+        hovermode: 'closest',
+        legend: { title: { text: 'Department' }, orientation: 'v', x: 1.02, y: 0.9 }
       };
-      Plotly.newPlot('scatter3d', data, layout, {responsive: true});
+      Plotly.newPlot('scatter3d', traces, layout, { responsive: true });
       return;
-    } else {
-      // Color by metric
-      marker.color = metrics[colorKey];
-      marker.colorscale = 'Viridis';
-      marker.colorbar = { title: getAxisLabel(colorKey) };
-      marker.showscale = true;
-      marker.cmin = Math.min(...metrics[colorKey]);
-      marker.cmax = Math.max(...metrics[colorKey]);
     }
 
-    var trace = {
+    // Color by numeric metric
+    const cVals = metrics[colorKey];
+    const trace = {
       x: metrics[xkey],
       y: metrics[ykey],
       z: metrics[zkey],
       mode: 'markers',
       type: 'scatter3d',
       text: user_labels,
-      marker: marker
+      marker: {
+        ...markerBase,
+        color: cVals,
+        colorscale: 'Viridis',
+        showscale: true,
+        colorbar: { title: getAxisLabel(colorKey) },
+        cmin: Math.min(...cVals),
+        cmax: Math.max(...cVals)
+      }
     };
-    var layout = {
+
+    const layout = {
+      title: '',
       scene: {
         xaxis: { title: getAxisLabel(xkey) },
         yaxis: { title: getAxisLabel(ykey) },
         zaxis: { title: getAxisLabel(zkey) }
       },
-      margin: { l:0, r:0, b:0, t:30 }
+      margin: { l: 0, r: 0, b: 0, t: 0 },
+      hovermode: 'closest'
     };
-    Plotly.newPlot('scatter3d', [trace], layout, {responsive: true});
+
+    Plotly.newPlot('scatter3d', [trace], layout, { responsive: true });
   }
 
   const xSel = document.getElementById('scatter-x');
@@ -405,71 +440,109 @@
   ySel.addEventListener('change', updateScatter);
   zSel.addEventListener('change', updateScatter);
   cSel.addEventListener('change', updateScatter);
-
-  // Initial plot
-  drawScatter3D(xSel.value, ySel.value, zSel.value, cSel.value);
+  updateScatter();
 </script>
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  // Prepare data
   const examLabels     = {{ exam_labels|tojson }};
   const examScores     = {{ exam_avg_scores|tojson }};
   const courseLabels   = {{ course_labels|tojson }};
   const courseProgress = {{ course_avg_progress|tojson }};
   const passCount      = {{ passed_count }};
   const failCount      = {{ failed_count }};
+  const specPassCount  = {{ special_pass_count }};
+  const specFailCount  = {{ special_fail_count }};
   const trendLabels    = {{ ts_labels|tojson }};
   const trendScores    = {{ ts_avg_scores|tojson }};
+  const specTsLabels   = {{ spec_ts_labels|tojson }};
+  const specTsScores   = {{ spec_ts_avg_scores|tojson }};
 
   document.addEventListener('DOMContentLoaded', () => {
-    // Average Exam Scores Bar Chart
-    new Chart(document.getElementById('examChart').getContext('2d'), {
+    // 1) Average Exam Scores (H-Bar)
+    const examCtx = document.getElementById('examChart').getContext('2d');
+    const examColors = examLabels.map(l => l === 'Special Exam' ? '#16a085' : '#4e79a7');
+    new Chart(examCtx, {
       type: 'bar',
       data: {
         labels: examLabels,
         datasets: [{
-          label: 'Avg Score (%)',
+          label: 'Average Score (%)',
           data: examScores,
-          backgroundColor: '#3498db',
+          backgroundColor: examColors,
           borderRadius: 6,
+          barThickness: 20
         }]
       },
       options: {
         indexAxis: 'y',
         responsive: true,
-        scales: { x: { beginAtZero: true, max: 100 } },
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            beginAtZero: true,
+            max: 100,
+            ticks: { callback: v => v + '%' }
+          },
+          y: {
+            ticks: { autoSkip: false }
+          }
+        },
         plugins: {
           legend: { display: false },
-          tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x}%` } }
+          tooltip: {
+            callbacks: { label: ctx => ` ${ctx.parsed.x}%` }
+          }
         }
       }
     });
 
-    // Pass vs Fail Doughnut
-    new Chart(document.getElementById('passFailChart').getContext('2d'), {
+    // 2) Pass vs Fail: Two Mini Doughnuts
+    new Chart(document.getElementById('regPassFailChart').getContext('2d'), {
       type: 'doughnut',
       data: {
         labels: ['Passed', 'Failed'],
         datasets: [{
           data: [passCount, failCount],
           backgroundColor: ['#27ae60', '#e74c3c'],
-          hoverOffset: 8,
+          borderColor: '#fff',
           borderWidth: 2,
-          borderColor: '#fff'
+          hoverOffset: 6
         }]
       },
       options: {
-        cutout: '65%',
+        cutout: '70%',
         plugins: {
-          legend: { display: true, position: 'bottom' }
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed}%` } }
+        }
+      }
+    });
+    new Chart(document.getElementById('specPassFailChart').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Passed', 'Failed'],
+        datasets: [{
+          data: [specPassCount, specFailCount],
+          backgroundColor: ['#1abc9c', '#f39c12'],
+          borderColor: '#fff',
+          borderWidth: 2,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        cutout: '70%',
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed}%` } }
         }
       }
     });
 
-    // Course Progress Bar Chart
-    new Chart(document.getElementById('courseChart').getContext('2d'), {
+    // 3) Course Progress (H-Bar)
+    const courseCtx = document.getElementById('courseChart').getContext('2d');
+    new Chart(courseCtx, {
       type: 'bar',
       data: {
         labels: courseLabels,
@@ -478,12 +551,21 @@
           data: courseProgress,
           backgroundColor: '#f39c12',
           borderRadius: 6,
+          barThickness: 20
         }]
       },
       options: {
         indexAxis: 'y',
         responsive: true,
-        scales: { x: { beginAtZero: true, max: 100 } },
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            beginAtZero: true,
+            max: 100,
+            ticks: { callback: v => v + '%' }
+          },
+          y: { ticks: { autoSkip: false } }
+        },
         plugins: {
           legend: { display: false },
           tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x}%` } }
@@ -491,28 +573,59 @@
       }
     });
 
-    // Score Trend Line Chart
-    new Chart(document.getElementById('trendChart').getContext('2d'), {
+    // 4) Score Trend (Dual Line)
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    const allDates  = Array.from(new Set([...trendLabels, ...specTsLabels])).sort();
+    const regMap    = Object.fromEntries(trendLabels.map((d,i) => [d, trendScores[i]]));
+    const specMap   = Object.fromEntries(specTsLabels.map((d,i) => [d, specTsScores[i]]));
+    const regData   = allDates.map(d => regMap[d] !== undefined ? regMap[d] : null);
+    const specData  = allDates.map(d => specMap[d] !== undefined ? specMap[d] : null);
+
+    new Chart(trendCtx, {
       type: 'line',
       data: {
-        labels: trendLabels,
-        datasets: [{
-          label: 'Avg Score',
-          data: trendScores,
-          fill: true,
-          borderColor: '#8e44ad',
-          backgroundColor: 'rgba(142,68,173,0.1)',
-          tension: 0.25,
-          pointBackgroundColor: '#8e44ad',
-          pointRadius: 4,
-          pointHoverRadius: 6,
-        }]
+        labels: allDates,
+        datasets: [
+          {
+            label: 'Avg Regular Exam',
+            data: regData,
+            fill: true,
+            borderColor: '#8e44ad',
+            backgroundColor: 'rgba(142,68,173,0.1)',
+            tension: 0.25,
+            pointBackgroundColor: '#8e44ad',
+            pointRadius: 4,
+            pointHoverRadius: 6
+          },
+          {
+            label: 'Avg Special Exam',
+            data: specData,
+            fill: false,
+            borderColor: '#16a085',
+            backgroundColor: 'rgba(22,160,133,0.1)',
+            tension: 0.25,
+            pointBackgroundColor: '#16a085',
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }
+        ]
       },
       options: {
         responsive: true,
-        scales: { y: { beginAtZero: true, max: 100 } },
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            ticks: { callback: v => v + '%' }
+          },
+          x: {
+            ticks: { autoSkip: true, maxRotation: 0, minRotation: 0 }
+          }
+        },
         plugins: {
-          legend: { display: true, position: 'top' }
+          legend: { display: true, position: 'top' },
+          tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}%` } }
         }
       }
     });

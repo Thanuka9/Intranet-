@@ -17,7 +17,6 @@ from models import (
 from models import FailedLogin
 import os
 
-
 auth_routes = Blueprint('auth_routes', __name__)
 
 # Serializer for email-based tokens
@@ -31,22 +30,21 @@ MAX_FAILED_ATTEMPTS = 3
 
 @auth_routes.route('/register', methods=['GET', 'POST'])
 def register():
-    # GET: populate dropdowns
-    departments  = Department.query.all()
+    departments = Department.query.all()
     designations = Designation.query.all()
-    clients      = Client.query.all()
+    clients = Client.query.all()
 
     if request.method == 'POST':
         # 1. Extract form fields
-        first_name     = request.form['first_name']
-        last_name      = request.form['last_name']
+        first_name = request.form['first_name']
+        last_name = request.form['last_name']
         employee_email = request.form['employee_email']
-        password       = request.form['password']
+        password = request.form['password']
         designation_id = request.form['designation']
-        department_id  = request.form['department']
-        employee_id    = request.form['employee_id']
-        join_date      = request.form['join_date']
-        client_ids     = request.form.getlist('clients', type=int)
+        department_id = request.form['department']
+        employee_id = request.form['employee_id']
+        join_date = request.form['join_date']
+        client_ids = request.form.getlist('clients', type=int)
 
         # 2. Domain restriction
         if not employee_email.endswith("@collectivercm.com"):
@@ -63,15 +61,15 @@ def register():
 
         # 5. Create user with token
         new_user = User(
-            first_name         = first_name,
-            last_name          = last_name,
-            employee_email     = employee_email,
-            employee_id        = employee_id,
-            join_date          = join_date,
-            department_id      = department_id,
-            designation_id     = designation_id,
-            is_verified        = False,
-            verification_token = token
+            first_name=first_name,
+            last_name=last_name,
+            employee_email=employee_email,
+            employee_id=employee_id,
+            join_date=join_date,
+            department_id=department_id,
+            designation_id=designation_id,
+            is_verified=False,
+            verification_token=token
         )
         new_user.set_password(password)
 
@@ -88,7 +86,13 @@ def register():
             new_user.roles.append(member)
 
         # 9. Commit everything
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            logging.error(f"Database error during registration: {e}")
+            flash("Registration error. Please try again.", "error")
+            return redirect(url_for('auth_routes.register'))
 
         # 10. Send verification email
         verify_url = url_for('auth_routes.verify_email', token=token, _external=True)
@@ -96,12 +100,10 @@ def register():
             subject="Verify Your Email",
             recipients=[employee_email]
         )
-        # Plain-text fallback
         msg.body = (
             "Please verify your email by clicking the link:\n\n"
             f"{verify_url}"
         )
-        # HTML version
         msg.html = render_template(
             'emails/verification_email.html',
             user=new_user,
@@ -123,37 +125,18 @@ def register():
 
 @auth_routes.route('/verify/<token>')
 def verify_email(token):
-    """Verifies a user's email address using a token.
-
-    This function is typically accessed via a link sent to the user's email
-    address during registration. It uses a timed serializer to validate the
-    token and, if valid, marks the user's email as verified in the database.
-
-    Args:
-        token (str): The verification token from the email link.
-
-    Returns:
-        werkzeug.wrappers.response.Response: Redirects to the login page
-        with a flash message indicating the outcome of the verification.
-    """
-    # Query the User model to find a user with the given verification token.
+    """Verifies a user's email address using a token."""
     user = User.query.filter_by(verification_token=token).first()
 
-    # If no user is found with the token, it's invalid or expired.
     if not user:
         flash("Invalid or expired verification link.", "error")
         return redirect(url_for('auth_routes.login'))
 
-    # Check if the user's email is already verified.
     if user.is_verified:
         flash("Already verified.", "info")
     else:
-        # If the user is not already verified, mark them as verified.
         user.is_verified = True
-        # Clear the verification token from the user's record.
         user.verification_token = None
-        # Commit the changes to the database.
-        # This database commit will be refactored in a later step to be part of a larger transaction.
         try:
             db.session.commit()
             flash("Email verified! You can now log in.", "success")
@@ -162,7 +145,6 @@ def verify_email(token):
             logging.error(f"Database error during email verification: {e}")
             flash("Could not verify email. Please try again or contact support.", "error")
 
-    # Redirect the user to the login page, regardless of verification status.
     return redirect(url_for('auth_routes.login'))
 
 
@@ -170,8 +152,8 @@ def verify_email(token):
 def login():
     if request.method == 'POST':
         email = request.form.get('employee_email')
-        pwd   = request.form.get('password')
-        user  = User.query.filter_by(employee_email=email).first()
+        pwd = request.form.get('password')
+        user = User.query.filter_by(employee_email=email).first()
 
         # 1) Locked-out users
         if user and user.is_locked:
@@ -185,21 +167,28 @@ def login():
         # 2) Correct password path
         if user and user.check_password(pwd):
             user.failed_login_count = 0
-            user.is_locked         = False
-            user.locked_at         = None
+            user.is_locked = False
+            user.locked_at = None
             db.session.commit()
 
             if not user.is_verified:
                 flash("Account not verified. Contact support.", "error")
                 return redirect(url_for('auth_routes.login'))
 
-            session['user_id']        = user.id
+            session['user_id'] = user.id
             session['is_super_admin'] = user.is_super_admin
-            session['role_id']        = user.roles[0].id if user.roles else None
+            session['role_id'] = user.roles[0].id if user.roles else None
             session['designation_id'] = user.designation_id
 
             # generate & send 2FA
             user.generate_2fa_code()
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                logging.error(f"Database error during 2FA code generation: {e}")
+                flash("Server error. Please try again.", "error")
+                return redirect(url_for('auth_routes.login'))
             msg = Message(
                 subject="Your 2FA Code",
                 recipients=[user.employee_email]
@@ -266,6 +255,13 @@ def resend_2fa():
 
     user = User.query.get(user_id)
     user.generate_2fa_code()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        logging.error(f"Database error during 2FA resend: {e}")
+        flash("Server error. Please try again.", "error")
+        return redirect(url_for('auth_routes.login'))
     msg = Message(
         subject="Your 2FA Code",
         recipients=[user.employee_email]
@@ -285,28 +281,34 @@ def resend_2fa():
 def forgot_password():
     if request.method == 'POST':
         email = request.form['employee_email']
-        user  = User.query.filter_by(employee_email=email).first()
+        user = User.query.filter_by(employee_email=email).first()
         if not user:
             flash("Email not found.", "error")
             return redirect(url_for('auth_routes.login'))
 
         # 1) generate the token & expiry
-        token      = s.dumps(email, salt='password-reset-salt')
+        token = s.dumps(email, salt='password-reset-salt')
         expires_at = datetime.utcnow() + timedelta(hours=1)
 
-        # 2) record it in your new table
+        # 2) record it in PasswordResetRequest table
         pr = PasswordResetRequest(
-            user_id    = user.id,
-            token      = token,
-            expires_at = expires_at
+            user_id=user.id,
+            token=token,
+            expires_at=expires_at
         )
         db.session.add(pr)
 
         # (optional) still keep it on the User for quick lookup
-        user.password_reset_token      = token
+        user.password_reset_token = token
         user.password_reset_expiration = expires_at
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            logging.error(f"Database error during forgot password: {e}")
+            flash("Server error. Please try again.", "error")
+            return redirect(url_for('auth_routes.login'))
 
         # 3) send the email
         reset_url = url_for('auth_routes.reset_password', token=token, _external=True)
@@ -345,21 +347,30 @@ def reset_password(token):
     if request.method == 'POST':
         pw1 = request.form['new_password']
         pw2 = request.form['confirm_password']
-        if pw1 != pw2:
+        if not pw1 or not pw2:
+            flash("Password fields cannot be empty.", "error")
+        elif pw1 != pw2:
             flash("Passwords do not match.", "error")
+        elif len(pw1) < 8:
+            flash("Password must be at least 8 characters.", "error")
         else:
             user.set_password(pw1)
 
             # 3) clean up
             db.session.delete(pr)
-            user.password_reset_token      = None
+            user.password_reset_token = None
             user.password_reset_expiration = None
-            db.session.commit()
-
-            flash("Password has been reset! You can now log in.", "success")
-            return redirect(url_for('auth_routes.login'))
+            try:
+                db.session.commit()
+                flash("Password has been reset! You can now log in.", "success")
+                return redirect(url_for('auth_routes.login'))
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                logging.error(f"Database error during password reset: {e}")
+                flash("Could not reset password. Please try again.", "error")
 
     return render_template('reset_password.html')
+
 
 @auth_routes.route('/logout')
 @login_required
@@ -370,6 +381,7 @@ def logout():
     logging.info(f"User {user_id} logged out from {request.remote_addr}")
     flash("You have been logged out successfully.", "success")
     return redirect(url_for('auth_routes.login'))
+
 
 def log_failed_login_attempt(email):
     ip = request.remote_addr

@@ -5,30 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>View Task - Collective</title>
   <!-- Bootstrap 5 -->
-  <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
-  />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"/>
   <!-- Font Awesome -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-  />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <style>
-    /* —— Base & Layout —— */
+    html, body {
+      height: 100%;
+    }
     body {
       display: flex;
       flex-direction: column;
       min-height: 100vh;
       margin: 0;
-      background-image: url("{{ url_for('static', filename='images/background.jpg') }}");
-      background-size: cover;
-      background-position: center;
-      font-family: Arial, sans-serif;
+      background: linear-gradient(120deg, #e7eaf6 0%, #fff 100%);
+      font-family: 'Segoe UI', Arial, sans-serif;
     }
+
     .main-wrapper {
       flex: 1;
-      padding: 20px 0;
+      padding: 36px 0 24px 0;
     }
 
     /* —— Top Bar (shared) —— */
@@ -36,90 +31,211 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 24px;
-      background-color: #fff;
-      border-bottom: 1px solid #ddd;
+      padding: 6px 18px 6px 12px;
+      background: rgba(255,255,255,0.96);
+      border-bottom: 1px solid #e3e3e3;
+      min-height: 48px;
+      box-shadow: 0 1px 5px 0 rgba(120,120,120,0.04);
+      font-size: 1.08rem;
+      z-index: 10;
     }
     .top-bar img {
-      height: 40px;
-      margin-left: 10px;
+      height: 32px;
+      margin-right: 8px;
+      filter: drop-shadow(0 1px 1px #e3e3e3);
     }
     .brand {
-      font-size: 1.6rem;
-      font-weight: bold;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-left: 1px;
     }
-    .brand .black { color: #000; }
-    .brand .red   { color: rgba(186, 30, 36, 1); }
+    .brand .black { color: #222; }
+    .brand .red   { color: #ba1e24; }
 
     /* —— Container Content —— */
     .container {
-      max-width: 800px;
+      max-width: 720px;
       margin: 0 auto;
-      background: #ffffffcc;
-      border-radius: 8px;
-      padding: 30px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      background: rgba(255,255,255,0.98);
+      border-radius: 12px;
+      padding: 36px 32px 28px 32px;
+      box-shadow: 0 6px 32px rgba(58,58,80,0.09),0 1.5px 4px rgba(120,120,120,0.06);
+      /* backdrop-filter: blur(2.5px); */
+      position: relative;
+      margin-top: 12px;
     }
     .container h2 {
-      font-weight: bold;
-      margin-bottom: 10px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #22285a;
+      word-break: break-word;
     }
     .container p {
-      margin-bottom: 15px;
+      margin-bottom: 12px;
+      color: #444b6e;
+      font-size: 1.04rem;
+    }
+    .container strong {
+      color: #3a395e;
+    }
+
+    /* —— Flash Messages —— */
+    .alert {
+      font-size: 1rem;
+      padding: 9px 18px 9px 12px;
+      border-radius: 6px;
+      margin-bottom: 24px;
     }
 
     /* —— Progress Bar —— */
+    .progress {
+      height: 26px;
+      background: #eaf0fa;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 2px rgba(80,80,120,0.04);
+    }
     .progress-bar-custom {
-      height: 24px;
-      font-size: 0.9rem;
-      transition: width 0.4s ease;
-      background-color: #28a745;
+      height: 26px;
+      font-size: 1.01rem;
+      font-weight: 600;
       color: #fff;
-      font-weight: bold;
       display: flex;
       align-items: center;
       justify-content: center;
-      text-align: center;
+      border-radius: 8px;
+      transition: width 0.4s cubic-bezier(.4,1.3,.29,.99), background 0.3s;
+      letter-spacing: 1.5px;
+      box-shadow: 0 2px 10px 0 rgba(40,80,120,0.06);
     }
 
-    /* —— Buttons & Form Controls —— */
-    .btn-primary, .btn-secondary {
-      font-size: 1rem;
-      padding: 10px 20px;
-      transition: background-color 0.3s ease;
+    /* —— Form Improvements —— */
+    form .form-label {
+      font-weight: 500;
+      color: #304075;
+      margin-bottom: 2px;
     }
-    .btn-primary:hover   { background-color: #0056b3; }
-    .btn-secondary:hover { background-color: #5a6268; }
-    .form-control-lg {
-      border-radius: 6px;
-      padding: 10px;
+    .form-control-lg, .form-control-file {
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 1.08rem;
+      margin-bottom: 3px;
     }
     .form-control-file {
-      padding: 6px;
-      border-radius: 6px;
+      background: #f6f8fc;
     }
+    .form-text {
+      font-size: 0.98rem;
+      color: #7a8caa;
+      margin-left: 4px;
+    }
+    .btn-primary, .btn-secondary {
+      font-size: 1rem;
+      padding: 9px 24px;
+      border-radius: 7px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      box-shadow: 0 1px 4px 0 rgba(40,80,120,0.05);
+      border: none;
+    }
+    .btn-primary {
+      background: linear-gradient(90deg, #3e64ff 60%, #5edfff 100%);
+      color: #fff;
+      transition: background 0.24s;
+    }
+    .btn-primary:hover   { background: linear-gradient(90deg, #2749e8 60%, #48b8d9 100%);}
+    .btn-secondary {
+      background: #e7eaf6;
+      color: #304075;
+    }
+    .btn-secondary:hover { background: #c7d1e6; color: #22285a;}
 
     /* —— Attachments List —— */
     .list-group-item {
-      font-size: 1rem;
-      padding: 12px 15px;
+      font-size: 1.02rem;
+      padding: 11px 14px;
       border: none;
       display: flex;
       align-items: center;
+      background: transparent;
+      transition: background 0.13s;
     }
     .list-group-item i {
       margin-right: 10px;
-      color: #007bff;
+      color: #3e64ff;
+      font-size: 1.15em;
     }
-    .list-group-item:hover { background-color: #f8f9fa; }
+    .list-group-item a {
+      color: #3a395e;
+      text-decoration: underline dotted;
+      font-weight: 500;
+      transition: color 0.18s;
+    }
+    .list-group-item a:hover {
+      color: #2540b5;
+      text-decoration: underline solid;
+    }
+    .list-group-item:hover { background: #f3f7fa; }
+    .list-group-item.text-muted {
+      color: #9ba7c7;
+    }
+
+    /* — Section Headings — */
+    h5 {
+      color: #2540b5;
+      margin-top: 24px;
+      margin-bottom: 13px;
+      font-weight: 600;
+      font-size: 1.13rem;
+      letter-spacing: 0.5px;
+    }
+
+    /* —— Responsive —— */
+    @media (max-width: 600px) {
+      .container {
+        padding: 19px 7vw 14px 7vw;
+        max-width: 98vw;
+      }
+      .top-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        min-height: 40px;
+        padding: 3px 2vw 3px 2vw;
+      }
+      .brand {
+        font-size: 1.05rem;
+      }
+      .progress-bar-custom { font-size: 0.98rem; }
+    }
 
     /* —— Footer (shared) —— */
     footer {
-      background-color: #343a40;
+      background: #343a40;
       color: #fff;
       text-align: center;
-      padding: 12px 0;
+      padding: 10px 0 7px 0;
+      font-size: 0.99rem;
       margin-top: auto;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      box-shadow: 0 -1px 5px 0 rgba(100,100,120,0.04);
+    }
+    /* Add subtle divider */
+    .divider {
+      border-top: 1px dashed #d1d8ec;
+      margin: 28px 0 14px 0;
+    }
+
+    /* Subtle animation for progress bar */
+    @keyframes progressGlow {
+      0%   { box-shadow: 0 0 0 0 rgba(90,210,255,0.2);}
+      70%  { box-shadow: 0 0 18px 2px rgba(90,210,255,0.13);}
+      100% { box-shadow: 0 0 0 0 rgba(90,210,255,0.2);}
+    }
+    .progress-bar-custom {
+      animation: progressGlow 2s infinite alternate;
     }
   </style>
 </head>
@@ -127,8 +243,9 @@
 
   <!-- Top Bar -->
   <div class="top-bar">
-    <a href="{{ url_for('task_routes.view_tasks') }}" class="btn btn-secondary">
-      <i class="fas fa-arrow-left"></i> Back
+    <a href="{{ url_for('task_routes.view_tasks') }}" class="btn btn-secondary py-1 px-3">
+      <i class="fas fa-arrow-left"></i>
+      <span class="d-none d-md-inline ms-1">Back</span>
     </a>
     <div class="d-flex align-items-center">
       <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" />
@@ -141,25 +258,49 @@
   <!-- Main Content -->
   <div class="main-wrapper">
     <div class="container">
+
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
       <h2><i class="fas fa-tasks me-2"></i>{{ task.title }}</h2>
-      <p><i class="fas fa-align-left me-1"></i>{{ task.description }}</p>
-      <p><i class="fas fa-calendar-alt me-1"></i>
-        <strong>Due Date:</strong> {{ task.due_date.strftime('%B %d, %Y') }}
-      </p>
-      <p><i class="fas fa-flag me-1"></i>
-        <strong>Priority:</strong> {{ task.priority }}
-      </p>
-      <p><i class="fas fa-info-circle me-1"></i>
-        <strong>Status:</strong> {{ task.status }}
-      </p>
+      <div class="row mb-2">
+        <div class="col-md-7">
+          <p><i class="fas fa-align-left me-1"></i>{{ task.description }}</p>
+        </div>
+        <div class="col-md-5">
+          <div class="row mb-1">
+            <div class="col-12 mb-1">
+              <span class="badge bg-light text-dark me-1"><i class="fas fa-calendar-alt me-1"></i>
+                <strong>Due:</strong> {{ task.due_date.strftime('%b %d, %Y') }}
+              </span>
+              <span class="badge bg-light text-dark me-1"><i class="fas fa-flag me-1"></i>
+                <strong>Priority:</strong> {{ task.priority }}
+              </span>
+              <span class="badge bg-light text-dark">
+                <i class="fas fa-info-circle me-1"></i>
+                <strong>Status:</strong> {{ task.status }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Progress Display -->
-      <div class="mt-4">
+      <div class="mt-3 mb-2">
         <h5><i class="fas fa-chart-line me-1"></i>Progress</h5>
         <div class="progress">
           <div
             id="progress-bar"
-            class="progress-bar progress-bar-striped progress-bar-animated progress-bar-custom"
+            class="progress-bar progress-bar-striped progress-bar-animated progress-bar-custom bg-success"
             role="progressbar"
             style="width: 0%;"
             aria-valuemin="0"
@@ -174,7 +315,8 @@
 
       <!-- Status Update Section -->
       {% if current_user in task.assignees %}
-      <form method="POST" enctype="multipart/form-data" class="mt-4">
+      <div class="divider"></div>
+      <form method="POST" enctype="multipart/form-data" class="mt-2 mb-0">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
         <div class="mb-3">
@@ -198,37 +340,41 @@
                  class="form-control-file"
                  id="email_attachments"
                  name="email_attachments"
-                 multiple>
-          <div class="form-text">Allowed: pdf, png, jpg, jpeg, docx, xlsx. Max total 25 MB.</div>
+                 multiple
+                 accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx">
+          <div class="form-text">
+            Allowed: pdf, png, jpg, jpeg, docx, xlsx.
+            <span class="d-none d-md-inline">Max 25MB per file. 100MB total.</span>
+          </div>
         </div>
 
-        <button type="submit" class="btn btn-primary">
+        <button type="submit" class="btn btn-primary mt-1">
           <i class="fas fa-save me-1"></i> Update
         </button>
+        <div id="file-size-message" class="text-danger mt-2" style="display: none;"></div>
       </form>
       {% endif %}
 
+      <div class="divider"></div>
       <!-- Attachments -->
-      <div class="mt-4">
-        <h5><i class="fas fa-paperclip me-1"></i>Attachments</h5>
-        <ul class="list-group list-group-flush">
-          {% for attachment in attachments %}
-          <li class="list-group-item">
-            <i class="fas fa-file-alt"></i>
-            <a href="{{ url_for('task_routes.download_attachment',
-                                task_id=task.id,
-                                attachment_id=attachment.id) }}"
-               class="text-decoration-none">
-              {{ attachment.filename }}
-            </a>
-          </li>
-          {% else %}
-          <li class="list-group-item text-muted">
-            <i class="fas fa-info-circle"></i> No attachments available.
-          </li>
-          {% endfor %}
-        </ul>
-      </div>
+      <h5><i class="fas fa-paperclip me-1"></i>Attachments</h5>
+      <ul class="list-group list-group-flush">
+        {% for attachment in attachments %}
+        <li class="list-group-item">
+          <i class="fas fa-file-alt"></i>
+          <a href="{{ url_for('task_routes.download_attachment',
+                              task_id=task.id,
+                              attachment_id=attachment.id) }}"
+             class="text-decoration-none">
+            {{ attachment.filename }}
+          </a>
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted">
+          <i class="fas fa-info-circle"></i> No attachments available.
+        </li>
+        {% endfor %}
+      </ul>
     </div>
   </div>
 
@@ -247,6 +393,16 @@
       bar.setAttribute("aria-valuenow", progressValue);
       bar.setAttribute("title", progressValue + "%");
       bar.textContent = progressValue + "%";
+
+      // Dynamic progress bar color
+      bar.classList.remove("bg-success", "bg-warning", "bg-danger");
+      if (progressValue >= 80) {
+        bar.classList.add("bg-success");
+      } else if (progressValue >= 40) {
+        bar.classList.add("bg-warning");
+      } else {
+        bar.classList.add("bg-danger");
+      }
     });
 
     document.querySelector('form')?.addEventListener('submit', e => {
@@ -255,7 +411,16 @@
       for (let f of files) total += f.size;
       if (total > 25 * 1024 * 1024) {
         e.preventDefault();
-        alert("Total file size exceeds 25 MB. Remove some files.");
+        const msg = "Total file size exceeds 25 MB. Remove some files.";
+        alert(msg);
+        const span = document.getElementById('file-size-message');
+        if (span) {
+          span.textContent = msg;
+          span.style.display = 'block';
+        }
+      } else {
+        const span = document.getElementById('file-size-message');
+        if (span) span.style.display = 'none';
       }
     });
   </script>

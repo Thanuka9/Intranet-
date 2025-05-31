@@ -17,7 +17,7 @@ from werkzeug.utils import secure_filename
 from gridfs import GridFS
 from pymongo import MongoClient
 from functools import wraps
-from sqlalchemy import func, or_, and_
+from sqlalchemy import func, or_, and_, case
 import io, csv
 from bson import ObjectId
 from flask import make_response
@@ -27,6 +27,8 @@ from pymongo import MongoClient
 from gridfs import GridFS
 from sqlalchemy import desc
 from IPython.display import HTML
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy import text
 from sqlalchemy.orm  import joinedload
 
 
@@ -103,6 +105,44 @@ def super_admin_required(func):
             return redirect(request.referrer or url_for('admin_routes.admin_dashboard'))
         return func(*args, **kwargs)
     return wrapper
+
+# --- Sync PostgreSQL Sequence ---
+def sync_sequence(model):
+    """
+    Reset the PostgreSQL sequence for the given model’s primary key.
+    This assumes that:
+      - The primary key column is named `id`.
+      - The underlying sequence is named `<tablename>_id_seq`.
+    After calling this, the next INSERT (without an explicit id) will use MAX(id)+1.
+    """
+    table_name = model.__tablename__            # e.g. "categories"
+    seq_name = f"{table_name}_id_seq"          # e.g. "categories_id_seq"
+
+    try:
+        # 1) Find the current maximum id in the table
+        result = db.session.execute(
+            text(f"SELECT COALESCE(MAX(id), 0) FROM {table_name}")
+        )
+        max_id = result.scalar() or 0
+
+        # 2) Compute the next value
+        next_val = max_id + 1
+
+        # 3) Reset the sequence to (max_id + 1)
+        db.session.execute(
+            text(f"ALTER SEQUENCE {seq_name} RESTART WITH :next_val"),
+            {"next_val": next_val}
+        )
+
+        # 4) Commit so that ALTER SEQUENCE takes effect immediately
+        db.session.commit()
+        current_app.logger.info(f"Sequence {seq_name} synced to next value {next_val}")
+
+    except Exception as e:
+        # If something goes wrong (e.g. sequence does not exist), rollback and log
+        db.session.rollback()
+        current_app.logger.error(f"Failed to sync sequence {seq_name}: {e}")
+
 
 # --- Admin Dashboard ---
 @admin_routes.route('/admin')
@@ -590,21 +630,20 @@ def view_exams():
         categories=categories,
         users=users
     )
-# --- Admin Analytics ---
+
+# --- View Analytics ---
 @admin_routes.route('/admin/analytics')
 @login_required
 @admin_required
 def view_analytics():
-    # Add 'all' as an option for all time
     periods = ['all', 30, 60, 90]
     period_str = request.args.get('period', '')
     start_date_str = request.args.get('start_date', '').strip()
     end_date_str = request.args.get('end_date', '').strip()
     q = request.args.get('q', '').strip()
-
     today = datetime.utcnow().date()
 
-    # All time analytics
+    # Determine time range
     if period_str == 'all':
         start_date = None
         end_date = None
@@ -632,23 +671,23 @@ def view_analytics():
         start_date = today - timedelta(days=period)
         end_date = today
 
-    # --- User queries ---
     user_query = User.query.filter(User.deleted_at.is_(None))
-    # Total users (not deleted)
     total_users = user_query.count()
     active_users = total_users
 
-    # --- Analytics Queries ---
     def date_filter(query, model_field):
-        """Apply date filter if start_date/end_date are set (not all time)"""
         if start_date and end_date:
             return query.filter(model_field >= start_date, model_field <= end_date)
         return query
 
-    # Average exam score, course progress, exam stats filtered by date if not all time
-    avg_exam_score = date_filter(db.session.query(func.avg(UserScore.score)), UserScore.created_at).scalar() or 0
-    avg_course_progress = date_filter(db.session.query(func.avg(UserProgress.progress_percentage)), UserProgress.completion_date).scalar() or 0
+    avg_exam_score = date_filter(
+        db.session.query(func.avg(UserScore.score)), UserScore.created_at
+    ).scalar() or 0
+    avg_course_progress = date_filter(
+        db.session.query(func.avg(UserProgress.progress_percentage)), UserProgress.completion_date
+    ).scalar() or 0
 
+    # Per-exam avg scores (unchanged)
     exam_data = (
         date_filter(
             db.session.query(
@@ -665,8 +704,35 @@ def view_analytics():
     exam_labels = [row.title for row in exam_data]
     exam_avg_scores = [round(row.avg_score, 2) for row in exam_data]
 
-    passed_count = date_filter(UserScore.query.filter(UserScore.score >= 56), UserScore.created_at).count()
-    failed_count = date_filter(UserScore.query.filter(UserScore.score < 56), UserScore.created_at).count()
+    # --- APPEND “Special Exam” to the same arrays so that it appears as its own bar ---
+    special_records = SpecialExamRecord.query.all()
+    special_totals = 0
+    special_sum_scores = 0.0
+    for rec in special_records:
+        took1 = rec.paper1_completed_at is not None
+        took2 = rec.paper2_completed_at is not None
+        if not (took1 or took2):
+            continue
+        scores = []
+        if took1:
+            scores.append(rec.paper1_score)
+        if took2:
+            scores.append(rec.paper2_score)
+        if scores:
+            special_sum_scores += sum(scores) / len(scores)
+            special_totals += 1
+    special_avg_score = round((special_sum_scores / special_totals), 2) if special_totals else 0.0
+    exam_labels.append("Special Exam")
+    exam_avg_scores.append(special_avg_score)
+
+    passed_count = date_filter(
+        UserScore.query.filter(UserScore.score >= 56),
+        UserScore.created_at
+    ).count()
+    failed_count = date_filter(
+        UserScore.query.filter(UserScore.score < 56),
+        UserScore.created_at
+    ).count()
     pf_total = passed_count + failed_count or 1
     pass_pct = round(passed_count / pf_total * 100, 1)
     fail_pct = round(failed_count / pf_total * 100, 1)
@@ -687,6 +753,7 @@ def view_analytics():
     course_labels = [row.title for row in cp_data]
     course_avg_progress = [round(row.avg_prog, 2) for row in cp_data]
 
+    # Time-series for Regular Exams (unchanged):
     ts = (
         date_filter(
             db.session.query(
@@ -702,13 +769,55 @@ def view_analytics():
     ts_labels = [r.date.strftime('%Y-%m-%d') for r in ts]
     ts_avg_scores = [round(r.avg_score, 2) for r in ts]
 
-    # Top users by exam score in range
+    # --- FIXED: Build a time-series for SPECIAL EXAMS ---
+    spec_ts_query = (
+        db.session.query(
+            func.date(SpecialExamRecord.created_at).label('spec_date'),
+            func.avg(
+                case(
+                    (SpecialExamRecord.paper2_completed_at.is_(None), SpecialExamRecord.paper1_score),
+                    (SpecialExamRecord.paper1_completed_at.is_(None), SpecialExamRecord.paper2_score),
+                    else_=( (SpecialExamRecord.paper1_score + SpecialExamRecord.paper2_score) / 2 )
+                )
+            ).label('spec_avg_score')
+        )
+        .filter(
+            SpecialExamRecord.created_at >= start_date if start_date else True,
+            SpecialExamRecord.created_at <= end_date if end_date else True
+        )
+        .group_by(func.date(SpecialExamRecord.created_at))
+        .order_by(func.date(SpecialExamRecord.created_at))
+        .all()
+    )
+    spec_ts_labels = [r.spec_date.strftime('%Y-%m-%d') for r in spec_ts_query]
+    spec_ts_avg_scores = [round(r.spec_avg_score, 2) for r in spec_ts_query]
+
     top_users_query = db.session.query(User, func.avg(UserScore.score).label('avg_score')) \
         .join(UserScore, UserScore.user_id == User.id) \
         .filter(User.deleted_at.is_(None))
     if start_date and end_date:
-        top_users_query = top_users_query.filter(UserScore.created_at >= start_date, UserScore.created_at <= end_date)
-    top_users = top_users_query.group_by(User).order_by(func.avg(UserScore.score).desc()).limit(5).all()
+        top_users_query = top_users_query.filter(
+            UserScore.created_at >= start_date,
+            UserScore.created_at <= end_date
+        )
+    top_users = top_users_query.group_by(User).order_by(
+        func.avg(UserScore.score).desc()
+    ).limit(5).all()
+
+    # --- Compute Special Exam Metrics (pass/fail) ---
+    special_pass = 0
+    special_fail = 0
+    for rec in special_records:
+        took1 = rec.paper1_completed_at is not None
+        took2 = rec.paper2_completed_at is not None
+        if not took1 and not took2:
+            continue
+        passed1 = rec.paper1_passed
+        passed2 = rec.paper2_passed
+        if passed1 or passed2:
+            special_pass += 1
+        else:
+            special_fail += 1
 
     # --- Advanced 3D Scatter Metrics ---
     users_all = User.query.filter(User.deleted_at.is_(None)).all()
@@ -720,33 +829,28 @@ def view_analytics():
         "avg_attempts_per_exam": [],
         "score_improvement": [],
         "last_activity_days_ago": [],
+        "avg_special_score": [],
         "user_labels": [],
         "department": [],
     }
     for user in users_all:
-        # Scores and progress
         scores = sorted(user.scores, key=lambda s: s.created_at)
         progresses = user.study_progress
 
-        # Avg exam score
         avg_score = sum(s.score for s in scores) / len(scores) if scores else 0
         metrics["avg_exam_score"].append(round(avg_score, 2))
 
-        # Total time spent
         time_spent = sum([getattr(sp, "time_spent", 0) for sp in progresses])
         metrics["total_time_spent"].append(round(time_spent, 2))
 
-        # Completion rate
         courses_assigned = len(progresses)
         courses_completed = sum(1 for sp in progresses if getattr(sp, "progress_percentage", 0) >= 100)
         completion_rate = (courses_completed / courses_assigned * 100) if courses_assigned else 0
         metrics["completion_rate"].append(round(completion_rate, 2))
 
-        # Exams taken
         exams_taken = len(scores)
         metrics["exams_taken"].append(exams_taken)
 
-        # Avg attempts per exam (if attempt tracking)
         exam_ids = set()
         attempts = 0
         for s in scores:
@@ -755,14 +859,12 @@ def view_analytics():
         avg_attempts = (attempts / len(exam_ids)) if exam_ids else 0
         metrics["avg_attempts_per_exam"].append(round(avg_attempts, 2))
 
-        # Score improvement (last - first)
         if len(scores) >= 2:
             score_improvement = scores[-1].score - scores[0].score
         else:
             score_improvement = 0
         metrics["score_improvement"].append(round(score_improvement, 2))
 
-        # Last activity days ago
         last_dates = [s.created_at for s in scores] + [sp.completion_date for sp in progresses if sp.completion_date]
         last_dates = [d for d in last_dates if d]
         if last_dates:
@@ -772,7 +874,23 @@ def view_analytics():
             days_ago = None
         metrics["last_activity_days_ago"].append(days_ago if days_ago is not None else "")
 
-        # Labels
+        # --- Per-user avg_special_score
+        rec = getattr(user, "special_exam_record", None)
+        if rec:
+            took1 = rec.paper1_completed_at is not None
+            took2 = rec.paper2_completed_at is not None
+            if took1 and took2:
+                special_user_avg = (rec.paper1_score + rec.paper2_score) / 2
+            elif took1:
+                special_user_avg = rec.paper1_score
+            elif took2:
+                special_user_avg = rec.paper2_score
+            else:
+                special_user_avg = 0
+        else:
+            special_user_avg = 0
+        metrics["avg_special_score"].append(round(special_user_avg, 2))
+
         metrics["user_labels"].append(f"{user.first_name} {user.last_name}")
         metrics["department"].append(user.department.name if user.department else "N/A")
 
@@ -784,23 +902,30 @@ def view_analytics():
         {"key": "avg_attempts_per_exam", "label": "Avg Attempts per Exam"},
         {"key": "score_improvement", "label": "Score Improvement"},
         {"key": "last_activity_days_ago", "label": "Last Activity (days ago)"},
+        {"key": "avg_special_score", "label": "Avg Special Exam Score"},
     ]
-    # Default axes
+
     default_x = "avg_exam_score"
     default_y = "total_time_spent"
     default_z = "completion_rate"
 
     return render_template(
         'admin_analytics.html',
-        period=period, periods=periods,
+        period=period,
+        periods=periods,
         total_users=total_users,
         active_users=active_users,
         avg_exam_score=round(avg_exam_score, 2),
         avg_course_progress=round(avg_course_progress, 2),
+        special_avg_score=special_avg_score,
         exam_labels=exam_labels,
         exam_avg_scores=exam_avg_scores,
+        spec_ts_labels=spec_ts_labels,
+        spec_ts_avg_scores=spec_ts_avg_scores,
         passed_count=passed_count,
         failed_count=failed_count,
+        special_pass_count=special_pass,
+        special_fail_count=special_fail,
         pass_pct=pass_pct,
         fail_pct=fail_pct,
         course_labels=course_labels,
@@ -869,39 +994,97 @@ def analytics_user_list():
 @admin_required
 def analytics_user_detail(user_id):
     user = User.query.get_or_404(user_id)
-    # Exams: show all attempts, with date
-    exam_scores = (
+
+    # 1) Fetch all “regular” exam attempts (title, score, date)
+    exam_scores_query = (
         db.session.query(Exam.title, UserScore.score, UserScore.created_at)
         .join(UserScore, UserScore.exam_id == Exam.id)
         .filter(UserScore.user_id == user_id)
         .order_by(UserScore.created_at)
         .all()
     )
-    course_progress = (
-        db.session.query(StudyMaterial.title, UserProgress.progress_percentage, UserProgress.completion_date)
+    exam_titles       = [e[0] for e in exam_scores_query]
+    exam_scores_list  = [e[1] for e in exam_scores_query]
+    exam_dates        = [e[2].strftime('%Y-%m-%d') if e[2] else '' for e in exam_scores_query]
+
+    # 2) Fetch course progress (title, percent, date)
+    course_progress_query = (
+        db.session.query(
+            StudyMaterial.title,
+            UserProgress.progress_percentage,
+            UserProgress.completion_date
+        )
         .join(UserProgress, UserProgress.study_material_id == StudyMaterial.id)
         .filter(UserProgress.user_id == user_id)
+        .order_by(UserProgress.completion_date)
         .all()
     )
-    exam_titles = [e[0] for e in exam_scores]
-    exam_scores_list = [e[1] for e in exam_scores]
-    exam_dates = [e[2].strftime('%Y-%m-%d') if e[2] else '' for e in exam_scores]
-    course_titles = [c[0] for c in course_progress]
-    course_percents = [c[1] for c in course_progress]
-    # Timeline, sorted
-    timeline = sorted(
-        [(e[2], f"Exam: {e[0]}", e[1]) for e in exam_scores] +
-        [(c[2], f"Course: {c[0]}", c[1]) for c in course_progress if c[2]],
-        key=lambda x: x[0] or datetime.min
-    )
+    course_titles   = [c[0] for c in course_progress_query]
+    course_percents = [c[1] for c in course_progress_query]
+
+    # 3) Fetch special exam record for this user (if any)
+    #    Assume there is a one-to-one relationship: user.special_exam_record
+    special_rec = getattr(user, 'special_exam_record', None)
+    if special_rec:
+        # If either paper1 or paper2 exists, extract them; else treat as None
+        special_paper1_score = special_rec.paper1_score if special_rec.paper1_completed_at else None
+        special_paper2_score = special_rec.paper2_score if special_rec.paper2_completed_at else None
+        special_exam_date    = special_rec.created_at.strftime('%Y-%m-%d') if special_rec.created_at else None
+    else:
+        special_paper1_score = None
+        special_paper2_score = None
+        special_exam_date    = None
+
+    # 4) Build timeline items and sort by date
+    #    Each item is (date_obj, title_string, detail_string)
+    timeline = []
+
+    # Add each regular exam attempt
+    for title, score, dt in exam_scores_query:
+        timeline.append((dt, f"Exam: {title}", f"{score}%"))
+
+    # Add each course progress entry (if date exists)
+    for title, percent, comp_date in course_progress_query:
+        if comp_date:
+            timeline.append((comp_date, f"Course: {title}", f"{percent}%"))
+
+    # Add special exam event (if any date)
+    if special_rec and special_rec.created_at:
+        # If both papers exist, show “Special Exam Completed” with average
+        sp_scores = []
+        if special_paper1_score is not None:
+            sp_scores.append(special_paper1_score)
+        if special_paper2_score is not None:
+            sp_scores.append(special_paper2_score)
+        if sp_scores:
+            avg_sp = round(sum(sp_scores) / len(sp_scores), 1)
+            timeline.append(
+                (special_rec.created_at, "Special Exam", f"{avg_sp}% (avg of paper scores)")
+            )
+        else:
+            # If somehow record exists but no scores, still note attempt
+            timeline.append(
+                (special_rec.created_at, "Special Exam", "Attempted (no score)")
+            )
+
+    # Sort timeline by date (oldest first). If date is None, put at the beginning.
+    timeline = sorted(timeline, key=lambda item: item[0] or datetime.min)
+
     return render_template(
         'admin_analytics_user_detail.html',
         user=user,
+        # Regular exam data
         exam_titles=exam_titles,
         exam_scores=exam_scores_list,
         exam_dates=exam_dates,
+        # Special exam data
+        special_paper1_score=special_paper1_score,
+        special_paper2_score=special_paper2_score,
+        special_exam_date=special_exam_date,
+        # Course progress data
         course_titles=course_titles,
         course_percents=course_percents,
+        # Timeline
         timeline=timeline
     )
 
@@ -1496,7 +1679,97 @@ def manage_exam_requests():
     )
 
 # ------------------------------------------------------------
-# 1) Summary: list users & count of wrong answers
+# Special Exam Questions Mapping
+# ------------------------------------------------------------
+SPECIAL_EXAM_QUESTIONS = {
+    "paper1": {
+        0: "What does BPO stand for?",
+        1: "Which of the following is an advantage of BPO?",
+        2: "What does RCM stand for in the healthcare industry?",
+        3: "Which of the following is NOT a part of the Revenue Cycle Management (RCM) process?",
+        4: "Which step in the RCM process involves confirming the patient's eligibility for insurance coverage?",
+        5: "Who is referred to as a 'patient' in the healthcare system?",
+        6: "Choose a responsibility of a subscriber in the RCM process.",
+        7: "In RCM, who is referred to as a 'provider'?",
+        8: "What is another name for Medicare Part C?",
+        9: "Which government health insurance program is primarily designed for individuals with low income?",
+        10: "Which of the following health services is not covered by Medicare Part A?",
+        11: "What does the Date of Service (DOS) refer to?",
+        12: "How does co-pay differ from co-insurance?",
+        13: "Which of the following statements is true about medical billing and coding?",
+        14: "Which coding system is commonly used for diagnosis codes?",
+        15: "Which of the following is a key function of a modifier?",
+        16: "Which of the following factors can cause changes in the fee schedule rate?",
+        17: "What is a Policy Number?",
+        18: "A claim that has been pending for 75 days from the Date of Service (DOS) would be placed in which bucket?",
+        19: "If a claim is billed to UHC for $250, and $125 is marked as W/O (contractual obligation), how much of the claim is potentially payable by the insurance?",
+        20: "What is the formula for calculating the allowable amount?",
+        21: "Which of the following formulas correctly represents the contractual write-off?",
+        22: "What does a fee schedule in medical billing specify?",
+        23: "What types of expenses count toward the out-of-pocket maximum?",
+        24: "When does the deductible amount reset?",
+        25: "Which of the following is a key feature of CPT codes?",
+        26: "If a patient has an 80/20 co-insurance plan, how much will the insurance company pay for a $100 medical bill after the deductible is met?",
+        27: "What does NPI stand for in healthcare?",
+        28: "What does CMS stand for?",
+        29: "Which of the following is a government-sponsored health insurance program in the United States?",
+        30: "What is a deductible in health insurance?",
+        31: "What is Authorization?",
+        32: "What is Provider Credentialing?",
+        33: "What are patient responsibilities in RCM?",
+        34: "Which of the following is NOT a method of performing VOB?",
+        35: "What is Secondary or Tertiary Insurance?",
+        36: "Can individuals under 65 qualify for Medicare?",
+        37: "What does HIPAA require from healthcare providers?",
+        38: "What does auto insurance cover?",
+        39: "The doctor submitted a claim for DOS on 02/01/2025. The patient had an in-network deductible of $1250 and an out-of-pocket balance of $3000. There is a separate co-pay for office visits, which is $100. The patient had surgery at the outpatient hospital. The insurance allowable rate for this procedure is $1750. And the coinsurance percentage for all outpatient procedures is 20%. Please calculate the following: The deductible and final insurance payment amount"
+    },
+    "paper2": {
+        0: "Which of the following is an example of BPO?",
+        1: "Which of the following is an example of a commercial payor in the United States?",
+        2: "Which of the following is NOT a part of the RCM process?",
+        3: "Who is responsible for purchasing workers' compensation insurance?",
+        4: "Which is the first step in RCM process?",
+        5: "Which of the following would be considered a responsibility of a 'patient'?",
+        6: "If a child is covered under their parent's health insurance plan, the subscriber is:",
+        7: "Claims aged up to 30 days from the Date of Service (DOS) are placed in which bucket?",
+        8: "Which status indicates that the insurance company has refused to make a payment for the claim?",
+        9: "Which of the following factors can cause changes in fee schedule rates?",
+        10: "Which of the following is an example of a CARC code?",
+        11: "Which of the following statements is true regarding patient responsibility?",
+        12: "How is the total payment amount calculated?",
+        13: "How is the allowable amount determined?",
+        14: "Which of the following statements about manual payment posting is true?",
+        15: "Which of the following best describes the process of posting adjustments in medical billing?",
+        16: "Where can claims get rejected during the billing process?",
+        17: "Which of the following best describes the NPI?",
+        18: "What does Medicare Part B cover?",
+        19: "What does the Effective Date of an insurance policy indicate?",
+        20: "What does the abbreviation 'DX' refer to in medical billing?",
+        21: "If a patient has a $6,000 out-of-pocket maximum and has already paid $6,000 in medical expenses, how much will they owe for additional medical services that year?",
+        22: "A participating provider is also known as:",
+        23: "In below, who is not referred to as a 'provider' in RCM?",
+        24: "Which of the following is NOT covered by Medicare Part B?",
+        25: "What is a diagnosis code?",
+        26: "Which of the following is a government health insurance program designed for elderly citizens and certain disabled individuals?",
+        27: "If a spouse is covered under their partner’s insurance policy, the spouse is referred to as the:",
+        28: "Which of the following statements is true about an out-of-pocket maximum?",
+        29: "If a patient has a $2000 yearly deductible and each doctor’s visit costs $100, how many visits must the patient pay for out-of-pocket before insurance starts covering the cost?",
+        30: "What is Practice Management Software in RCM?",
+        31: "What does Medicare Part A cover?",
+        32: "Why is it important to verify benefits before providing services?",
+        33: "What is a deductible in health insurance?",
+        34: "Which of the following is NOT a method of performing VOB?",
+        35: "What is an Out-of-Pocket Maximum?",
+        36: "Why is Provider Enrollment important in healthcare?",
+        37: "What is a referral in healthcare?",
+        38: "What does HIPAA require from healthcare providers?",
+        39: "A claim was billed to BCBS with a billed amount of $1500. As per the patient's insurance plan, the allowable is $1200. The patient has a Copay of $100 and the patient has 20% coinsurance. Calculate the following: Insurance paid amount and Total patient responsibility amount"
+    }
+}
+
+# ------------------------------------------------------------
+# 1. Incorrect Summary: List users & count of wrong answers
 # ------------------------------------------------------------
 @admin_routes.route('/incorrect_summary')
 @login_required
@@ -1517,26 +1790,23 @@ def incorrect_summary():
     )
     return render_template('incorrect_summary.html', data=summary)
 
-
 # ------------------------------------------------------------
-# 2) Detail: either paginated or full list for one user
+# 2. Incorrect Answers: Details for one user, patching special questions
 # ------------------------------------------------------------
 @admin_routes.route('/incorrect_answers')
 @login_required
 @admin_required
 def view_incorrect_answers():
-    # 1) Grab parameters
     user_id  = request.args.get('user_id', type=int)
     page     = request.args.get('page', 1, type=int)
     per_page = 40
 
-    # 2) Validate user_id
     if not user_id:
         flash("Please select a user first.", "warning")
         return redirect(url_for('admin_routes.incorrect_summary'))
     user = User.query.get_or_404(user_id)
 
-    # 3) Build subquery: for each question, find the latest answered_at
+    # Subquery for latest answered_at for each question
     last_wrong_sq = (
         db.session.query(
             IncorrectAnswer.question_id,
@@ -1547,19 +1817,17 @@ def view_incorrect_answers():
         .subquery()
     )
 
-    # 4) Join to get full details for only those “last wrong” rows
+    # Main query for incorrect answers
     detailed_q = (
         db.session.query(
             last_wrong_sq.c.last_wrong.label('answered_at'),
-            db.case(
-                [
-                    (IncorrectAnswer.special_paper.isnot(None),
-                     db.func.concat('Special Exam ', IncorrectAnswer.special_paper))
-                ],
-                else_=Exam.title
-            ).label('exam_title'),
+    case(
+        (IncorrectAnswer.special_paper.isnot(None),
+        db.func.concat('Special Exam ', IncorrectAnswer.special_paper)),
+        else_=Exam.title
+    ).label('exam_title'),
             IncorrectAnswer.special_paper,
-            IncorrectAnswer.question_id.label('question_id_val'), # Renamed to avoid clash if Question.id is also selected
+            IncorrectAnswer.question_id.label('question_id_val'),
             Question.question_text,
             IncorrectAnswer.user_answer,
             IncorrectAnswer.correct_answer
@@ -1567,34 +1835,50 @@ def view_incorrect_answers():
         .join(
             IncorrectAnswer,
             and_(
-                IncorrectAnswer.question_id == last_wrong_sq.c.question_id, # This uses the question_id from IncorrectAnswer via last_wrong_sq
-                IncorrectAnswer.answered_at  == last_wrong_sq.c.last_wrong
+                IncorrectAnswer.question_id == last_wrong_sq.c.question_id,
+                IncorrectAnswer.answered_at == last_wrong_sq.c.last_wrong
             )
         )
-        # OUTER JOIN to Question table using IncorrectAnswer.question_id
         .outerjoin(Question, IncorrectAnswer.question_id == Question.id)
-        # OUTER JOIN to Exam table
         .outerjoin(Exam, IncorrectAnswer.exam_id == Exam.id)
         .order_by(desc(last_wrong_sq.c.last_wrong))
     )
 
-    # 5) Paginate over unique questions
     pagination = detailed_q.paginate(page=page, per_page=per_page, error_out=False)
-    records    = pagination.items
+    records = pagination.items
 
-    # 6) Render
+    # Patch special exam questions if needed (dict for mutability)
+    patched_records = []
+    for row in records:
+        row_dict = dict(row._mapping) if hasattr(row, '_mapping') else dict(row)
+        if row_dict['special_paper'] and row_dict['question_id_val'] is not None:
+            paper = row_dict['special_paper'].lower()
+            question_map = SPECIAL_EXAM_QUESTIONS.get(paper, {})
+            if not row_dict['question_text']:
+                fallback = question_map.get(row_dict['question_id_val'])
+                if fallback:
+                    row_dict['question_text'] = fallback
+                else:
+                    row_dict['question_text'] = "[Special Exam Q not found]"
+                    logging.warning(
+                        f"Missing SPECIAL_EXAM_QUESTIONS entry for paper '{paper}' question_id {row_dict['question_id_val']}"
+                    )
+        patched_records.append(row_dict)
+
     return render_template(
         'incorrect_details.html',
         user       = user,
-        records    = records,
+        records    = patched_records,
         pagination = pagination
     )
 
+# ------------------------------------------------------------
+# 3. Clear all incorrect answers for a user
+# ------------------------------------------------------------
 @admin_routes.route('/incorrect_answers/clear', methods=['POST'])
 @login_required
 @admin_required
 def clear_incorrect_answers():
-    # 1) Read and validate the incoming user_id
     user_id = request.form.get('user_id', type=int)
     if not user_id:
         flash("No user specified to clear.", "warning")
@@ -1602,7 +1886,6 @@ def clear_incorrect_answers():
 
     user = User.query.get_or_404(user_id)
 
-    # 2) Bulk‐delete all that user’s incorrect answers
     deleted_count = (
         IncorrectAnswer.query
         .filter_by(user_id=user_id)
@@ -1610,7 +1893,6 @@ def clear_incorrect_answers():
     )
     db.session.commit()
 
-    # 3) Feedback and redirect back to the detail view (now empty)
     flash(f"Cleared {deleted_count} incorrect answers for {user.first_name} {user.last_name}.", "success")
     return redirect(url_for('admin_routes.view_incorrect_answers', user_id=user_id))
 
@@ -1769,3 +2051,532 @@ def delete_user_client():
         flash('Association not found.', 'danger')
 
     return redirect(url_for('admin_routes.manage_user_clients'))
+
+
+
+@admin_routes.route('/admin/seeds', methods=['GET'])
+@login_required
+@super_admin_required
+def manage_seeds():
+    all_roles = Role.query.order_by(Role.name).all()
+    all_designations = Designation.query.order_by(Designation.title).all()
+    all_departments = Department.query.order_by(Department.name).all()
+    all_clients = Client.query.order_by(Client.name).all()
+    all_levels = Level.query.order_by(Level.level_number).all()
+    all_areas = Area.query.order_by(Area.name).all()
+    all_categories = Category.query.order_by(Category.name).all()
+    return render_template('admin_seeds.html',
+        roles=all_roles,
+        designations=all_designations,
+        departments=all_departments,
+        clients=all_clients,
+        levels=all_levels,
+        areas=all_areas,
+        categories=all_categories
+    )
+
+def sync_sequence(model, sequence_name=None):
+    # Only for PostgreSQL and only if using autoincrement IDs
+    table = model.__tablename__
+    pk_col = model.__mapper__.primary_key[0].name
+    if not sequence_name:
+        sequence_name = f"{table}_{pk_col}_seq"
+    max_id = db.session.execute(text(f"SELECT MAX({pk_col}) FROM {table}")).scalar() or 0
+    db.session.execute(text(f"SELECT setval('{sequence_name}', {max_id})"))
+    db.session.commit()
+
+# ----- ROLE CRUD -----
+@admin_routes.route('/admin/seeds/roles/add', methods=['POST'])
+@login_required
+@super_admin_required
+def add_role():
+    name = request.form.get('role_name', '').strip()
+    if not name:
+        flash("Role name cannot be empty.", "error")
+    else:
+        if Role.query.filter_by(name=name).first():
+            flash(f"Role '{name}' already exists.", "warning")
+        else:
+            db.session.add(Role(name=name))
+            try:
+                db.session.commit()
+                sync_sequence(Role)
+                flash(f"Added Role '{name}'.", "success")
+            except IntegrityError:
+                db.session.rollback()
+                sync_sequence(Role)
+                flash("Failed to add role (possible ID conflict). Sequence has been resynced, please try again.", "error")
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+@admin_routes.route('/admin/seeds/roles/edit/<int:id>', methods=['POST'])
+@login_required
+@super_admin_required
+def edit_role(id):
+    role = Role.query.get_or_404(id)
+    new_name = request.form.get('role_name', '').strip()
+    if not new_name:
+        flash("Role name cannot be empty.", "error")
+    else:
+        conflict = Role.query.filter(Role.name == new_name, Role.id != id).first()
+        if conflict:
+            flash(f"Another role with name '{new_name}' already exists.", "warning")
+        else:
+            role.name = new_name
+            try:
+                db.session.commit()
+                flash(f"Role updated to '{new_name}'.", "success")
+            except IntegrityError:
+                db.session.rollback()
+                flash("Failed to update role due to a database error.", "error")
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+@admin_routes.route('/admin/seeds/roles/delete/<int:id>', methods=['POST'])
+@login_required
+@super_admin_required
+def delete_role(id):
+    role = Role.query.get_or_404(id)
+    try:
+        db.session.delete(role)
+        db.session.commit()
+        sync_sequence(Role)
+        flash(f"Deleted Role '{role.name}'.", "success")
+    except IntegrityError:
+        db.session.rollback()
+        flash(
+            f"Failed to delete role '{role.name}'. It may be referenced by other records.",
+            "error"
+        )
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+# ----- DESIGNATION CRUD -----
+@admin_routes.route('/admin/seeds/designations/add', methods=['POST'])
+@login_required
+@super_admin_required
+def add_designation():
+    title = request.form.get('desig_title', '').strip()
+    starting_level = request.form.get('desig_starting_level', '').strip()
+    if not title or not starting_level.isdigit():
+        flash("Title and numeric starting level are required.", "error")
+    else:
+        lvl = int(starting_level)
+        conflict = Designation.query.filter_by(title=title).first()
+        if conflict:
+            flash(f"Designation '{title}' already exists.", "warning")
+        else:
+            new_desig = Designation(title=title, starting_level=lvl)
+            db.session.add(new_desig)
+            try:
+                db.session.commit()
+                sync_sequence(Designation)
+                flash(f"Added Designation '{title}'.", "success")
+            except IntegrityError:
+                db.session.rollback()
+                sync_sequence(Designation)
+                flash("Failed to add designation (possible ID conflict). Sequence has been resynced, please try again.", "error")
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+@admin_routes.route('/admin/seeds/designations/edit/<int:id>', methods=['POST'])
+@login_required
+@super_admin_required
+def edit_designation(id):
+    desig = Designation.query.get_or_404(id)
+    new_title = request.form.get('desig_title', '').strip()
+    new_level = request.form.get('desig_starting_level', '').strip()
+    if not new_title or not new_level.isdigit():
+        flash("Designation title and numeric level are required.", "error")
+    else:
+        lvl = int(new_level)
+        conflict = Designation.query.filter(
+            Designation.title == new_title, Designation.id != id
+        ).first()
+        if conflict:
+            flash(f"Another designation named '{new_title}' already exists.", "warning")
+        else:
+            desig.title = new_title
+            desig.starting_level = lvl
+            try:
+                db.session.commit()
+                flash(f"Updated Designation to '{new_title}'.", "success")
+            except IntegrityError:
+                db.session.rollback()
+                flash("Failed to update designation due to a database error.", "error")
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+@admin_routes.route('/admin/seeds/designations/delete/<int:id>', methods=['POST'])
+@login_required
+@super_admin_required
+def delete_designation(id):
+    desig = Designation.query.get_or_404(id)
+    try:
+        db.session.delete(desig)
+        db.session.commit()
+        sync_sequence(Designation)
+        flash(f"Deleted Designation '{desig.title}'.", "success")
+    except IntegrityError:
+        db.session.rollback()
+        flash(
+            f"Failed to delete designation '{desig.title}'. It may be referenced by other records.",
+            "error"
+        )
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+# ----- DEPARTMENT CRUD -----
+@admin_routes.route('/admin/seeds/departments/add', methods=['POST'])
+@login_required
+@super_admin_required
+def add_department():
+    name = request.form.get('dept_name', '').strip()
+    if not name:
+        flash("Department name cannot be empty.", "error")
+    else:
+        if Department.query.filter_by(name=name).first():
+            flash(f"Department '{name}' already exists.", "warning")
+        else:
+            db.session.add(Department(name=name))
+            try:
+                db.session.commit()
+                sync_sequence(Department)
+                flash(f"Added Department '{name}'.", "success")
+            except IntegrityError:
+                db.session.rollback()
+                sync_sequence(Department)
+                flash("Failed to add department (possible ID conflict). Sequence has been resynced, please try again.", "error")
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+@admin_routes.route('/admin/seeds/departments/edit/<int:id>', methods=['POST'])
+@login_required
+@super_admin_required
+def edit_department(id):
+    dept = Department.query.get_or_404(id)
+    new_name = request.form.get('dept_name', '').strip()
+    if not new_name:
+        flash("Department name cannot be empty.", "error")
+    else:
+        conflict = Department.query.filter(Department.name == new_name, Department.id != id).first()
+        if conflict:
+            flash(f"Another department named '{new_name}' already exists.", "warning")
+        else:
+            dept.name = new_name
+            try:
+                db.session.commit()
+                flash(f"Department updated to '{new_name}'.", "success")
+            except IntegrityError:
+                db.session.rollback()
+                flash("Failed to update department due to a database error.", "error")
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+@admin_routes.route('/admin/seeds/departments/delete/<int:id>', methods=['POST'])
+@login_required
+@super_admin_required
+def delete_department(id):
+    dept = Department.query.get_or_404(id)
+    try:
+        db.session.delete(dept)
+        db.session.commit()
+        sync_sequence(Department)
+        flash(f"Deleted Department '{dept.name}'.", "success")
+    except IntegrityError:
+        db.session.rollback()
+        flash(
+            f"Failed to delete department '{dept.name}'. It may be referenced by other records.",
+            "error"
+        )
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+# ----- CLIENT CRUD -----
+@admin_routes.route('/admin/seeds/clients/add', methods=['POST'])
+@login_required
+@super_admin_required
+def add_client():
+    name = request.form.get('client_name', '').strip()
+    if not name:
+        flash("Client name cannot be empty.", "error")
+    else:
+        if Client.query.filter_by(name=name).first():
+            flash(f"Client '{name}' already exists.", "warning")
+        else:
+            db.session.add(Client(name=name))
+            try:
+                db.session.commit()
+                sync_sequence(Client)
+                flash(f"Added Client '{name}'.", "success")
+            except IntegrityError:
+                db.session.rollback()
+                sync_sequence(Client)
+                flash("Failed to add client (possible ID conflict). Sequence has been resynced, please try again.", "error")
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+@admin_routes.route('/admin/seeds/clients/edit/<int:id>', methods=['POST'])
+@login_required
+@super_admin_required
+def edit_client(id):
+    client = Client.query.get_or_404(id)
+    new_name = request.form.get('client_name', '').strip()
+    if not new_name:
+        flash("Client name cannot be empty.", "error")
+    else:
+        conflict = Client.query.filter(Client.name == new_name, Client.id != id).first()
+        if conflict:
+            flash(f"Another client named '{new_name}' already exists.", "warning")
+        else:
+            client.name = new_name
+            try:
+                db.session.commit()
+                flash(f"Client updated to '{new_name}'.", "success")
+            except IntegrityError:
+                db.session.rollback()
+                flash("Failed to update client due to a database error.", "error")
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+@admin_routes.route('/admin/seeds/clients/delete/<int:id>', methods=['POST'])
+@login_required
+@super_admin_required
+def delete_client(id):
+    client = Client.query.get_or_404(id)
+    try:
+        db.session.delete(client)
+        db.session.commit()
+        sync_sequence(Client)
+        flash(f"Deleted Client '{client.name}'.", "success")
+    except IntegrityError:
+        db.session.rollback()
+        flash(
+            f"Failed to delete client '{client.name}'. It may be referenced by other records.",
+            "error"
+        )
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+# ----- LEVEL CRUD -----
+@admin_routes.route('/admin/seeds/levels/add', methods=['POST'])
+@login_required
+@super_admin_required
+def add_level():
+    lvl_num = request.form.get('level_number', '').strip()
+    title = request.form.get('level_title', '').strip()
+    if not lvl_num.isdigit() or not title:
+        flash("A numeric level and title are required.", "error")
+    else:
+        num = int(lvl_num)
+        if Level.query.filter_by(level_number=num).first():
+            flash(f"Level #{num} already exists.", "warning")
+        else:
+            db.session.add(Level(level_number=num, title=title))
+            try:
+                db.session.commit()
+                sync_sequence(Level)
+                flash(f"Added Level {num} – '{title}'.", "success")
+            except IntegrityError:
+                db.session.rollback()
+                sync_sequence(Level)
+                flash("Failed to add level (possible ID conflict). Sequence has been resynced, please try again.", "error")
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+@admin_routes.route('/admin/seeds/levels/edit/<int:id>', methods=['POST'])
+@login_required
+@super_admin_required
+def edit_level(id):
+    lvl = Level.query.get_or_404(id)
+    new_num = request.form.get('level_number', '').strip()
+    new_title = request.form.get('level_title', '').strip()
+    if not new_num.isdigit() or not new_title:
+        flash("A numeric level and title are required.", "error")
+    else:
+        num = int(new_num)
+        conflict = Level.query.filter(Level.level_number == num, Level.id != id).first()
+        if conflict:
+            flash(f"Another level with # {num} already exists.", "warning")
+        else:
+            lvl.level_number = num
+            lvl.title = new_title
+            try:
+                db.session.commit()
+                flash(f"Updated Level to #{num} – '{new_title}'.", "success")
+            except IntegrityError:
+                db.session.rollback()
+                flash("Failed to update level due to a database error.", "error")
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+@admin_routes.route('/admin/seeds/levels/delete/<int:id>', methods=['POST'])
+@login_required
+@super_admin_required
+def delete_level(id):
+    lvl = Level.query.get_or_404(id)
+    try:
+        db.session.delete(lvl)
+        db.session.commit()
+        sync_sequence(Level)
+        flash(f"Deleted Level #{lvl.level_number}.", "success")
+    except IntegrityError:
+        db.session.rollback()
+        flash(
+            f"Failed to delete level #{lvl.level_number}. It may be referenced by other records.",
+            "error"
+        )
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+# ----- AREA CRUD -----
+@admin_routes.route('/admin/seeds/areas/add', methods=['POST'])
+@login_required
+@super_admin_required
+def add_area():
+    name = request.form.get('area_name', '').strip()
+    if not name:
+        flash("Area name cannot be empty.", "error")
+    else:
+        if Area.query.filter_by(name=name).first():
+            flash(f"Area '{name}' already exists.", "warning")
+        else:
+            db.session.add(Area(name=name))
+            try:
+                db.session.commit()
+                sync_sequence(Area)
+                flash(f"Added Area '{name}'.", "success")
+            except IntegrityError:
+                db.session.rollback()
+                sync_sequence(Area)
+                flash("Failed to add area (possible ID conflict). Sequence has been resynced, please try again.", "error")
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+@admin_routes.route('/admin/seeds/areas/edit/<int:id>', methods=['POST'])
+@login_required
+@super_admin_required
+def edit_area(id):
+    area = Area.query.get_or_404(id)
+    new_name = request.form.get('area_name', '').strip()
+    if not new_name:
+        flash("Area name cannot be empty.", "error")
+    else:
+        conflict = Area.query.filter(Area.name == new_name, Area.id != id).first()
+        if conflict:
+            flash(f"Another area named '{new_name}' already exists.", "warning")
+        else:
+            area.name = new_name
+            try:
+                db.session.commit()
+                flash(f"Area updated to '{new_name}'.", "success")
+            except IntegrityError:
+                db.session.rollback()
+                flash("Failed to update area due to a database error.", "error")
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+@admin_routes.route('/admin/seeds/areas/delete/<int:id>', methods=['POST'])
+@login_required
+@super_admin_required
+def delete_area(id):
+    area = Area.query.get_or_404(id)
+    try:
+        db.session.delete(area)
+        db.session.commit()
+        sync_sequence(Area)
+        flash(f"Deleted Area '{area.name}'.", "success")
+    except IntegrityError:
+        db.session.rollback()
+        flash(
+            f"Failed to delete area '{area.name}'. It may be referenced by other records.",
+            "error"
+        )
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+# ----- CATEGORY CRUD -----
+@admin_routes.route('/admin/seeds/categories/add', methods=['POST'])
+@login_required
+@super_admin_required
+def add_category():
+    name = request.form.get('category_name', '').strip()
+    if not name:
+        flash("Category name cannot be empty.", "error")
+        return redirect(url_for('admin_routes.manage_seeds'))
+
+    # 1) Check for duplicate name upfront
+    if Category.query.filter_by(name=name).first():
+        flash(f"Category '{name}' already exists.", "warning")
+        return redirect(url_for('admin_routes.manage_seeds'))
+
+    # 2) Attempt to insert a new category
+    new_cat = Category(name=name)
+    db.session.add(new_cat)
+    try:
+        db.session.commit()
+        # 3) After a successful INSERT, re-sync the sequence so it remains correct
+        sync_sequence(Category)
+
+        flash(f"Added Category '{name}'.", "success")
+    except IntegrityError:
+        # 4) If insert fails (most likely due to sequence conflict), rollback
+        db.session.rollback()
+
+        # 5) Attempt to fix the sequence and then ask the user to retry
+        sync_sequence(Category)
+        flash(
+            "Failed to add category (possible ID conflict). "
+            "Sequence has been resynced—please try again.",
+            "error"
+        )
+
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+
+@admin_routes.route('/admin/seeds/categories/edit/<int:id>', methods=['POST'])
+@login_required
+@super_admin_required
+def edit_category(id):
+    cat = Category.query.get_or_404(id)
+    new_name = request.form.get('category_name', '').strip()
+
+    if not new_name:
+        flash("Category name cannot be empty.", "error")
+        return redirect(url_for('admin_routes.manage_seeds'))
+
+    # 1) No change → early exit
+    if cat.name == new_name:
+        flash("No changes detected for category.", "info")
+        return redirect(url_for('admin_routes.manage_seeds'))
+
+    # 2) Check that no other category already has `new_name`
+    conflict = (
+        Category.query
+        .filter(Category.name == new_name, Category.id != id)
+        .first()
+    )
+    if conflict:
+        flash(f"Another category named '{new_name}' already exists.", "warning")
+        return redirect(url_for('admin_routes.manage_seeds'))
+
+    # 3) Attempt to update the name
+    cat.name = new_name
+    try:
+        db.session.commit()
+        flash(f"Category updated to '{new_name}'.", "success")
+    except IntegrityError:
+        db.session.rollback()
+        flash(
+            "Failed to update category (possible constraint or sequence error). "
+            "Please verify your database state and try again.",
+            "error"
+        )
+
+    return redirect(url_for('admin_routes.manage_seeds'))
+
+
+@admin_routes.route('/admin/seeds/categories/delete/<int:id>', methods=['POST'])
+@login_required
+@super_admin_required
+def delete_category(id):
+    cat = Category.query.get_or_404(id)
+    category_name = cat.name
+
+    try:
+        db.session.delete(cat)
+        db.session.commit()
+        # Once the row is removed, re-sync the sequence so future INSERTs continue smoothly
+        sync_sequence(Category)
+
+        flash(f"Deleted Category '{category_name}'.", "success")
+    except IntegrityError:
+        db.session.rollback()
+        flash(
+            f"Failed to delete category '{category_name}'. It may be referenced by other records.",
+            "error"
+        )
+
+    return redirect(url_for('admin_routes.manage_seeds'))

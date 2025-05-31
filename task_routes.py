@@ -20,10 +20,9 @@ from sqlalchemy import func
 task_routes = Blueprint('task_routes', __name__, url_prefix="/tasks")
 
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'docx', 'xlsx'}
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 5MB per file
+MAX_FILE_SIZE = 25 * 1024 * 1024  # 25MB per file (applies to uploads in assign/edit)
 MAX_EMAIL_FILE_SIZE = 25 * 1024 * 1024  # 25MB per file for email attachments
 MAX_TOTAL_SIZE = 100 * 1024 * 1024  # 100MB total
-
 
 STATUS_PROGRESS_MAP = {
     "Getting Things Started...": 10,
@@ -40,22 +39,29 @@ def allowed_file(filename):
 
 def save_task_document(file, task_id):
     filename = secure_filename(file.filename)
-    file_data = file.read()
-    if len(file_data) > MAX_FILE_SIZE:
-        flash("File size exceeds the limit of 5MB", "danger")
+    current_app.logger.info(f"Attempting to save document: {filename} for task_id: {task_id}")
+
+    file_data = file.read() # Read file data to check size
+    file_size = len(file_data)
+
+    if file_size > MAX_FILE_SIZE:
+        current_app.logger.warning(f"File {filename} for task {task_id} rejected: size {file_size} bytes exceeds limit {MAX_FILE_SIZE} bytes.")
+        flash("File size exceeds the limit of 25MB", "danger")
         return False
+
     task_document = TaskDocument(
         filename=filename,
         filetype=file.content_type,
-        data=file_data,
+        data=file_data, # Use the already read data
         task_id=task_id
     )
-    db.session.add(task_document)
-    return True
-
-from extensions import scheduler, db
-from models import Task
-import logging
+    try:
+        db.session.add(task_document)
+        current_app.logger.info(f"Saved attachment: {filename} for task {task_id}")
+        return True
+    except Exception as e:
+        current_app.logger.error(f"Failed to save attachment: {filename} for task {task_id}. Error: {e}", exc_info=True)
+        return False
 
 def delete_completed_task(task_id):
     # APScheduler jobs run outside of any request, so we need an app context
@@ -73,33 +79,15 @@ def delete_completed_task(task_id):
         db.session.commit()
         logging.info(f"[delete_completed_task] Deleted completed task {task_id}.")
 
-def auto_delete_completed_tasks(client_id):
-    """
-    Automatically delete tasks for the given client that are complete.
-    If client_id is None, this function does nothing.
-    """
-    if client_id is None:
-        return
-    tasks_to_delete = Task.query.filter_by(client_id=client_id, status='Complete! Ready to Go!').all()
-    for task in tasks_to_delete:
-        db.session.delete(task)
-    db.session.commit()
-
 @task_routes.route('/', strict_slashes=False)
 @login_required
 def view_tasks():
     """
     View tasks for the current user.
-    If the user has any clients, we auto-delete completed tasks for each of them.
     Internal tasks are those whose task.client_id is in the user's clients.
     External tasks are those with a NULL client_id.
     """
-    # collect all of current_user's client IDs
     client_ids = [c.id for c in current_user.clients]
-
-    # auto‐delete completed tasks for each client
-    for cid in client_ids:
-        auto_delete_completed_tasks(cid)
 
     q = request.args.get('q', '').strip()
 
@@ -196,13 +184,17 @@ def assign_task():
             flash(f"Error allocating Task ID: {e}", "danger")
             return redirect(url_for('task_routes.assign_task'))
 
-        # 4) Save attachments (5MB max each)
+        # 4) Save attachments (25MB max each)
         for f in request.files.getlist('attachments'):
             if f and allowed_file(f.filename):
-                if not save_task_document(f, task.id):
+                current_app.logger.info(f"Processing attachment {f.filename} for new task (task_id: {task.id}, title: {title}) in assign_task.")
+                saved_successfully = save_task_document(f, task.id)
+                if not saved_successfully:
+                    current_app.logger.warning(f"Failed to save attachment {f.filename} for task {task.id} in assign_task. Triggering rollback.")
                     db.session.rollback()
-                    flash("One of your attachments exceeded 5MB and was rejected.", "danger")
+                    flash("One of your attachments could not be saved (e.g., size limit exceeded or DB error). Task not created.", "danger")
                     return redirect(url_for('task_routes.assign_task'))
+                current_app.logger.info(f"Successfully processed attachment {f.filename} for task {task.id} in assign_task.")
 
         # 5) Link assignees
         key = 'assignees' if task_type == 'internal' else 'external_assignees'
@@ -260,27 +252,39 @@ def view_task(task_id):
 
     if request.method == 'POST' and current_user in task.assignees:
         try:
-            # 1) Update status & progress
-            new_status      = request.form.get('status', task.status)
-            task.status     = new_status
-            task.progress   = STATUS_PROGRESS_MAP.get(new_status, task.progress)
+            # Get potential new status from the form
+            new_status_from_form = request.form.get('status')
+
+            process_email_attachments = True
+            # Check if email_attachments are present and if the status is NOT completion
+            if new_status_from_form and new_status_from_form != 'Complete! Ready to Go!' and \
+               request.files.getlist('email_attachments'):
+                flash("Files attached here are only sent with the completion email. To add permanent documents to this task, please use the 'Edit Task' page. No files were saved with the task this time.", "warning")
+                process_email_attachments = False
+
+            # 1) Update status & progress using the status from form if available, else existing task status
+            current_status_for_update = new_status_from_form if new_status_from_form else task.status
+            task.status     = current_status_for_update
+            task.progress   = STATUS_PROGRESS_MAP.get(current_status_for_update, task.progress)
 
             # 2) Collect any 2nd-step attachments for the completion email
             email_files = []
-            for f in request.files.getlist('email_attachments'):
-                if f and allowed_file(f.filename):
-                    f.seek(0, os.SEEK_END)
-                    if f.tell() > MAX_EMAIL_FILE_SIZE:
-                        flash("Each email attachment must be under 25 MB.", "danger")
-                        return redirect(url_for('task_routes.view_task', task_id=task_id))
-                    f.seek(0)
-                    email_files.append({
-                        "filename": secure_filename(f.filename),
-                        "filetype": f.content_type,
-                        "data": f.read()
-                    })
+            if process_email_attachments:
+                for f in request.files.getlist('email_attachments'):
+                    if f and allowed_file(f.filename):
+                        f.seek(0, os.SEEK_END)
+                        if f.tell() > MAX_EMAIL_FILE_SIZE:
+                            flash("Each email attachment must be under 25 MB.", "danger")
+                            return redirect(url_for('task_routes.view_task', task_id=task_id))
+                        f.seek(0)
+                        email_files.append({
+                            "filename": secure_filename(f.filename),
+                            "filetype": f.content_type,
+                            "data": f.read()
+                        })
 
             # 3) If marking complete...
+            # Check progress, which is now updated based on new_status_from_form
             if task.progress == 100:
                 task.status       = 'Complete! Ready to Go!'
                 task.completed_by = current_user.id
@@ -350,17 +354,35 @@ def edit_task(task_id):
 
         for file in request.files.getlist('attachments'):
             file.seek(0)
+            file_size = len(file.read())
+            file.seek(0)
             if file and allowed_file(file.filename):
-                if not save_task_document(file, task.id):
-                    db.session.rollback()
-                    flash("File upload failed due to size restrictions", "danger")
+                if file_size > MAX_FILE_SIZE:
+                    flash(f"'{file.filename}' exceeds 25MB and was not uploaded.", "danger")
                     return redirect(url_for('task_routes.edit_task', task_id=task.id))
+                current_app.logger.info(f"Processing new attachment {file.filename} for task_id: {task_id} in edit_task.")
+                saved_successfully = save_task_document(file, task.id)
+                if not saved_successfully:
+                    current_app.logger.warning(f"Failed to save new attachment {file.filename} for task {task_id} in edit_task. Triggering rollback.")
+                    db.session.rollback()
+                    flash("File upload failed (e.g., size restrictions or DB error). Changes not saved.", "danger")
+                    return redirect(url_for('task_routes.edit_task', task_id=task.id))
+                current_app.logger.info(f"Successfully processed new attachment {file.filename} for task {task_id} in edit_task.")
 
         attachment_ids_to_delete = request.form.getlist('delete_attachments')
+        if attachment_ids_to_delete:
+            current_app.logger.info(f"Attachments marked for deletion for task {task_id}: {attachment_ids_to_delete}")
         for attachment_id in attachment_ids_to_delete:
+            current_app.logger.info(f"Attempting to delete TaskDocument with id: {attachment_id} for task_id: {task_id}.")
             document = TaskDocument.query.filter_by(id=attachment_id, task_id=task.id).first()
             if document:
-                db.session.delete(document)
+                try:
+                    db.session.delete(document)
+                    current_app.logger.info(f"Successfully deleted TaskDocument {attachment_id} for task {task_id} from session.")
+                except Exception as e:
+                    current_app.logger.error(f"Error deleting TaskDocument {attachment_id} for task {task_id} from DB session: {e}", exc_info=True)
+            else:
+                current_app.logger.warning(f"TaskDocument with id: {attachment_id} not found for task_id: {task_id} during deletion attempt.")
 
         try:
             db.session.commit()
@@ -418,10 +440,10 @@ def analytics_dashboard():
     """
     Display analytics for tasks. Aggregates all tasks where the user is either
     an assignee or the assigner, then builds:
-      - a Plotly donut chart of Completed vs Incomplete
-      - a status_data list for Chart.js
+      - status_data list for Chart.js
+      - smartly displays completion rate and task status analytics using the template
     """
-    # Base query: any task involving this user
+    # Base query: any task involving this user, including completed ones until the 24h scheduled deletion
     tasks = Task.query.filter(
         (Task.assignees.contains(current_user)) |
         (Task.assigned_by == current_user.id)
@@ -434,30 +456,7 @@ def analytics_dashboard():
         Task.status != 'Complete! Ready to Go!'
     ).count()
 
-    # --- 1) Build a Plotly donut for completion rate ---
-    incomplete_tasks = total_tasks - completed_tasks
-
-    import plotly.express as px
-    from plotly.offline import plot
-
-    completion_df = {
-        "Status": ["Completed", "Incomplete"],
-        "Count":  [completed_tasks, incomplete_tasks]
-    }
-    completion_fig = px.pie(
-        completion_df,
-        names="Status",
-        values="Count",
-        hole=0.4,
-        title="Completion Rate"
-    )
-    completion_chart = plot(
-        completion_fig,
-        output_type="div",
-        include_plotlyjs='cdn'
-    )
-
-    # --- 2) Prepare status_data for Chart.js ---
+    # Prepare status_data for Chart.js and logic
     task_by_status = db.session.query(
         Task.status, func.count(Task.id)
     ).filter(
@@ -475,6 +474,5 @@ def analytics_dashboard():
         total_tasks=total_tasks,
         completed_tasks=completed_tasks,
         overdue_tasks=overdue_tasks,
-        completion_chart=completion_chart,
         status_data=status_data,
     )
