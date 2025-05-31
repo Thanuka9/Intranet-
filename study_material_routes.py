@@ -517,6 +517,15 @@ def list_study_materials():
         progress_percentage = user_progress.progress_percentage if user_progress else 0
         progress_data.append({'course_id': material.id, 'progress_percentage': progress_percentage})
 
+    # --- SORT by Course ID ---
+    # Zip, sort, and unzip to keep both lists in sync
+    combined = sorted(zip(accessible_materials, progress_data), key=lambda x: x[0].id)
+    if combined:
+        accessible_materials, progress_data = zip(*combined)
+        accessible_materials, progress_data = list(accessible_materials), list(progress_data)
+    else:
+        accessible_materials, progress_data = [], []
+
     return render_template('list_study_materials.html', materials=accessible_materials, progress_data=progress_data)
 
 
