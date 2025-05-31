@@ -40,22 +40,39 @@ def create_exam():
     # -------------------------------
     if request.method == 'GET':
         try:
-            # Fetch Levels, Categories, and Designation Levels from Dropdown Route
-            response = requests.get(url_for('study_material_routes.get_dropdowns', _external=True))
-            dropdown_data = response.json()
+            # Instead of an HTTP round‐trip, query Levels, Categories, and Designations directly:
+            levels = Level.query.order_by(Level.level_number.asc()).all()
+            categories = Category.query.order_by(Category.id.asc()).all()
+            designations = Designation.query.order_by(Designation.id.asc()).all()
 
-            # Fetch Areas, Courses from database
-            areas   = Area.query.all()
+            dropdown_data = {
+                'levels': [
+                    {'id': lvl.id, 'level_number': lvl.level_number}
+                    for lvl in levels
+                ],
+                'categories': [
+                    {'id': cat.id, 'name': cat.name}
+                    for cat in categories
+                ],
+                'designations': [
+                    {'id': des.id, 'title': des.title}
+                    for des in designations
+                ]
+            }
+
+            # Fetch Areas and Courses from the database as before
+            areas = Area.query.all()
             courses = StudyMaterial.query.all()
 
             return render_template(
                 'upload_exam.html',
-                levels              = dropdown_data['levels'],
-                categories          = dropdown_data['categories'],
-                areas               = [{'id': a.id, 'name': a.name} for a in areas],
-                designation_levels  = dropdown_data['designations'],
-                courses             = [{"id": c.id, "title": c.title} for c in courses]
+                levels             = dropdown_data['levels'],
+                categories         = dropdown_data['categories'],
+                areas              = [{'id': a.id, 'name': a.name} for a in areas],
+                designation_levels = dropdown_data['designations'],
+                courses            = [{"id": c.id, "title": c.title} for c in courses]
             )
+
         except Exception as e:
             logging.error(f"Error rendering exam creation form: {e}")
             return render_template('500.html', error="Failed to load the exam creation form."), 500
@@ -67,13 +84,13 @@ def create_exam():
         try:
             form = request.form
             # 1) Extract and validate all exam‐level fields
-            title   = form.get('title','').strip()
-            duration= form.get('duration','').strip()
-            level_id= form.get('level_id','').strip()
-            category_id = form.get('category_id','').strip()
-            area_id    = form.get('area_id','').strip()
-            course_id  = form.get('course_id','').strip()
-            min_desig  = form.get('minimum_designation_level','').strip()
+            title       = form.get('title', '').strip()
+            duration    = form.get('duration', '').strip()
+            level_id    = form.get('level_id', '').strip()
+            category_id = form.get('category_id', '').strip()
+            area_id     = form.get('area_id', '').strip()
+            course_id   = form.get('course_id', '').strip()
+            min_desig   = form.get('minimum_designation_level', '').strip()
 
             if not all([title, duration, level_id, category_id, area_id, course_id, min_desig]):
                 return jsonify({'error': 'All fields are required'}), 400
@@ -86,9 +103,14 @@ def create_exam():
             area        = Area.query.get(area_id)
             course      = StudyMaterial.query.get(course_id)
             designation = Designation.query.get(min_desig)
-            for obj,name in [(level,'Level'), (category,'Category'),
-                             (area,'Area'), (course,'Course'),
-                             (designation,'Designation')]:
+
+            for obj, name in [
+                (level, 'Level'),
+                (category, 'Category'),
+                (area, 'Area'),
+                (course, 'Course'),
+                (designation, 'Designation')
+            ]:
                 if not obj:
                     return jsonify({'error': f'Selected {name} does not exist'}), 400
 
@@ -107,7 +129,7 @@ def create_exam():
             db.session.add(exam)
             db.session.commit()
 
-            # 4) Return the URL where the front‑end must POST the questions
+            # 4) Return the URL where the front-end must POST the questions
             add_q_url = url_for('exams_routes.add_questions', exam_id=exam.id)
 
             return jsonify({
@@ -217,11 +239,11 @@ def add_questions(exam_id):
 
                 # Create Question model instance
                 q = Question(
-                    exam_id       = exam_id,
-                    question_text = question_text,
-                    choices       = ','.join(choices_list),
-                    correct_answer= corr,
-                    category_id   = int(category_id)
+                    exam_id        = exam_id,
+                    question_text  = question_text,
+                    choices        = ','.join(choices_list),
+                    correct_answer = corr,
+                    category_id    = int(category_id)
                 )
                 questions_to_add.append(q)
 
@@ -257,6 +279,7 @@ def add_questions(exam_id):
         logging.error(f"Unexpected error: {e}")
         db.session.rollback()
         return jsonify({'error': 'Internal server error'}), 500
+
     
 # -------------------------------
 # List Exams
