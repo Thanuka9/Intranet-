@@ -37,7 +37,7 @@ def profile():
 
     # --- Compute Performance Data ---
     # Define the five categories to display on the graph
-    performance_categories = ["Billing", "Posting", "VOB", "Collection", "Denial Management"]
+    performance_categories = ["Billing", "Posting", "VOB", "Collection", "Introduction"]
     performance_labels = []
     user_performance = []   # Current user's average score per category for this level
     overall_performance = []  # Overall average score per category for this level

@@ -93,7 +93,7 @@ def compare_users():
         user2_sprec = SpecialExamRecord.query.filter_by(user_id=user2.id).first()
 
         # Categories for Radar Chart
-        categories = ["Billing", "Posting", "VOB", "Collection", "Denial Management"]
+        categories = ["Billing", "Posting", "VOB", "Collection", "Introduction"]
         performance_labels = []
         user1_cat_scores = []
         user2_cat_scores = []
