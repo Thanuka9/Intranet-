@@ -230,9 +230,9 @@
       <p class="mb-0">Collective Intranet© 2024</p>
     </footer>
 
-    {%!-- We push the `categories` list into JS so the “Add Question” logic can
+    {# We push the `categories` list into JS so the “Add Question” logic can
     still build a dropdown of categories dynamically for each new question
-    block. --%}
+    block. #}
     <script>
       window.CATEGORIES = {{ categories | tojson }};
     </script>

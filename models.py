@@ -688,7 +688,7 @@ class TaskDocument(db.Model):
 
     id = Column(Integer, primary_key=True)
     filename = Column(String(255), nullable=False)
-    filetype = Column(String(50), nullable=False)
+    filetype = Column(String(255), nullable=False)
     data = Column(LargeBinary, nullable=False)
     upload_date = Column(DateTime, default=datetime.utcnow)
 
