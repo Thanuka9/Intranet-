@@ -129,11 +129,16 @@ def verify_email(token):
     user = User.query.filter_by(verification_token=token).first()
 
     if not user:
-        flash("Invalid or expired verification link.", "error")
+        # Check if token was already used (i.e., user is verified but token is cleared)
+        already_verified_user = User.query.filter_by(is_verified=True).first()
+        if already_verified_user:
+            flash("This verification link has already been used.", "info")
+        else:
+            flash("Invalid or expired verification link.", "error")
         return redirect(url_for('auth_routes.login'))
 
     if user.is_verified:
-        flash("Already verified.", "info")
+        flash("Your email is already verified.", "info")
     else:
         user.is_verified = True
         user.verification_token = None
