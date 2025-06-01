@@ -125,18 +125,23 @@ def register():
 
 @auth_routes.route('/verify/<token>')
 def verify_email(token):
-    """Verifies a user's email address using a token."""
-    user = User.query.filter_by(verification_token=token).first()
-
-    if not user:
-        # Check if token was already used (i.e., user is verified but token is cleared)
-        already_verified_user = User.query.filter_by(is_verified=True).first()
-        if already_verified_user:
-            flash("This verification link has already been used.", "info")
-        else:
-            flash("Invalid or expired verification link.", "error")
+    try:
+        # 1) Decode the token to get back the original email
+        email = s.loads(token, salt='email-confirmation', max_age=60*60*24)
+    except SignatureExpired:
+        flash("That verification link has expired.", "error")
+        return redirect(url_for('auth_routes.login'))
+    except BadSignature:
+        flash("Invalid verification link.", "error")
         return redirect(url_for('auth_routes.login'))
 
+    # 2) Look up the user record by email
+    user = User.query.filter_by(employee_email=email).first()
+    if not user:
+        flash("Invalid verification link.", "error")
+        return redirect(url_for('auth_routes.login'))
+
+    # 3) If the user exists, check if they’re already verified
     if user.is_verified:
         flash("Your email is already verified.", "info")
     else:
@@ -151,7 +156,6 @@ def verify_email(token):
             flash("Could not verify email. Please try again or contact support.", "error")
 
     return redirect(url_for('auth_routes.login'))
-
 
 @auth_routes.route('/login', methods=['GET', 'POST'])
 def login():
