@@ -299,12 +299,10 @@
           questionsContainer.appendChild(questionDiv);
         });
 
-        // Intercept form submission:
-        //  1) Send POST to create_exam → get back { add_questions_url }
-        //  2) Then re-use the same FormData to POST questions to add_questions_url
+        // Intercept form submission with better error handling:
         const form = document.getElementById("uploadExamForm");
         form.addEventListener("submit", function (e) {
-          e.preventDefault(); // stop normal submit
+          e.preventDefault();
           const fd = new FormData(form);
 
           // 1) Create the exam
@@ -312,10 +310,18 @@
             method: "POST",
             body: fd,
           })
-            .then((res) => res.json())
+            .then(async (res) => {
+              if (res.ok) {
+                return res.json();
+              }
+              const html = await res.text();
+              throw new Error("Create exam failed:\n" + html);
+            })
             .then((createJson) => {
               if (!createJson.add_questions_url) {
-                throw new Error(createJson.error || "Failed to create exam");
+                throw new Error(
+                  createJson.error || "Server did not return add_questions_url"
+                );
               }
               // 2) Post questions to the provided URL
               return fetch(createJson.add_questions_url, {
@@ -323,21 +329,26 @@
                 body: fd,
               });
             })
-            .then((res2) => res2.json())
+            .then(async (res2) => {
+              if (res2.ok) {
+                return res2.json();
+              }
+              const html2 = await res2.text();
+              throw new Error("Add questions failed:\n" + html2);
+            })
             .then((qJson) => {
               if (qJson.errors && qJson.errors.length) {
                 alert(
                   "Some questions failed to save:\n" + qJson.errors.join("\n")
                 );
               } else {
-                // success → go back to list
                 window.location.href =
                   "{{ url_for('exams_routes.list_exams') }}";
               }
             })
             .catch((err) => {
               console.error(err);
-              alert("Error: " + err.message);
+              alert(err.message);
             });
         });
       });
