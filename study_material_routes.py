@@ -587,15 +587,17 @@ def update_progress():
             )
             db.session.add(prog)
 
-        # advance page counter
+        # advance page counter, but never exceed total_pages
         if current_page > prog.pages_visited:
-            prog.pages_visited = current_page
+            prog.pages_visited = min(current_page, total_pages)
 
-        # compute %
-        prog.progress_percentage = int(prog.pages_visited / total_pages * 100)
+        # compute % and cap at 100
+        raw_pct = int(prog.pages_visited / total_pages * 100)
+        prog.progress_percentage = min(raw_pct, 100)
 
-        # stamp completion once
-        if prog.progress_percentage == 100 and prog.completion_date is None:
+        # stamp completion once (allow >= 100 to trigger)
+        if prog.progress_percentage >= 100 and prog.completion_date is None:
+            prog.progress_percentage = 100
             prog.completion_date = datetime.utcnow()
             prog.completed = True
 
@@ -620,8 +622,6 @@ def update_progress():
     except Exception as e:
         logging.exception("update_progress failed")
         return jsonify(error=str(e)), 500
-
-
 
 @study_material_routes.route('/stream_file/<file_id>', methods=['GET'])
 def stream_file(file_id):
