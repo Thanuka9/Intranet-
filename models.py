@@ -16,7 +16,7 @@ from sqlalchemy.dialects.postgresql import ARRAY
 user_task_association = Table(
     'user_task_association', db.Model.metadata,
     Column('user_id', Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
-    Column('task_id', Integer, ForeignKey('tasks.id'), primary_key=True)
+    Column('task_id', Integer, ForeignKey('tasks.id', ondelete='CASCADE'), primary_key=True),
 )
 
 # -------------------------------------
@@ -25,7 +25,7 @@ user_task_association = Table(
 user_roles = Table(
     'user_roles', db.Model.metadata,
     Column('user_id', Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
-    Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True)
+    Column('role_id', Integer, ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
 )
 
 # -------------------------------------
@@ -34,7 +34,7 @@ user_roles = Table(
 user_clients = Table(
   'user_clients', db.Model.metadata,
   Column('user_id',   Integer, ForeignKey('users.id', ondelete='CASCADE'),   primary_key=True),
-  Column('client_id', Integer, ForeignKey('clients.id'), primary_key=True),
+  Column('client_id', Integer, ForeignKey('clients.id', ondelete='CASCADE'), primary_key=True),
 )
 
 # -------------------------------------
@@ -556,15 +556,15 @@ class Question(db.Model):
     __tablename__ = 'questions'
 
     id = Column(Integer, primary_key=True)
-    exam_id = Column(Integer, ForeignKey('exams.id'), nullable=False)
+    exam_id = Column(Integer, ForeignKey('exams.id', ondelete='CASCADE'), nullable=False)
     question_text = Column(Text, nullable=False)
     choices = Column(Text, nullable=False)  # Stores comma-separated choices
     correct_answer = Column(String(255), nullable=False)
-    category_id = Column(Integer, ForeignKey('categories.id'), nullable=False)
+    category_id = Column(Integer, ForeignKey('categories.id', ondelete='CASCADE'), nullable=False)
 
     # Relationships
-    exam = relationship("Exam", back_populates="questions")
-    category = relationship("Category", back_populates="questions")
+    exam = relationship("Exam", back_populates="questions", passive_deletes=True)
+    category = relationship("Category", back_populates="questions", passive_deletes=True)
 
     def __repr__(self):
         return f"<Question(id={self.id}, text='{self.question_text[:30]}...', category='{self.category.name}')>"
@@ -606,7 +606,7 @@ class UserScore(db.Model):
         area_name = self.area.name if self.area else 'N/A'
         return (f"<UserScore(id={self.id}, user_id={self.user_id}, "
                 f"level={level_num}, area='{area_name}', score={self.score})>")
-    
+
 # -------------------------------
 # Exam Access Request Model
 # -------------------------------
@@ -614,14 +614,22 @@ class ExamAccessRequest(db.Model):
     __tablename__ = 'exam_access_requests'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='CASCADE'),
+        nullable=False
+    )
     exam_id = db.Column(db.Integer, nullable=False)  # Supports both regular & special exams
     status = db.Column(db.String(20), default='pending')  # pending | approved | rejected
     requested_at = db.Column(db.DateTime, default=datetime.utcnow)
     reviewed_at = db.Column(db.DateTime, nullable=True)
-    used          = db.Column(db.Boolean, nullable=False, default=False)
+    used        = db.Column(db.Boolean, nullable=False, default=False)
 
-    user = db.relationship("User", backref="exam_requests")
+    user = db.relationship(
+        "User",
+        backref=db.backref("exam_requests", passive_deletes=True),
+        passive_deletes=True
+    )
 
     @property
     def is_special_exam(self):
@@ -652,7 +660,7 @@ class Task(db.Model):
         db.ForeignKey('users.id', ondelete='SET NULL'),
         nullable=True
     )
-    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id', ondelete='CASCADE'), nullable=True)
 
     # Relationships
     assigned_by_user = db.relationship(
@@ -773,7 +781,7 @@ class Event(db.Model):
     date = Column(Date, nullable=False)
 
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    user = relationship("User", back_populates="events", passive_deletes=True)
+    user = db.relationship("User", back_populates="events", passive_deletes=True)
 
     def __repr__(self):
         return f"<Event(id={self.id}, title='{self.title}', date={self.date}, user_id={self.user_id})>"
@@ -879,10 +887,8 @@ class Department(db.Model):
         return f"<Department(id={self.id}, name='{self.name}')>"
     
 # -------------------------------------
-#incorrect_answer Model
+# IncorrectAnswer Model
 # -------------------------------------
-from sqlalchemy import Text  # at the top
-
 class IncorrectAnswer(db.Model):
     __tablename__ = 'incorrect_answers'
 
@@ -899,11 +905,19 @@ class IncorrectAnswer(db.Model):
         db.Index('ix_user_exam', 'user_id', 'exam_id'),
     )
 
-    user = db.relationship('User', back_populates='incorrect_answers')
-    exam = db.relationship('Exam', back_populates='incorrect_answers')
+    user = db.relationship(
+        'User',
+        back_populates='incorrect_answers',
+        passive_deletes=True
+    )
+    exam = db.relationship(
+        'Exam',
+        back_populates='incorrect_answers',
+        passive_deletes=True
+    )
 
 # -------------------------------------
-#PasswordResetRequest Model
+# PasswordResetRequest Model
 # -------------------------------------
 class PasswordResetRequest(db.Model):
     __tablename__ = 'password_reset_request'
@@ -925,5 +939,7 @@ class PasswordResetRequest(db.Model):
     # back-reference to User
     user = db.relationship(
         'User',
-        back_populates='password_reset_requests'
+        back_populates='password_reset_requests',
+        passive_deletes=True
     )
+

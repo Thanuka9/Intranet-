@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, render_template
 from extensions import db
-from models import Exam, Question, UserScore, User, Category, Level, Area, UserLevelProgress, Designation, LevelArea, StudyMaterial, ExamAccessRequest, IncorrectAnswer
+from models import Exam, Question, UserScore, User, Category, Level, Area, UserLevelProgress, Designation, LevelArea, StudyMaterial, ExamAccessRequest, IncorrectAnswer, UserProgress
 from flask_login import current_user, login_required
 from datetime import datetime, timezone, timedelta
 from jinja2 import TemplateNotFound
@@ -281,9 +281,9 @@ def add_questions(exam_id):
         return jsonify({'error': 'Internal server error'}), 500
 
     
-# -------------------------------
-# List Exams
-# -------------------------------
+# ---------------------------------------
+# List Exams Route
+# ---------------------------------------
 @exams_routes.route('/list', methods=['GET'])
 @login_required
 def list_exams():
@@ -307,6 +307,7 @@ def list_exams():
                 .order_by(Exam.level_id.asc(), Exam.title.asc())
                 .all()
         )
+
         exam_scores = {
             s.exam_id: s
             for s in UserScore.query
@@ -319,7 +320,8 @@ def list_exams():
 
         # ── Main loop for regular exams ──────────────────────────────
         for exam in exams:
-            score_record   = exam_scores.get(exam.id)
+            score_record = exam_scores.get(exam.id)
+
             access_request = (
                 ExamAccessRequest.query
                 .filter_by(user_id=user_id, exam_id=exam.id)
@@ -327,16 +329,24 @@ def list_exams():
                 .first()
             )
 
-            study_complete = has_finished_study(user_id, exam.level_id, exam.area_id)
-            can_skip       = exam.is_skippable(current_user)
-            level_allowed  = (
+            # 1) STUDY-COMPLETION CHECK (must complete exact course)
+            prog = UserProgress.query.filter_by(
+                user_id=user_id,
+                study_material_id=exam.course_id,
+                completed=True
+            ).first()
+            study_complete = True if prog else False
+
+            # 2) CAN-SKIP and LEVEL-GATING
+            can_skip      = exam.is_skippable(current_user)
+            level_allowed = (
                 current_user.designation.can_skip_level(exam.level.level_number)
                 or exam.level.level_number <= current_level
             )
             if not level_allowed:
-                continue  # hidden by level gating
+                continue  # hide exams above user’s level
 
-            # base payload
+            # 3) Build base exam_data payload
             exam_data = {
                 'exam_id'     : exam.id,
                 'title'       : exam.title,
@@ -351,7 +361,7 @@ def list_exams():
                 'route'       : 'exams_routes.start_exam'
             }
 
-            # 1) Study requirement
+            # 4) Enforce STUDY REQUIREMENT
             if not study_complete:
                 if can_skip and not score_record:
                     exam_data['status'] = 'Skipped (optional)'
@@ -360,7 +370,7 @@ def list_exams():
                     processed_exams.append(exam_data)
                     continue
 
-            # 2) Access control on first attempt
+            # 5) ACCESS CONTROL on FIRST ATTEMPT
             if not score_record:
                 if (
                     not access_request
@@ -377,31 +387,29 @@ def list_exams():
                     processed_exams.append(exam_data)
                     continue
 
-            # 3) Score & retry logic
+            # 6) SCORE & RETRY LOGIC
             if not score_record:
                 exam_data.update({
                     'status'   : 'Start Exam',
                     'can_retry': True
                 })
             else:
-                next_try       = score_record.created_at + retry_period
-                can_retry_now  = now >= next_try
+                next_try      = score_record.created_at + retry_period
+                can_retry_now = (now >= next_try)
                 exam_data['retry_date'] = next_try.date().isoformat()
 
                 if score_record.score >= 56:
-                    # passed: cooldown before re-attempt
                     exam_data.update({
                         'status'   : 'Retry available' if can_retry_now else 'Passed',
                         'can_retry': can_retry_now
                     })
                 else:
-                    # failed: same cooldown logic
                     exam_data.update({
                         'status'   : 'Retry available' if can_retry_now else 'Failed',
                         'can_retry': can_retry_now
                     })
 
-                # 3b) require new access request when retrying
+                # 6b) Re-check “Access Required” on retry
                 if exam_data['status'] == 'Retry available':
                     latest_req = (
                         ExamAccessRequest.query
@@ -410,13 +418,14 @@ def list_exams():
                         .first()
                     )
                     if not latest_req or latest_req.used:
-                        exam_data['status']     = 'Access Required'
+                        exam_data['status']      = 'Access Required'
                         exam_data['can_request'] = True
-                        exam_data['can_retry']  = False
+                        exam_data['can_retry']   = False
 
-            # 4) Level promotion badge
-            if exam_data['status'] == 'Passed' and check_level_completion(current_user.id, exam.level_id):
-                exam_data['status'] = 'Level Completed'
+            # 7) LEVEL PROMOTION BADGE
+            if exam_data['status'] == 'Passed':
+                if check_level_completion(current_user.id, exam.level_id):
+                    exam_data['status'] = 'Level Completed'
 
             processed_exams.append(exam_data)
 
@@ -424,12 +433,12 @@ def list_exams():
         record = SpecialExamRecord.query.filter_by(user_id=user_id).first()
 
         def can_attempt_special(completed_at):
-            return not completed_at or now >= (completed_at + retry_period)
+            return not completed_at or (now >= (completed_at + retry_period))
 
         # Paper 1
         if record and record.paper1_passed:
             next_try  = record.paper1_completed_at + retry_period
-            p1_status = 'Retry available' if now >= next_try else 'Passed'
+            p1_status = 'Retry available' if (now >= next_try) else 'Passed'
         elif record:
             if record.paper2_passed:
                 p1_status = 'Locked (Paper 2 passed)'
@@ -448,17 +457,17 @@ def list_exams():
             'status'     : p1_status,
             'retry_date' : (
                 (record.paper1_completed_at + retry_period).date().isoformat()
-                if record and record.paper1_completed_at else None
+                if (record and record.paper1_completed_at) else None
             ),
-            'can_retry'  : p1_status in ('Start Exam', 'Retry available'),
-            'attempts'   : getattr(record, 'paper1_attempts', 0) if record else 0,
+            'can_retry'  : (p1_status in ('Start Exam', 'Retry available')),
+            'attempts'   : (getattr(record, 'paper1_attempts', 0) if record else 0),
             'route'      : 'special_exams_routes.exam_paper1'
         }
 
         # Paper 2
         if record and record.paper2_passed:
             next_try  = record.paper2_completed_at + retry_period
-            p2_status = 'Retry available' if now >= next_try else 'Passed'
+            p2_status = 'Retry available' if (now >= next_try) else 'Passed'
         elif record:
             if record.paper1_passed:
                 p2_status = 'Locked (Paper 1 passed)'
@@ -477,14 +486,14 @@ def list_exams():
             'status'     : p2_status,
             'retry_date' : (
                 (record.paper2_completed_at + retry_period).date().isoformat()
-                if record and record.paper2_completed_at else None
+                if (record and record.paper2_completed_at) else None
             ),
-            'can_retry'  : p2_status in ('Start Exam', 'Retry available'),
-            'attempts'   : getattr(record, 'paper2_attempts', 0) if record else 0,
+            'can_retry'  : (p2_status in ('Start Exam', 'Retry available')),
+            'attempts'   : (getattr(record, 'paper2_attempts', 0) if record else 0),
             'route'      : 'special_exams_routes.exam_paper2'
         }
 
-        # enforce access gating on special papers too
+        # Enforce access gating on special papers
         for paper in (paper1_data, paper2_data):
             if paper['status'] in ('Start Exam', 'Retry available'):
                 latest_req = (
@@ -494,9 +503,9 @@ def list_exams():
                     .first()
                 )
                 if not latest_req or latest_req.used:
-                    paper['status']     = 'Access Required'
+                    paper['status']      = 'Access Required'
                     paper['can_request'] = True
-                    paper['can_retry']  = False
+                    paper['can_retry']   = False
 
         unlocked_level = session.pop("new_level_unlocked", None)
         if current_user.designation_id != 1:
@@ -524,6 +533,9 @@ def list_exams():
         return render_template('500.html', error="Failed to load exam list"), 500
 
 
+# ---------------------------------------
+# Update Level Progression Function
+# ---------------------------------------
 def update_level_progression(user_id, exam_id):
     """
     Update the user's level progression after an exam attempt.
@@ -537,21 +549,24 @@ def update_level_progression(user_id, exam_id):
         exam = Exam.query.get(exam_id)
         user = User.query.get(user_id)
         if not exam or not user:
-            return
+            return  # nothing to do if either is missing
 
+        # 1) Find existing progression for this user/level/area
         existing_progress = UserLevelProgress.query.filter_by(
             user_id=user_id,
             level_id=exam.level_id,
             area_id=exam.area_id
         ).first()
 
+        # 2) Grab the user's latest score record for this exact exam
         latest_score = UserScore.query.filter_by(
             user_id=user_id,
             exam_id=exam.id
         ).order_by(UserScore.created_at.desc()).first()
         if not latest_score:
-            return
+            return  # no score to evaluate
 
+        # 3) If no UserLevelProgress row, create one
         if not existing_progress:
             existing_progress = UserLevelProgress(
                 user_id=user_id,
@@ -564,28 +579,39 @@ def update_level_progression(user_id, exam_id):
             )
             db.session.add(existing_progress)
 
+        # 4) Update attempts and best_score
         existing_progress.attempts += 1
-        existing_progress.best_score = max(existing_progress.best_score or 0, latest_score.score)
+        existing_progress.best_score = max(
+            existing_progress.best_score or 0,
+            latest_score.score
+        )
+        # 5) If they passed (>=56), mark this Level-Area as 'completed'
         if latest_score.score >= 56:
             existing_progress.status = 'completed'
 
         db.session.commit()
 
-        # If entire level done, advance user
+        # 6) If the entire level is done (all areas)—advance user
         if check_level_completion(user_id, exam.level_id):
-            next_level = Level.query.filter_by(level_number=exam.level.level_number+1).first()
+            next_level = Level.query.filter_by(
+                level_number=exam.level.level_number + 1
+            ).first()
             if next_level:
                 user.current_level = next_level.level_number
                 db.session.commit()
-                flash(f"Congratulations! You have unlocked Level {next_level.level_number}", "success")
+                flash(
+                    f"Congratulations! You have unlocked Level {next_level.level_number}",
+                    "success"
+                )
 
     except SQLAlchemyError as e:
         logging.error(f"Database error in update_level_progression: {e}")
         db.session.rollback()
     except Exception as e:
         logging.error(f"Unexpected error in update_level_progression: {e}")
-
-
+# ---------------------------------------
+# Check Level Completion Function    
+# ---------------------------------------
 def check_level_completion(user_id, level_id):
     """
     Returns True if the user has met all completion requirements for the given level:
