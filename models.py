@@ -627,7 +627,7 @@ class ExamAccessRequest(db.Model):
     def is_special_exam(self):
         return self.exam_id in (9991, 9992)
 
-#--------------------------------    
+# --------------------------------    
 # Task Model
 # -------------------------------
 class Task(db.Model):
@@ -642,13 +642,30 @@ class Task(db.Model):
     progress = db.Column(db.Integer, nullable=False, default=0)
 
     # Foreign Keys
-    assigned_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'),nullable=False)
-    completed_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'),nullable=True)
+    assigned_by = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='CASCADE'),
+        nullable=False
+    )
+    completed_by = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='SET NULL'),
+        nullable=True
+    )
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=True)
 
     # Relationships
-    assigned_by_user = db.relationship("User", foreign_keys=[assigned_by], back_populates="tasks_assigned", passive_deletes=True)
-    completed_by_user = db.relationship("User", foreign_keys=[completed_by], passive_deletes=True)
+    assigned_by_user = db.relationship(
+        "User",
+        foreign_keys=[assigned_by],
+        back_populates="tasks_assigned",
+        passive_deletes=True
+    )
+    completed_by_user = db.relationship(
+        "User",
+        foreign_keys=[completed_by],
+        passive_deletes=True
+    )
     client = db.relationship("Client", back_populates="tasks")
 
     assignees = db.relationship(
@@ -660,7 +677,8 @@ class Task(db.Model):
     documents = db.relationship(
         "TaskDocument",
         back_populates="task",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        passive_deletes=True
     )
 
     def calculate_progress(self):
@@ -692,8 +710,19 @@ class TaskDocument(db.Model):
     data = Column(LargeBinary, nullable=False)
     upload_date = Column(DateTime, default=datetime.utcnow)
 
-    task_id = Column(Integer, ForeignKey('tasks.id'), nullable=False)
-    task = relationship("Task", back_populates="documents")
+    # 1) add ondelete="CASCADE" here:
+    task_id = Column(
+        Integer,
+        ForeignKey('tasks.id', ondelete='CASCADE'),
+        nullable=False
+    )
+
+    # 2) enable passive_deletes=True so SQLAlchemy trusts the DB to cascade
+    task = relationship(
+        "Task",
+        back_populates="documents",
+        passive_deletes=True
+    )
 
     def __repr__(self):
         return f"<TaskDocument(id={self.id}, filename='{self.filename}', task_id={self.task_id})>"

@@ -28,8 +28,10 @@ from gridfs import GridFS
 from sqlalchemy import desc
 from IPython.display import HTML
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import text
+from sqlalchemy import text, func
 from sqlalchemy.orm  import joinedload
+from collections import defaultdict
+
 
 
 # Load .env variables (if running locally)
@@ -677,7 +679,10 @@ def view_analytics():
 
     def date_filter(query, model_field):
         if start_date and end_date:
-            return query.filter(model_field >= start_date, model_field <= end_date)
+            return query.filter(
+                func.date(model_field) >= start_date,
+                func.date(model_field) <= end_date
+            )
         return query
 
     avg_exam_score = date_filter(
@@ -1821,11 +1826,11 @@ def view_incorrect_answers():
     detailed_q = (
         db.session.query(
             last_wrong_sq.c.last_wrong.label('answered_at'),
-    case(
-        (IncorrectAnswer.special_paper.isnot(None),
-        db.func.concat('Special Exam ', IncorrectAnswer.special_paper)),
-        else_=Exam.title
-    ).label('exam_title'),
+            case(
+                (IncorrectAnswer.special_paper.isnot(None),
+                 db.func.concat('Special Exam ', IncorrectAnswer.special_paper)),
+                else_=Exam.title
+            ).label('exam_title'),
             IncorrectAnswer.special_paper,
             IncorrectAnswer.question_id.label('question_id_val'),
             Question.question_text,
@@ -1845,11 +1850,11 @@ def view_incorrect_answers():
     )
 
     pagination = detailed_q.paginate(page=page, per_page=per_page, error_out=False)
-    records = pagination.items
+    rows = pagination.items
 
     # Patch special exam questions if needed (dict for mutability)
     patched_records = []
-    for row in records:
+    for row in rows:
         row_dict = dict(row._mapping) if hasattr(row, '_mapping') else dict(row)
         if row_dict['special_paper'] and row_dict['question_id_val'] is not None:
             paper = row_dict['special_paper'].lower()
@@ -1865,10 +1870,15 @@ def view_incorrect_answers():
                     )
         patched_records.append(row_dict)
 
+    # Group patched_records by exam_title
+    grouped_by_exam = defaultdict(list)
+    for rec in patched_records:
+        grouped_by_exam[rec['exam_title']].append(rec)
+
     return render_template(
         'incorrect_details.html',
         user       = user,
-        records    = patched_records,
+        grouped    = grouped_by_exam,
         pagination = pagination
     )
 

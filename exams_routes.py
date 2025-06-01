@@ -920,9 +920,9 @@ def start_exam(exam_id):
 
     • honours ‘skippable’ exams (with ?force=true override)
     • blocks users below the exam’s minimum level
-    • enforces a 30‑day cool‑down after each failed attempt
-    • prevents retake after a passing score (≥ 56 %)
-    • REFUSES start unless study material for this area + level is 100 % complete
+    • enforces a 30-day cool-down after each failed attempt
+    • prevents retake after a passing score (≥ 56 %)
+    • REFUSES start unless study material for this area + level is 100 % complete
     """
     try:
         exam = (
@@ -930,22 +930,21 @@ def start_exam(exam_id):
             .options(db.joinedload(Exam.category))
             .get_or_404(exam_id)
         )
-        force    = request.args.get("force", "").lower() == "true"
-        now_utc  = datetime.utcnow()
+        force   = request.args.get("force", "").lower() == "true"
+        now_utc = datetime.utcnow()
 
-        # ─── Prerequisite Study Check ──────────────────────────────
+        # ─── 1) Prerequisite Study Check ─────────────────────────────────
         if not has_finished_study(current_user.id, exam.level_id, exam.area_id):
             flash("Please finish the study material first.", "danger")
             return redirect(url_for("exams_routes.list_exams"))
 
-        # ─── Access Approval Check ────────────────────────────────
+        # ─── 2) Access Approval Check ────────────────────────────────────
         access_req = (
             ExamAccessRequest.query
-            .filter_by(user_id=current_user.id, exam_id=exam_id, status='approved')
+            .filter_by(user_id=current_user.id, exam_id=exam_id, status="approved")
             .order_by(ExamAccessRequest.requested_at.desc())
             .first()
         )
-
         if not access_req:
             flash("You must request access and wait for admin approval before starting this exam.", "warning")
             return redirect(url_for("exams_routes.list_exams"))
@@ -954,19 +953,19 @@ def start_exam(exam_id):
             flash("This access has already been used. Please request exam access again.", "info")
             return redirect(url_for("exams_routes.list_exams"))
 
-        # ─── Optional Skip Gate ────────────────────────────────────
+        # ─── 3) Optional Skip Gate (informational only) ─────────────────
         if exam.is_skippable(current_user) and not force:
             flash(
                 "You can skip this exam. Click “Take Anyway” if you’d still like to attempt it.",
                 "info"
             )
-           
-        # ─── Level Requirement ─────────────────────────────────────
+
+        # ─── 4) Level Requirement ────────────────────────────────────────
         if exam.minimum_level and current_user.get_current_level() < exam.minimum_level:
             flash("Your level is not high enough to take this exam yet.", "warning")
             return redirect(url_for("exams_routes.list_exams"))
 
-        # ─── Cooldown Logic ────────────────────────────────────────
+        # ─── 5) Cooldown Logic ──────────────────────────────────────────
         last_score = (
             UserScore.query
             .filter_by(user_id=current_user.id, exam_id=exam_id)
@@ -980,10 +979,10 @@ def start_exam(exam_id):
 
             next_try = last_score.created_at + timedelta(days=30)
             if now_utc < next_try:
-                flash(f"You can retry this exam after {next_try.strftime('%Y‑%m‑%d')}.", "warning")
+                flash(f"You can retry this exam after {next_try.strftime('%Y-%m-%d')}.", "warning")
                 return redirect(url_for("exams_routes.list_exams"))
 
-        # ─── Questions Load ────────────────────────────────────────
+        # ─── 6) Questions Load ──────────────────────────────────────────
         questions = Question.query.filter_by(exam_id=exam.id).all()
         if not questions:
             flash("This exam has no questions yet.", "warning")
@@ -991,7 +990,7 @@ def start_exam(exam_id):
 
         selected = random.sample(questions, min(len(questions), 20))
 
-        # ─── Mark Access As Used ───────────────────────────────────
+        # ─── 7) Mark Access As Used ─────────────────────────────────────
         access_req.used = True
         db.session.commit()
 
@@ -1010,57 +1009,84 @@ def start_exam(exam_id):
             served_questions=",".join(str(q.id) for q in selected),
         )
 
-    # ─── Generic error fallback ───
     except Exception as err:
         logging.exception(f"Exam start error: {err}")
         flash("Could not start exam.", "danger")
         return redirect(url_for("exams_routes.list_exams"))
 
+
 # -------------------------------
 # Debug Start Exam Route
 # -------------------------------
-@exams_routes.route('/debug/start/<int:exam_id>', methods=['GET'])
+@exams_routes.route("/debug/start/<int:exam_id>", methods=["GET"])
+@login_required
 def debug_start_exam(exam_id):
     """
-    Debug route to test the start_exam functionality without login required.
+    Debug route to test the start_exam logic without admin approval,
+    but STILL enforces the study‐completion and other guards.
     """
     try:
-        # Fetch the exam
         exam = Exam.query.get_or_404(exam_id)
+
+        # ─── 1) Prerequisite Study Check (same as above) ───────────────
+        if not has_finished_study(current_user.id, exam.level_id, exam.area_id):
+            flash("Please finish the study material first.", "danger")
+            return redirect(url_for("exams_routes.list_exams"))
+
+        # ─── 2) Level Requirement ───────────────────────────────────────
+        if exam.minimum_level and current_user.get_current_level() < exam.minimum_level:
+            flash("Your level is not high enough to take this exam yet.", "warning")
+            return redirect(url_for("exams_routes.list_exams"))
+
+        # ─── 3) Cooldown Logic (same as above) ──────────────────────────
+        last_score = (
+            UserScore.query
+            .filter_by(user_id=current_user.id, exam_id=exam_id)
+            .order_by(UserScore.created_at.desc())
+            .first()
+        )
+        if last_score:
+            if last_score.score >= 56:
+                flash("You have already passed this exam.", "info")
+                return redirect(url_for("exams_routes.list_exams"))
+
+            next_try = last_score.created_at + timedelta(days=30)
+            if datetime.utcnow() < next_try:
+                flash(f"You can retry this exam after {next_try.strftime('%Y-%m-%d')}.", "warning")
+                return redirect(url_for("exams_routes.list_exams"))
+
+        # ─── 4) Load all questions (no admin‐approval check) ─────────────
         questions = Question.query.filter_by(exam_id=exam.id).all()
+        if not questions:
+            flash("This exam has no questions yet.", "warning")
+            return redirect(url_for("exams_routes.list_exams"))
 
         debug_data = {
-            'exam': {
-                'id': exam.id,
-                'title': exam.title,
-                'duration': exam.duration
-            },
-            'questions': []
+            "exam": {"id": exam.id, "title": exam.title, "duration": exam.duration},
+            "questions": []
         }
-
         for question in questions:
             # Parse choices string into a list
-            if isinstance(question.choices, str):
-                choices_list = question.choices.split(',')
-                choices_list = [choice.strip() for choice in choices_list]
-            else:
-                choices_list = question.choices
-
-            debug_data['questions'].append({
-                'id': question.id,
-                'text': question.question_text,
-                'choices': choices_list
+            choices_list = (
+                [c.strip() for c in question.choices.split(",")]
+                if isinstance(question.choices, str)
+                else question.choices
+            )
+            debug_data["questions"].append({
+                "id": question.id,
+                "text": question.question_text,
+                "choices": choices_list
             })
 
         return jsonify(debug_data)
 
     except SQLAlchemyError as e:
         logging.error(f"Database error in debug_start_exam for Exam ID {exam_id}: {e}")
-        return jsonify({'error': 'Database error occurred'}), 500
+        return jsonify({"error": "Database error occurred"}), 500
 
     except Exception as e:
         logging.error(f"Unexpected error in debug_start_exam for Exam ID {exam_id}: {e}")
-        return jsonify({'error': 'Unexpected error occurred'}), 500
+        return jsonify({"error": "Unexpected error occurred"}), 500
 
 # -------------------------------
 # Route to Fetch Dropdown Data for Exam Creation

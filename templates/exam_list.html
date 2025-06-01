@@ -205,30 +205,38 @@
               <span class="status-badge badge-warning">
                 <i class="fas fa-book"></i> {{ exam.status }}
               </span>
+
               {% elif exam.status == 'Level Completed' %}
               <span class="status-badge badge-info">
                 <i class="fas fa-check-double"></i> Level Completed
               </span>
-              {% elif is_skipped %}
+
+              {% elif is_skipped %} {# Show it as “Optional (Can Skip)” but it’s
+              still gated by study completion #}
               <span class="status-badge badge-info">
                 <i class="fas fa-arrow-right"></i> {{ exam.status }}
               </span>
+
               {% elif exam.status == 'Passed' %}
               <span class="status-badge badge-info">
                 <i class="fas fa-check-circle"></i> Passed
               </span>
+
               {% elif exam.status == 'Retry available' %}
               <span class="status-badge badge-danger">
                 <i class="fas fa-redo-alt"></i> Retry available
               </span>
+
               {% elif exam.status == 'Failed' %}
               <span class="status-badge badge-default">
                 <i class="fas fa-exclamation-circle"></i> Failed
               </span>
+
               {% elif exam.status == 'Start Exam' %}
               <span class="status-badge badge-default">
                 <i class="fas fa-play-circle"></i> Start Exam
               </span>
+
               {% else %}
               <span class="status-badge badge-default">{{ exam.status }}</span>
               {% endif %}
@@ -239,11 +247,12 @@
               {# —— Regular Exam Action Buttons —— #} {% if exam.status ==
               'Start Exam' %}
               <a
-                href="{{ url_for('exams_routes.start_exam', exam_id=exam.exam_id, force='true') }}"
+                href="{{ url_for('exams_routes.start_exam', exam_id=exam.exam_id) }}"
                 class="action-btn start"
                 title="Start Exam"
-                ><i class="fas fa-play"></i
-              ></a>
+              >
+                <i class="fas fa-play"></i>
+              </a>
 
               {% elif exam.status == 'Access Required' %} {% if exam.can_request
               %}
@@ -271,11 +280,12 @@
               </span>
               {% endif %} {% elif exam.status == 'Retry available' %}
               <a
-                href="{{ url_for('exams_routes.start_exam', exam_id=exam.exam_id, force='true') }}"
+                href="{{ url_for('exams_routes.start_exam', exam_id=exam.exam_id) }}"
                 class="action-btn retry"
                 title="Retry Exam"
-                ><i class="fas fa-redo-alt"></i
-              ></a>
+              >
+                <i class="fas fa-redo-alt"></i>
+              </a>
 
               {% else %}
               <span class="action-btn no-action" title="Unavailable">
@@ -295,18 +305,22 @@
               <span class="status-badge badge-info">
                 <i class="fas fa-check-circle"></i> Passed
               </span>
+
               {% elif spex.status == 'Retry available' %}
               <span class="status-badge badge-danger">
                 <i class="fas fa-redo-alt"></i> Retry available
               </span>
+
               {% elif spex.status == 'Failed' %}
               <span class="status-badge badge-default">
                 <i class="fas fa-exclamation-circle"></i> Failed
               </span>
+
               {% elif spex.status == 'Start Exam' %}
               <span class="status-badge badge-default">
                 <i class="fas fa-play-circle"></i> Start Exam
               </span>
+
               {% else %}
               <span class="status-badge badge-default">{{ spex.status }}</span>
               {% endif %}
@@ -341,8 +355,9 @@
                 href="{{ url_for(spex.route) }}"
                 class="action-btn start"
                 title="Start Special Exam"
-                ><i class="fas fa-play"></i
-              ></a>
+              >
+                <i class="fas fa-play"></i>
+              </a>
 
               {% elif spex.status == 'Retry available' and spex.can_request %}
               <form
@@ -396,7 +411,7 @@
           ></button>
         </div>
       </div>
-      {% endfor %} {% endif %} {% endwith %} {% if unlocked_level %}
+      {% endfor %} {% endif %} {% if unlocked_level %}
       <div
         class="toast align-items-center bg-success text-white border-0 shadow-lg show mb-2"
         role="alert"
@@ -415,7 +430,7 @@
           ></button>
         </div>
       </div>
-      {% endif %}
+      {% endif %} {% endwith %}
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
