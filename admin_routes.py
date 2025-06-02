@@ -706,7 +706,6 @@ def view_analytics():
     Supports custom start/end date, quick ranges (all/last 30/60/90),
     department filter, designation filter.
     """
-
     # ── 1) PERIOD + DATE RANGE LOGIC ───────────────────
     periods = ['all', 30, 60, 90]
     period_str     = request.args.get('period', '30').strip()
@@ -715,6 +714,10 @@ def view_analytics():
     sel_dept       = request.args.get('department', '').strip()
     sel_desig      = request.args.get('designation', '').strip()
     today = datetime.utcnow().date()
+
+    # Use datetime for inclusive range
+    start_date, end_date = None, None
+    period = None
 
     # If no custom dates, default to “Last 30 days”
     if not start_date_str and not end_date_str:
@@ -752,6 +755,14 @@ def view_analytics():
                     # Keep “Last N days” if parsing fails
                     pass
 
+    # Always turn into datetime (full day for inclusivity)
+    if start_date is not None and end_date is not None:
+        start_datetime = datetime.combine(start_date, datetime.min.time())
+        end_datetime   = datetime.combine(end_date,   datetime.max.time())
+    else:
+        start_datetime, end_datetime = None, None
+
+
     # ── 2) BUILD USER QUERY (apply dept & designation) ───
     user_query = User.query.filter(User.deleted_at.is_(None))
 
@@ -783,7 +794,7 @@ def view_analytics():
             active_users        = 0,
             avg_exam_score      = 0,
             avg_course_progress = 0,
-            special_avg_score   = 0,   # adjusted to 0
+            special_avg_score   = 0,
 
             # ── PASS/FAIL ──
             passed_count        = 0,
@@ -828,17 +839,17 @@ def view_analytics():
             task_assigned  = [],
             task_completed = [],
 
-            # ── EXAM & COURSE BAR DATA ──
-            exam_labels         = [],
+            # ── EXAM & COURSE BAR DATA (use IDs) ──
+            exam_ids            = [],
             exam_avg_scores     = [],
-            course_labels       = [],
+            course_ids          = [],
             course_avg_progress = [],
 
             # ── SCORE TREND ──
-            ts_labels          = [],
-            ts_avg_scores      = [],
-            spec_ts_labels     = [],
-            spec_ts_avg_scores = [],
+            ts_labels           = [],
+            ts_avg_scores       = [],
+            spec_ts_labels      = [],
+            spec_ts_avg_scores  = [],
 
             # ── 3D SCATTER METRICS (empty) ──
             metrics      = {
@@ -878,43 +889,35 @@ def view_analytics():
         return query
 
     # ── 4) SUMMARY CARDS ────────────────────────────────────
-    # (a) Avg Exam Score (over UserScore rows for filtered users)
     avg_exam_score = date_filter(
         db.session.query(func.avg(UserScore.score))
                   .filter(UserScore.user_id.in_([u.id for u in users_filtered])),
         UserScore.created_at
     ).scalar() or 0
 
-    # (b) Avg Course Progress
     avg_course_progress = date_filter(
         db.session.query(func.avg(UserProgress.progress_percentage))
                   .filter(UserProgress.user_id.in_([u.id for u in users_filtered])),
         UserProgress.completion_date
     ).scalar() or 0
 
-    # (c) Avg Special Exam: truly average all special exam scores
-    # We’ll gather every paper1_score and paper2_score for each SpecialExamRecord,
-    # convert missing values to None, and compute the overall average of the existing scores.
     special_scores = []
     recs = SpecialExamRecord.query.filter(
         SpecialExamRecord.user_id.in_([u.id for u in users_filtered])
     ).all()
 
     for rec in recs:
-        # If paper1 was completed, append paper1_score
         if rec.paper1_completed_at is not None and rec.paper1_score is not None:
             special_scores.append(rec.paper1_score)
-        # If paper2 was completed, append paper2_score
         if rec.paper2_completed_at is not None and rec.paper2_score is not None:
             special_scores.append(rec.paper2_score)
 
     if special_scores:
-        # Compute the average of all recorded special exam scores
         special_avg_score = round(sum(special_scores) / len(special_scores), 2)
     else:
         special_avg_score = 0
 
-    # ── 5) PASS / FAIL (Regular + Special) ────────────────
+    # ── 5) PASS / FAIL ─────────────────────────────────────
     passed_count = date_filter(
         UserScore.query.filter(
             UserScore.user_id.in_([u.id for u in users_filtered]),
@@ -938,7 +941,6 @@ def view_analytics():
         pass_pct = round(passed_count / pf_total * 100, 1)
         fail_pct = round(failed_count / pf_total * 100, 1)
 
-    # For special pass/fail percentages (unchanged from before):
     special_pass = sum(
         1 for rec in recs
         if (rec.paper1_completed_at and rec.paper1_passed) or (rec.paper2_completed_at and rec.paper2_passed)
@@ -979,7 +981,7 @@ def view_analytics():
           .order_by(func.avg(UserScore.score).desc())
           .limit(5)
           .all()
-    )  # List of (User, avg_score)
+    )
 
     # ── 7) USERS BY DEPARTMENT (Pie Chart) ─────────────────
     dept_q = (
@@ -1073,7 +1075,7 @@ def view_analytics():
     # ── 11) TIME SPENT HEATMAP (Plotly) ───────────────────
     all_departments = Department.query.order_by(Department.name).all()
     all_courses     = StudyMaterial.query.all()
-    heatmap_labels  = [c.title for c in all_courses]
+    heatmap_labels  = [str(c.id) for c in all_courses]
     heatmap_depts   = [d.name  for d in all_departments]
     heatmap_data    = []
     for dept in all_departments:
@@ -1089,7 +1091,8 @@ def view_analytics():
                   )
                   .scalar()
             ) or 0
-            row.append(round(avg_time / 60, 1))  # convert seconds → minutes
+            # convert seconds → half‐hours (1800 seconds = 0.5 hours)
+            row.append(round(avg_time / 1800, 2))
         heatmap_data.append(row)
 
     # ── 12) TOP 5 MOST MISSED QUESTIONS ───────────────────
@@ -1108,12 +1111,25 @@ def view_analytics():
     for qid, cnt in top_missed:
         question = Question.query.get(qid)
         if question:
-            short_text = question.question_text[:50]
-            if len(question.question_text) > 50:
-                short_text += '…'
+            # Determine “Rg-1” or “SP1”/“SP2” prefix and question number
+            question_num = getattr(question, 'question_number', question.id)
+
+            # Example assumes Question.paper_type in {'regular','special1','special2'}
+            ptype = getattr(question, 'paper_type', None)
+            if ptype == 'regular':
+                prefix = 'Rg-1'
+            elif ptype == 'special1':
+                prefix = 'SP1'
+            elif ptype == 'special2':
+                prefix = 'SP2'
+            else:
+                prefix = (str(ptype) or '').upper()
+
+            label = f"{prefix} Q-{question_num}"
         else:
-            short_text = '(Deleted question)'
-        missed_labels.append(short_text)
+            label = f"{qid}-N/A"
+
+        missed_labels.append(label)
         missed_values.append(cnt)
 
     # ── 13) TASKS ASSIGNED vs COMPLETED (Grouped Bar) ─────
@@ -1142,11 +1158,11 @@ def view_analytics():
             'completed': completed_tasks
         })
 
-    task_depts     = [ts['dept']     for ts in task_stats]
-    task_assigned  = [ts['assigned'] for ts in task_stats]
-    task_completed = [ts['completed']for ts in task_stats]
+    task_depts     = [ts['dept']      for ts in task_stats]
+    task_assigned  = [ts['assigned']  for ts in task_stats]
+    task_completed = [ts['completed'] for ts in task_stats]
 
-    # ── 14) SCORE TREND (regular vs special, dual‐line chart) ─
+    # ── 14) SCORE TREND (dual‐line) ────────────────────────
     ts = (
         date_filter(
             db.session.query(
@@ -1185,7 +1201,7 @@ def view_analytics():
     spec_ts_labels     = [r.spec_date.strftime('%Y-%m-%d') for r in spec_ts]
     spec_ts_avg_scores = [round(r.spec_avg_score, 2) for r in spec_ts]
 
-    # ── 15) ADVANCED 3D SCATTER METRICS ────────────────────
+    # ── 15) 3D SCATTER METRICS ──────────────────────────────
     metrics = {
         "avg_exam_score":        [],
         "total_time_spent":      [],
@@ -1199,28 +1215,22 @@ def view_analytics():
         "department":            [],
     }
     for user in users_filtered:
-        # a) Sort this user's regular exam scores
         scores     = sorted(user.scores, key=lambda s: s.created_at)
         progresses = user.study_progress
 
-        # Avg exam score
         avg_score = round(sum(s.score for s in scores) / len(scores), 2) if scores else 0
         metrics["avg_exam_score"].append(avg_score)
 
-        # Total time spent
         total_spent = sum(getattr(sp, "time_spent", 0) for sp in progresses)
         metrics["total_time_spent"].append(round(total_spent, 2))
 
-        # Completion rate
         assigned_count  = len(progresses)
         completed_count = sum(1 for sp in progresses if getattr(sp, "progress_percentage", 0) >= 100)
         comp_rate       = round((completed_count / assigned_count * 100), 2) if assigned_count else 0
         metrics["completion_rate"].append(comp_rate)
 
-        # Exams taken
         metrics["exams_taken"].append(len(scores))
 
-        # Avg attempts per exam
         exam_ids = set()
         attempts = 0
         for s in scores:
@@ -1229,14 +1239,12 @@ def view_analytics():
         avg_att = round((attempts / len(exam_ids)), 2) if exam_ids else 0
         metrics["avg_attempts_per_exam"].append(avg_att)
 
-        # Score Improvement
         if len(scores) >= 2:
             improv = scores[-1].score - scores[0].score
         else:
             improv = 0
         metrics["score_improvement"].append(improv)
 
-        # Last activity date (days ago)
         dates = [s.created_at for s in scores] + [sp.completion_date for sp in progresses if sp.completion_date]
         if dates:
             last_dt = max(dates)
@@ -1245,7 +1253,6 @@ def view_analytics():
             days_ago = None
         metrics["last_activity_days_ago"].append(days_ago if days_ago is not None else "")
 
-        # Avg special exam score for this user
         rec = getattr(user, "special_exam_record", None)
         if rec:
             took1 = rec.paper1_completed_at is not None
@@ -1263,7 +1270,6 @@ def view_analytics():
             avg_special = 0
         metrics["avg_special_score"].append(avg_special)
 
-        # User label & department string
         metrics["user_labels"].append(f"{user.first_name} {user.last_name}")
         metrics["department"].append(
             ", ".join([d.name for d in user.departments]) if user.departments else "N/A"
@@ -1283,39 +1289,39 @@ def view_analytics():
     default_y = "total_time_spent"
     default_z = "completion_rate"
 
-    # ── 16) EXAM‐LEVEL + COURSE‐LEVEL DATA ─────────────────
+    # ── 16) EXAM‐LEVEL + COURSE‐LEVEL DATA (use IDs) ──────
     exam_data = (
         date_filter(
             db.session.query(
-                Exam.title.label("title"),
+                Exam.id.label("exam_id"),
                 func.avg(UserScore.score).label("avg_score")
             )
             .join(UserScore, UserScore.exam_id == Exam.id)
             .filter(UserScore.user_id.in_([u.id for u in users_filtered])),
             UserScore.created_at
         )
-        .group_by(Exam.title)
-        .order_by(Exam.title)
+        .group_by(Exam.id)
+        .order_by(Exam.id)
         .all()
     )
-    exam_labels     = [r.title      for r in exam_data]
+    exam_ids        = [str(r.exam_id)           for r in exam_data]
     exam_avg_scores = [round(r.avg_score, 2) for r in exam_data]
 
     cp_data = (
         date_filter(
             db.session.query(
-                StudyMaterial.title.label("title"),
+                StudyMaterial.id.label("material_id"),
                 func.avg(UserProgress.progress_percentage).label("avg_prog")
             )
             .join(UserProgress, UserProgress.study_material_id == StudyMaterial.id)
             .filter(UserProgress.user_id.in_([u.id for u in users_filtered])),
             UserProgress.completion_date
         )
-        .group_by(StudyMaterial.title)
-        .order_by(StudyMaterial.title)
+        .group_by(StudyMaterial.id)
+        .order_by(StudyMaterial.id)
         .all()
     )
-    course_labels       = [r.title   for r in cp_data]
+    course_ids         = [str(r.material_id)         for r in cp_data]
     course_avg_progress = [round(r.avg_prog, 2) for r in cp_data]
 
     # ── 17) RENDER TEMPLATE ───────────────────────────────
@@ -1383,9 +1389,9 @@ def view_analytics():
         task_completed      = task_completed,
 
         # ── EXAM & COURSE BAR DATA ──
-        exam_labels         = exam_labels,
+        exam_ids            = exam_ids,
         exam_avg_scores     = exam_avg_scores,
-        course_labels       = course_labels,
+        course_ids          = course_ids,
         course_avg_progress = course_avg_progress,
 
         # ── SCORE TREND ──
