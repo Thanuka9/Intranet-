@@ -9,7 +9,7 @@ from models import (
     User, Designation, Exam, Question, UserScore,
     Category, Level, Area, UserLevelProgress,
     SpecialExamRecord, Client, LevelArea,
-    Task, TaskDocument, FailedLogin, Event, Role, ExamAccessRequest, IncorrectAnswer, Department
+    Task, TaskDocument, FailedLogin, Event, Role, ExamAccessRequest, IncorrectAnswer, Department, user_departments
 )
 import logging
 from datetime import datetime, timedelta
@@ -439,18 +439,55 @@ def delete_exam(exam_id):
         flash("Exam deleted successfully!", "success")
     except Exception as e:
         logging.error(f"user_id={user_id} error deleting exam {exam_id}: {e}")
-        flash("Failed to delete exam.", "error")  # <-- fixed here
+        flash("Failed to delete exam.", "error")
     return redirect(url_for('admin_routes.admin_dashboard'))
 
-@admin_routes.route('/edit_exam/<int:exam_id>', methods=['POST'])
+
+@admin_routes.route('/edit_exam/<int:exam_id>', methods=['GET', 'POST'])
 @login_required
 @super_admin_required
 def edit_exam(exam_id):
+    """
+    GET  → Render a form to edit (title, duration, level, etc.) for that exam.
+    POST → Read the form data and update the existing exam record.
+    """
     exam = Exam.query.get_or_404(exam_id)
-    # update your exam.title, exam.duration, exam.level, etc.
-    db.session.commit()
-    flash("Exam updated successfully.", "success")
-    return redirect(url_for('admin_routes.admin_dashboard'))
+
+    if request.method == 'POST':
+        # 1) Grab each field from request.form (names must match your form inputs)
+        new_title    = request.form.get('title', '').strip()
+        new_duration = request.form.get('duration', '').strip()
+        new_level    = request.form.get('level', '').strip()  # this is a string ID
+
+        # 2) Simple validation
+        if not new_title:
+            flash("Title cannot be blank.", "warning")
+            return redirect(url_for('admin_routes.edit_exam', exam_id=exam_id))
+
+        # 3) Assign back onto the `exam` object
+        exam.title = new_title
+
+        # Convert duration to int if valid, otherwise leave as-is
+        if new_duration.isdigit():
+            exam.duration = int(new_duration)
+
+        # Convert level to int and assign to the foreign-key column
+        if new_level.isdigit():
+            exam.level_id = int(new_level)
+
+        try:
+            db.session.commit()
+            flash("Exam updated successfully.", "success")
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error updating exam {exam_id}: {e}")
+            flash("Failed to update exam.", "error")
+
+        return redirect(url_for('admin_routes.admin_dashboard'))
+
+    # If GET → render a simple template with current exam data pre‐filled
+    return render_template("admin_edit_exam.html", exam=exam)
+
 
 
 @admin_routes.route('/delete_question/<int:question_id>', methods=['POST'])
@@ -528,7 +565,7 @@ def view_special_exam_record(record_id):
         flash("Failed to load record.", "error")
         return redirect(url_for('admin_routes.admin_dashboard'))
 
-# --- List / Filter Users ---
+# --- Manage Users page ---
 @admin_routes.route('/admin/users')
 @login_required
 @super_admin_required
@@ -541,15 +578,18 @@ def view_users():
     elif status == 'unverified':
         qry = qry.filter_by(is_verified=False)
 
-    users        = qry.all()
-    designations = Designation.query.order_by(Designation.title).all()
+    users           = qry.all()
+    designations    = Designation.query.order_by(Designation.title).all()
+    all_departments = Department.query.order_by(Department.name).all()
 
     return render_template(
         'admin_users.html',
         users=users,
         status=status,
-        designations=designations
+        designations=designations,
+        all_departments=all_departments
     )
+
 
 @admin_routes.route('/admin/user/designation/<int:user_id>', methods=['POST'])
 @login_required
@@ -564,7 +604,31 @@ def change_designation(user_id):
         flash(f"{user.first_name} {user.last_name} is now {desig.title}.", "success")
     else:
         flash("Invalid designation selected.", "error")
-    return redirect(url_for('admin_routes.view_users'))
+    return redirect(url_for('admin_routes.view_users', status=request.args.get('status', None)))
+
+
+@admin_routes.route('/admin/user/departments/<int:user_id>', methods=['POST'])
+@login_required
+@super_admin_required
+def change_user_departments(user_id):
+    user = User.query.get_or_404(user_id)
+    dept_ids = request.form.getlist('departments')  # list of strings
+    try:
+        dept_ids_int = [int(x) for x in dept_ids]
+    except ValueError:
+        dept_ids_int = []
+
+    selected_departments = Department.query.filter(Department.id.in_(dept_ids_int)).all()
+    user.departments = selected_departments
+    db.session.commit()
+
+    if selected_departments:
+        names = ", ".join([d.name for d in selected_departments])
+        flash(f"{user.first_name} {user.last_name} now belongs to: {names}", "success")
+    else:
+        flash(f"{user.first_name} {user.last_name} has no departments assigned.", "warning")
+
+    return redirect(url_for('admin_routes.view_users', status=request.args.get('status', None)))
 
 
 # --- Manage Courses page ---
@@ -596,7 +660,6 @@ def view_courses():
         levels=levels,
         designations=designations
     )
-
 
 # --- Manage Exams page ---
 @admin_routes.route('/admin/exams')
@@ -638,313 +701,705 @@ def view_exams():
 @login_required
 @admin_required
 def view_analytics():
+    """
+    Renders the Analytics Dashboard page.
+    Supports custom start/end date, quick ranges (all/last 30/60/90),
+    department filter, designation filter.
+    """
+
+    # ── 1) PERIOD + DATE RANGE LOGIC ───────────────────
     periods = ['all', 30, 60, 90]
-    period_str = request.args.get('period', '')
+    period_str     = request.args.get('period', '30').strip()
     start_date_str = request.args.get('start_date', '').strip()
-    end_date_str = request.args.get('end_date', '').strip()
-    q = request.args.get('q', '').strip()
+    end_date_str   = request.args.get('end_date', '').strip()
+    sel_dept       = request.args.get('department', '').strip()
+    sel_desig      = request.args.get('designation', '').strip()
     today = datetime.utcnow().date()
 
-    # Determine time range
-    if period_str == 'all':
-        start_date = None
-        end_date = None
-        period = 'all'
-    elif period_str:
-        try:
-            period = int(period_str)
-        except ValueError:
-            period = 30
-        if period not in [30, 60, 90]:
-            period = 30
-        start_date = today - timedelta(days=period)
-        end_date = today
-    elif start_date_str and end_date_str:
-        try:
-            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
-            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
-            period = (end_date - start_date).days
-        except ValueError:
-            period = 30
-            start_date = today - timedelta(days=period)
-            end_date = today
+    # If no custom dates, default to “Last 30 days”
+    if not start_date_str and not end_date_str:
+        period_val = 30
+        start_date = today - timedelta(days=period_val)
+        end_date   = today
+        period     = period_val
     else:
-        period = 30
-        start_date = today - timedelta(days=period)
-        end_date = today
+        # If user chose “all” on quick range:
+        if period_str == 'all':
+            start_date, end_date = None, None
+            period = 'all'
+        else:
+            # Parse period as an integer
+            try:
+                period_val = int(period_str)
+                if period_val not in [30, 60, 90]:
+                    period_val = 30
+            except ValueError:
+                period_val = 30
 
+            # Default “Last N days”
+            start_date = today - timedelta(days=period_val)
+            end_date   = today
+            period = period_val
+
+            # Override with custom dates if provided
+            if start_date_str and end_date_str:
+                try:
+                    sd = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+                    ed = datetime.strptime(end_date_str,   "%Y-%m-%d").date()
+                    start_date, end_date = sd, ed
+                    period = (ed - sd).days
+                except ValueError:
+                    # Keep “Last N days” if parsing fails
+                    pass
+
+    # ── 2) BUILD USER QUERY (apply dept & designation) ───
     user_query = User.query.filter(User.deleted_at.is_(None))
-    total_users = user_query.count()
-    active_users = total_users
 
+    if sel_dept:
+        user_query = user_query.filter(User.departments.any(Department.name == sel_dept))
+    if sel_desig:
+        user_query = user_query.filter(User.designation.has(Designation.title == sel_desig))
+
+    users_filtered = user_query.all()
+    total_users    = len(users_filtered)
+    active_users   = total_users  # Adjust if you have an “inactive” flag
+
+    # If no users at all, return early with all “No data” responses
+    if total_users == 0:
+        return render_template(
+            'admin_analytics.html',
+            # ── FILTERS ──
+            periods         = periods,
+            period          = period,
+            start_date      = (start_date.strftime('%Y-%m-%d') if start_date else ''),
+            end_date        = (end_date.strftime('%Y-%m-%d')   if end_date   else ''),
+            all_departments = Department.query.order_by(Department.name).all(),
+            sel_dept        = sel_dept,
+            designations    = Designation.query.order_by(Designation.title).all(),
+            sel_desig       = sel_desig,
+
+            # ── SUMMARY CARDS ── (all zeroes)
+            total_users         = 0,
+            active_users        = 0,
+            avg_exam_score      = 0,
+            avg_course_progress = 0,
+            special_avg_score   = 0,   # adjusted to 0
+
+            # ── PASS/FAIL ──
+            passed_count        = 0,
+            failed_count        = 0,
+            pass_pct            = 0,
+            fail_pct            = 0,
+            special_pass_count  = 0,
+            special_fail_count  = 0,
+            sp_pass_pct         = 0,
+            sp_fail_pct         = 0,
+
+            # ── TOP 5 USERS ──
+            top_users = [],
+
+            # ── DEPT & DESIGNATION DISTRIBUTIONS ──
+            dept_labels  = [],
+            dept_values  = [],
+            desig_labels = [],
+            desig_values = [],
+
+            # ── CATEGORY PERFORMANCE ──
+            cat_names      = [],
+            cat_avg_scores = [],
+            cat_counts     = [],
+
+            # ── LEVEL PROGRESS FUNNEL ──
+            funnel_levels    = [],
+            funnel_total     = [],
+            funnel_completed = [],
+
+            # ── TIME‐SPENT HEATMAP ──
+            heatmap_labels = [],
+            heatmap_depts  = [],
+            heatmap_data   = [],
+
+            # ── TOP MISSED QUESTIONS ──
+            missed_labels = [],
+            missed_values = [],
+
+            # ── TASKS ASSIGNED vs COMPLETED by Dept ──
+            task_depts     = [],
+            task_assigned  = [],
+            task_completed = [],
+
+            # ── EXAM & COURSE BAR DATA ──
+            exam_labels         = [],
+            exam_avg_scores     = [],
+            course_labels       = [],
+            course_avg_progress = [],
+
+            # ── SCORE TREND ──
+            ts_labels          = [],
+            ts_avg_scores      = [],
+            spec_ts_labels     = [],
+            spec_ts_avg_scores = [],
+
+            # ── 3D SCATTER METRICS (empty) ──
+            metrics      = {
+                "avg_exam_score":        [],
+                "total_time_spent":      [],
+                "completion_rate":       [],
+                "exams_taken":           [],
+                "avg_attempts_per_exam": [],
+                "score_improvement":     [],
+                "last_activity_days_ago":[],
+                "avg_special_score":     [],
+                "user_labels":           [],
+                "department":            [],
+            },
+            axis_options = [
+                {"key": "avg_exam_score",          "label": "Avg Exam Score"},
+                {"key": "total_time_spent",        "label": "Total Time Spent"},
+                {"key": "completion_rate",         "label": "Completion Rate"},
+                {"key": "exams_taken",             "label": "Exams Taken"},
+                {"key": "avg_attempts_per_exam",   "label": "Avg Attempts per Exam"},
+                {"key": "score_improvement",       "label": "Score Improvement"},
+                {"key": "last_activity_days_ago",  "label": "Last Activity (days ago)"},
+                {"key": "avg_special_score",       "label": "Avg Special Exam Score"},
+            ],
+            default_x = "avg_exam_score",
+            default_y = "total_time_spent",
+            default_z = "completion_rate"
+        )
+
+    # ── 3) HELPER: wrap any query in a date‐filter ─────────
     def date_filter(query, model_field):
-        if start_date and end_date:
+        if start_date is not None and end_date is not None:
             return query.filter(
                 func.date(model_field) >= start_date,
                 func.date(model_field) <= end_date
             )
         return query
 
+    # ── 4) SUMMARY CARDS ────────────────────────────────────
+    # (a) Avg Exam Score (over UserScore rows for filtered users)
     avg_exam_score = date_filter(
-        db.session.query(func.avg(UserScore.score)), UserScore.created_at
+        db.session.query(func.avg(UserScore.score))
+                  .filter(UserScore.user_id.in_([u.id for u in users_filtered])),
+        UserScore.created_at
     ).scalar() or 0
+
+    # (b) Avg Course Progress
     avg_course_progress = date_filter(
-        db.session.query(func.avg(UserProgress.progress_percentage)), UserProgress.completion_date
+        db.session.query(func.avg(UserProgress.progress_percentage))
+                  .filter(UserProgress.user_id.in_([u.id for u in users_filtered])),
+        UserProgress.completion_date
     ).scalar() or 0
 
-    # Per-exam avg scores (unchanged)
-    exam_data = (
-        date_filter(
-            db.session.query(
-                Exam.title,
-                func.avg(UserScore.score).label('avg_score')
-            )
-            .join(UserScore, UserScore.exam_id == Exam.id),
-            UserScore.created_at
-        )
-        .group_by(Exam.title)
-        .order_by(Exam.title)
-        .all()
-    )
-    exam_labels = [row.title for row in exam_data]
-    exam_avg_scores = [round(row.avg_score, 2) for row in exam_data]
+    # (c) Avg Special Exam: truly average all special exam scores
+    # We’ll gather every paper1_score and paper2_score for each SpecialExamRecord,
+    # convert missing values to None, and compute the overall average of the existing scores.
+    special_scores = []
+    recs = SpecialExamRecord.query.filter(
+        SpecialExamRecord.user_id.in_([u.id for u in users_filtered])
+    ).all()
 
-    # --- APPEND “Special Exam” to the same arrays so that it appears as its own bar ---
-    special_records = SpecialExamRecord.query.all()
-    special_totals = 0
-    special_sum_scores = 0.0
-    for rec in special_records:
-        took1 = rec.paper1_completed_at is not None
-        took2 = rec.paper2_completed_at is not None
-        if not (took1 or took2):
-            continue
-        scores = []
-        if took1:
-            scores.append(rec.paper1_score)
-        if took2:
-            scores.append(rec.paper2_score)
-        if scores:
-            special_sum_scores += sum(scores) / len(scores)
-            special_totals += 1
-    special_avg_score = round((special_sum_scores / special_totals), 2) if special_totals else 0.0
-    exam_labels.append("Special Exam")
-    exam_avg_scores.append(special_avg_score)
+    for rec in recs:
+        # If paper1 was completed, append paper1_score
+        if rec.paper1_completed_at is not None and rec.paper1_score is not None:
+            special_scores.append(rec.paper1_score)
+        # If paper2 was completed, append paper2_score
+        if rec.paper2_completed_at is not None and rec.paper2_score is not None:
+            special_scores.append(rec.paper2_score)
 
+    if special_scores:
+        # Compute the average of all recorded special exam scores
+        special_avg_score = round(sum(special_scores) / len(special_scores), 2)
+    else:
+        special_avg_score = 0
+
+    # ── 5) PASS / FAIL (Regular + Special) ────────────────
     passed_count = date_filter(
-        UserScore.query.filter(UserScore.score >= 56),
+        UserScore.query.filter(
+            UserScore.user_id.in_([u.id for u in users_filtered]),
+            UserScore.score >= 56
+        ),
         UserScore.created_at
     ).count()
-    failed_count = date_filter(
-        UserScore.query.filter(UserScore.score < 56),
-        UserScore.created_at
-    ).count()
-    pf_total = passed_count + failed_count or 1
-    pass_pct = round(passed_count / pf_total * 100, 1)
-    fail_pct = round(failed_count / pf_total * 100, 1)
 
-    cp_data = (
-        date_filter(
-            db.session.query(
-                StudyMaterial.title,
-                func.avg(UserProgress.progress_percentage).label('avg_prog')
-            )
-            .join(UserProgress, UserProgress.study_material_id == StudyMaterial.id),
-            UserProgress.completion_date
+    failed_count = date_filter(
+        UserScore.query.filter(
+            UserScore.user_id.in_([u.id for u in users_filtered]),
+            UserScore.score < 56
+        ),
+        UserScore.created_at
+    ).count()
+
+    pf_total = passed_count + failed_count
+    if pf_total == 0:
+        pass_pct = fail_pct = 0
+    else:
+        pass_pct = round(passed_count / pf_total * 100, 1)
+        fail_pct = round(failed_count / pf_total * 100, 1)
+
+    # For special pass/fail percentages (unchanged from before):
+    special_pass = sum(
+        1 for rec in recs
+        if (rec.paper1_completed_at and rec.paper1_passed) or (rec.paper2_completed_at and rec.paper2_passed)
+    )
+    special_fail = sum(
+        1 for rec in recs
+        if (
+            (rec.paper1_completed_at or rec.paper2_completed_at) and
+            not ((rec.paper1_completed_at and rec.paper1_passed) or (rec.paper2_completed_at and rec.paper2_passed))
         )
-        .group_by(StudyMaterial.title)
-        .order_by(StudyMaterial.title)
+    )
+    sp_total = special_pass + special_fail
+    if sp_total == 0:
+        sp_pass_pct = sp_fail_pct = 0
+    else:
+        sp_pass_pct = round(special_pass / sp_total * 100, 1)
+        sp_fail_pct = round(special_fail / sp_total * 100, 1)
+
+    # ── 6) TOP 5 USERS BY AVG SCORE ───────────────────────
+    top_users_q = (
+        db.session.query(User, func.avg(UserScore.score).label('avg_score'))
+          .join(UserScore, UserScore.user_id == User.id)
+          .filter(User.deleted_at.is_(None))
+    )
+    if start_date is not None and end_date is not None:
+        top_users_q = top_users_q.filter(
+            UserScore.created_at >= start_date,
+            UserScore.created_at <= end_date
+        )
+    if sel_dept:
+        top_users_q = top_users_q.filter(User.departments.any(Department.name == sel_dept))
+    if sel_desig:
+        top_users_q = top_users_q.filter(User.designation.has(Designation.title == sel_desig))
+
+    top_users = (
+        top_users_q
+          .group_by(User.id)
+          .order_by(func.avg(UserScore.score).desc())
+          .limit(5)
+          .all()
+    )  # List of (User, avg_score)
+
+    # ── 7) USERS BY DEPARTMENT (Pie Chart) ─────────────────
+    dept_q = (
+        db.session.query(Department.name, func.count(User.id))
+          .join(user_departments, Department.id == user_departments.c.department_id)
+          .join(User, User.id == user_departments.c.user_id)
+          .filter(User.deleted_at.is_(None))
+    )
+    if sel_dept:
+        dept_q = dept_q.filter(User.departments.any(Department.name == sel_dept))
+    if sel_desig:
+        dept_q = dept_q.filter(User.designation.has(Designation.title == sel_desig))
+
+    dept_counts = (
+        dept_q.group_by(Department.name)
+             .order_by(Department.name)
+             .all()
+    )
+    dept_labels = [r[0] for r in dept_counts]
+    dept_values = [r[1] for r in dept_counts]
+
+    # ── 8) USERS BY DESIGNATION (Bar Chart) ───────────────
+    desig_q = (
+        db.session.query(Designation.title, func.count(User.id))
+          .join(User, User.designation_id == Designation.id)
+          .filter(User.deleted_at.is_(None))
+    )
+    if sel_dept:
+        desig_q = desig_q.filter(User.departments.any(Department.name == sel_dept))
+    if sel_desig:
+        desig_q = desig_q.filter(User.designation.has(Designation.title == sel_desig))
+
+    desig_counts = (
+        desig_q.group_by(Designation.title)
+               .order_by(Designation.title)
+               .all()
+    )
+    desig_labels = [r[0] for r in desig_counts]
+    desig_values = [r[1] for r in desig_counts]
+
+    # ── 9) CATEGORY PERFORMANCE (horizontal bar) ──────────
+    cat_avg_data = (
+        db.session.query(
+            Category.name.label('cat_name'),
+            func.avg(UserScore.score).label('avg_score'),
+            func.count(UserScore.id).label('count_scores')
+        )
+        .join(UserScore, UserScore.category_id == Category.id)
+        .filter(
+            UserScore.user_id.in_([u.id for u in users_filtered]),
+            UserScore.created_at >= start_date if start_date is not None else True,
+            UserScore.created_at <= end_date   if end_date   is not None else True
+        )
+        .group_by(Category.name)
+        .order_by(Category.name)
         .all()
     )
-    course_labels = [row.title for row in cp_data]
-    course_avg_progress = [round(row.avg_prog, 2) for row in cp_data]
+    cat_names      = [r.cat_name     for r in cat_avg_data]
+    cat_avg_scores = [round(r.avg_score, 2) for r in cat_avg_data]
+    cat_counts     = [r.count_scores for r in cat_avg_data]
 
-    # Time-series for Regular Exams (unchanged):
+    # ── 10) LEVEL PROGRESS FUNNEL (stacked bar) ───────────
+    level_stats = []
+    levels_data = Level.query.order_by(Level.level_number).all()
+    for lvl in levels_data:
+        total_assigned = (
+            db.session.query(func.count(UserLevelProgress.user_id.distinct()))
+              .filter(UserLevelProgress.level_id == lvl.id)
+              .scalar()
+        ) or 0
+
+        completed_count = (
+            db.session.query(func.count(UserLevelProgress.user_id.distinct()))
+              .filter(
+                  UserLevelProgress.level_id == lvl.id,
+                  UserLevelProgress.status == 'completed'
+              )
+              .scalar()
+        ) or 0
+
+        level_stats.append({
+            'level_name': f"Level {lvl.level_number}",
+            'total_assigned': total_assigned,
+            'completed': completed_count
+        })
+
+    funnel_levels    = [l['level_name']    for l in level_stats]
+    funnel_total     = [l['total_assigned'] for l in level_stats]
+    funnel_completed = [l['completed']      for l in level_stats]
+
+    # ── 11) TIME SPENT HEATMAP (Plotly) ───────────────────
+    all_departments = Department.query.order_by(Department.name).all()
+    all_courses     = StudyMaterial.query.all()
+    heatmap_labels  = [c.title for c in all_courses]
+    heatmap_depts   = [d.name  for d in all_departments]
+    heatmap_data    = []
+    for dept in all_departments:
+        row = []
+        for course in all_courses:
+            avg_time = (
+                db.session.query(func.avg(UserProgress.time_spent))
+                  .join(User, User.id == UserProgress.user_id)
+                  .join(user_departments, user_departments.c.user_id == User.id)
+                  .filter(
+                      user_departments.c.department_id == dept.id,
+                      UserProgress.study_material_id == course.id
+                  )
+                  .scalar()
+            ) or 0
+            row.append(round(avg_time / 60, 1))  # convert seconds → minutes
+        heatmap_data.append(row)
+
+    # ── 12) TOP 5 MOST MISSED QUESTIONS ───────────────────
+    top_missed = (
+        db.session.query(
+            IncorrectAnswer.question_id,
+            func.count(IncorrectAnswer.id).label('miss_count')
+        )
+        .group_by(IncorrectAnswer.question_id)
+        .order_by(func.count(IncorrectAnswer.id).desc())
+        .limit(5)
+        .all()
+    )
+    missed_labels = []
+    missed_values = []
+    for qid, cnt in top_missed:
+        question = Question.query.get(qid)
+        if question:
+            short_text = question.question_text[:50]
+            if len(question.question_text) > 50:
+                short_text += '…'
+        else:
+            short_text = '(Deleted question)'
+        missed_labels.append(short_text)
+        missed_values.append(cnt)
+
+    # ── 13) TASKS ASSIGNED vs COMPLETED (Grouped Bar) ─────
+    task_stats = []
+    for dept in all_departments:
+        total_tasks = (
+            db.session.query(func.count(Task.id))
+              .join(User, User.id == Task.assigned_by)
+              .join(user_departments, user_departments.c.user_id == User.id)
+              .filter(user_departments.c.department_id == dept.id)
+              .scalar() or 0
+        )
+        completed_tasks = (
+            db.session.query(func.count(Task.id))
+              .join(User, User.id == Task.assigned_by)
+              .join(user_departments, user_departments.c.user_id == User.id)
+              .filter(
+                  user_departments.c.department_id == dept.id,
+                  Task.status.ilike('%Complete%')
+              )
+              .scalar() or 0
+        )
+        task_stats.append({
+            'dept': dept.name,
+            'assigned': total_tasks,
+            'completed': completed_tasks
+        })
+
+    task_depts     = [ts['dept']     for ts in task_stats]
+    task_assigned  = [ts['assigned'] for ts in task_stats]
+    task_completed = [ts['completed']for ts in task_stats]
+
+    # ── 14) SCORE TREND (regular vs special, dual‐line chart) ─
     ts = (
         date_filter(
             db.session.query(
                 func.date(UserScore.created_at).label('date'),
                 func.avg(UserScore.score).label('avg_score')
-            ),
+            ).filter(UserScore.user_id.in_([u.id for u in users_filtered])),
             UserScore.created_at
         )
         .group_by(func.date(UserScore.created_at))
         .order_by(func.date(UserScore.created_at))
         .all()
     )
-    ts_labels = [r.date.strftime('%Y-%m-%d') for r in ts]
+    ts_labels     = [r.date.strftime('%Y-%m-%d') for r in ts]
     ts_avg_scores = [round(r.avg_score, 2) for r in ts]
 
-    # --- FIXED: Build a time-series for SPECIAL EXAMS ---
-    spec_ts_query = (
+    spec_ts = (
         db.session.query(
             func.date(SpecialExamRecord.created_at).label('spec_date'),
             func.avg(
                 case(
                     (SpecialExamRecord.paper2_completed_at.is_(None), SpecialExamRecord.paper1_score),
                     (SpecialExamRecord.paper1_completed_at.is_(None), SpecialExamRecord.paper2_score),
-                    else_=( (SpecialExamRecord.paper1_score + SpecialExamRecord.paper2_score) / 2 )
+                    else_=((SpecialExamRecord.paper1_score + SpecialExamRecord.paper2_score)/2)
                 )
             ).label('spec_avg_score')
         )
         .filter(
-            SpecialExamRecord.created_at >= start_date if start_date else True,
-            SpecialExamRecord.created_at <= end_date if end_date else True
+            SpecialExamRecord.user_id.in_([u.id for u in users_filtered]),
+            SpecialExamRecord.created_at >= start_date if start_date is not None else True,
+            SpecialExamRecord.created_at <= end_date   if end_date   is not None else True
         )
         .group_by(func.date(SpecialExamRecord.created_at))
         .order_by(func.date(SpecialExamRecord.created_at))
         .all()
     )
-    spec_ts_labels = [r.spec_date.strftime('%Y-%m-%d') for r in spec_ts_query]
-    spec_ts_avg_scores = [round(r.spec_avg_score, 2) for r in spec_ts_query]
+    spec_ts_labels     = [r.spec_date.strftime('%Y-%m-%d') for r in spec_ts]
+    spec_ts_avg_scores = [round(r.spec_avg_score, 2) for r in spec_ts]
 
-    top_users_query = db.session.query(User, func.avg(UserScore.score).label('avg_score')) \
-        .join(UserScore, UserScore.user_id == User.id) \
-        .filter(User.deleted_at.is_(None))
-    if start_date and end_date:
-        top_users_query = top_users_query.filter(
-            UserScore.created_at >= start_date,
-            UserScore.created_at <= end_date
-        )
-    top_users = top_users_query.group_by(User).order_by(
-        func.avg(UserScore.score).desc()
-    ).limit(5).all()
-
-    # --- Compute Special Exam Metrics (pass/fail) ---
-    special_pass = 0
-    special_fail = 0
-    for rec in special_records:
-        took1 = rec.paper1_completed_at is not None
-        took2 = rec.paper2_completed_at is not None
-        if not took1 and not took2:
-            continue
-        passed1 = rec.paper1_passed
-        passed2 = rec.paper2_passed
-        if passed1 or passed2:
-            special_pass += 1
-        else:
-            special_fail += 1
-
-    # --- Advanced 3D Scatter Metrics ---
-    users_all = User.query.filter(User.deleted_at.is_(None)).all()
+    # ── 15) ADVANCED 3D SCATTER METRICS ────────────────────
     metrics = {
-        "avg_exam_score": [],
-        "total_time_spent": [],
-        "completion_rate": [],
-        "exams_taken": [],
+        "avg_exam_score":        [],
+        "total_time_spent":      [],
+        "completion_rate":       [],
+        "exams_taken":           [],
         "avg_attempts_per_exam": [],
-        "score_improvement": [],
-        "last_activity_days_ago": [],
-        "avg_special_score": [],
-        "user_labels": [],
-        "department": [],
+        "score_improvement":     [],
+        "last_activity_days_ago":[],
+        "avg_special_score":     [],
+        "user_labels":           [],
+        "department":            [],
     }
-    for user in users_all:
-        scores = sorted(user.scores, key=lambda s: s.created_at)
+    for user in users_filtered:
+        # a) Sort this user's regular exam scores
+        scores     = sorted(user.scores, key=lambda s: s.created_at)
         progresses = user.study_progress
 
-        avg_score = sum(s.score for s in scores) / len(scores) if scores else 0
-        metrics["avg_exam_score"].append(round(avg_score, 2))
+        # Avg exam score
+        avg_score = round(sum(s.score for s in scores) / len(scores), 2) if scores else 0
+        metrics["avg_exam_score"].append(avg_score)
 
-        time_spent = sum([getattr(sp, "time_spent", 0) for sp in progresses])
-        metrics["total_time_spent"].append(round(time_spent, 2))
+        # Total time spent
+        total_spent = sum(getattr(sp, "time_spent", 0) for sp in progresses)
+        metrics["total_time_spent"].append(round(total_spent, 2))
 
-        courses_assigned = len(progresses)
-        courses_completed = sum(1 for sp in progresses if getattr(sp, "progress_percentage", 0) >= 100)
-        completion_rate = (courses_completed / courses_assigned * 100) if courses_assigned else 0
-        metrics["completion_rate"].append(round(completion_rate, 2))
+        # Completion rate
+        assigned_count  = len(progresses)
+        completed_count = sum(1 for sp in progresses if getattr(sp, "progress_percentage", 0) >= 100)
+        comp_rate       = round((completed_count / assigned_count * 100), 2) if assigned_count else 0
+        metrics["completion_rate"].append(comp_rate)
 
-        exams_taken = len(scores)
-        metrics["exams_taken"].append(exams_taken)
+        # Exams taken
+        metrics["exams_taken"].append(len(scores))
 
+        # Avg attempts per exam
         exam_ids = set()
         attempts = 0
         for s in scores:
             exam_ids.add(s.exam_id)
             attempts += getattr(s, "attempt", 1)
-        avg_attempts = (attempts / len(exam_ids)) if exam_ids else 0
-        metrics["avg_attempts_per_exam"].append(round(avg_attempts, 2))
+        avg_att = round((attempts / len(exam_ids)), 2) if exam_ids else 0
+        metrics["avg_attempts_per_exam"].append(avg_att)
 
+        # Score Improvement
         if len(scores) >= 2:
-            score_improvement = scores[-1].score - scores[0].score
+            improv = scores[-1].score - scores[0].score
         else:
-            score_improvement = 0
-        metrics["score_improvement"].append(round(score_improvement, 2))
+            improv = 0
+        metrics["score_improvement"].append(improv)
 
-        last_dates = [s.created_at for s in scores] + [sp.completion_date for sp in progresses if sp.completion_date]
-        last_dates = [d for d in last_dates if d]
-        if last_dates:
-            last_activity = max(last_dates)
-            days_ago = (today - last_activity.date()).days
+        # Last activity date (days ago)
+        dates = [s.created_at for s in scores] + [sp.completion_date for sp in progresses if sp.completion_date]
+        if dates:
+            last_dt = max(dates)
+            days_ago = (today - last_dt.date()).days
         else:
             days_ago = None
         metrics["last_activity_days_ago"].append(days_ago if days_ago is not None else "")
 
-        # --- Per-user avg_special_score
+        # Avg special exam score for this user
         rec = getattr(user, "special_exam_record", None)
         if rec:
             took1 = rec.paper1_completed_at is not None
             took2 = rec.paper2_completed_at is not None
-            if took1 and took2:
-                special_user_avg = (rec.paper1_score + rec.paper2_score) / 2
-            elif took1:
-                special_user_avg = rec.paper1_score
-            elif took2:
-                special_user_avg = rec.paper2_score
+            scores_list = []
+            if took1 and rec.paper1_score is not None:
+                scores_list.append(rec.paper1_score)
+            if took2 and rec.paper2_score is not None:
+                scores_list.append(rec.paper2_score)
+            if scores_list:
+                avg_special = round(sum(scores_list) / len(scores_list), 2)
             else:
-                special_user_avg = 0
+                avg_special = 0
         else:
-            special_user_avg = 0
-        metrics["avg_special_score"].append(round(special_user_avg, 2))
+            avg_special = 0
+        metrics["avg_special_score"].append(avg_special)
 
+        # User label & department string
         metrics["user_labels"].append(f"{user.first_name} {user.last_name}")
-        metrics["department"].append(user.department.name if user.department else "N/A")
+        metrics["department"].append(
+            ", ".join([d.name for d in user.departments]) if user.departments else "N/A"
+        )
 
     axis_options = [
-        {"key": "avg_exam_score", "label": "Avg Exam Score"},
-        {"key": "total_time_spent", "label": "Total Time Spent"},
-        {"key": "completion_rate", "label": "Completion Rate"},
-        {"key": "exams_taken", "label": "Exams Taken"},
-        {"key": "avg_attempts_per_exam", "label": "Avg Attempts per Exam"},
-        {"key": "score_improvement", "label": "Score Improvement"},
-        {"key": "last_activity_days_ago", "label": "Last Activity (days ago)"},
-        {"key": "avg_special_score", "label": "Avg Special Exam Score"},
+        {"key": "avg_exam_score",          "label": "Avg Exam Score"},
+        {"key": "total_time_spent",        "label": "Total Time Spent"},
+        {"key": "completion_rate",         "label": "Completion Rate"},
+        {"key": "exams_taken",             "label": "Exams Taken"},
+        {"key": "avg_attempts_per_exam",   "label": "Avg Attempts per Exam"},
+        {"key": "score_improvement",       "label": "Score Improvement"},
+        {"key": "last_activity_days_ago",  "label": "Last Activity (days ago)"},
+        {"key": "avg_special_score",       "label": "Avg Special Exam Score"},
     ]
-
     default_x = "avg_exam_score"
     default_y = "total_time_spent"
     default_z = "completion_rate"
 
+    # ── 16) EXAM‐LEVEL + COURSE‐LEVEL DATA ─────────────────
+    exam_data = (
+        date_filter(
+            db.session.query(
+                Exam.title.label("title"),
+                func.avg(UserScore.score).label("avg_score")
+            )
+            .join(UserScore, UserScore.exam_id == Exam.id)
+            .filter(UserScore.user_id.in_([u.id for u in users_filtered])),
+            UserScore.created_at
+        )
+        .group_by(Exam.title)
+        .order_by(Exam.title)
+        .all()
+    )
+    exam_labels     = [r.title      for r in exam_data]
+    exam_avg_scores = [round(r.avg_score, 2) for r in exam_data]
+
+    cp_data = (
+        date_filter(
+            db.session.query(
+                StudyMaterial.title.label("title"),
+                func.avg(UserProgress.progress_percentage).label("avg_prog")
+            )
+            .join(UserProgress, UserProgress.study_material_id == StudyMaterial.id)
+            .filter(UserProgress.user_id.in_([u.id for u in users_filtered])),
+            UserProgress.completion_date
+        )
+        .group_by(StudyMaterial.title)
+        .order_by(StudyMaterial.title)
+        .all()
+    )
+    course_labels       = [r.title   for r in cp_data]
+    course_avg_progress = [round(r.avg_prog, 2) for r in cp_data]
+
+    # ── 17) RENDER TEMPLATE ───────────────────────────────
     return render_template(
         'admin_analytics.html',
-        period=period,
-        periods=periods,
-        total_users=total_users,
-        active_users=active_users,
-        avg_exam_score=round(avg_exam_score, 2),
-        avg_course_progress=round(avg_course_progress, 2),
-        special_avg_score=special_avg_score,
-        exam_labels=exam_labels,
-        exam_avg_scores=exam_avg_scores,
-        spec_ts_labels=spec_ts_labels,
-        spec_ts_avg_scores=spec_ts_avg_scores,
-        passed_count=passed_count,
-        failed_count=failed_count,
-        special_pass_count=special_pass,
-        special_fail_count=special_fail,
-        pass_pct=pass_pct,
-        fail_pct=fail_pct,
-        course_labels=course_labels,
-        course_avg_progress=course_avg_progress,
-        ts_labels=ts_labels,
-        ts_avg_scores=ts_avg_scores,
-        top_users=top_users,
-        start_date=start_date.strftime('%Y-%m-%d') if start_date else '',
-        end_date=end_date.strftime('%Y-%m-%d') if end_date else '',
-        axis_options=axis_options,
-        metrics=metrics,
-        default_x=default_x,
-        default_y=default_y,
-        default_z=default_z,
+
+        # ── FILTERS ──
+        periods         = periods,
+        period          = period,
+        start_date      = (start_date.strftime('%Y-%m-%d') if start_date else ''),
+        end_date        = (end_date.strftime('%Y-%m-%d')   if end_date   else ''),
+        all_departments = Department.query.order_by(Department.name).all(),
+        sel_dept        = sel_dept,
+        designations    = Designation.query.order_by(Designation.title).all(),
+        sel_desig       = sel_desig,
+
+        # ── SUMMARY CARDS ──
+        total_users         = total_users,
+        active_users        = active_users,
+        avg_exam_score      = round(avg_exam_score, 2),
+        avg_course_progress = round(avg_course_progress, 2),
+        special_avg_score   = round(special_avg_score, 2),
+
+        # ── PASS / FAIL ──
+        passed_count        = passed_count,
+        failed_count        = failed_count,
+        pass_pct            = pass_pct,
+        fail_pct            = fail_pct,
+        special_pass_count  = special_pass,
+        special_fail_count  = special_fail,
+        sp_pass_pct         = sp_pass_pct,
+        sp_fail_pct         = sp_fail_pct,
+
+        # ── TOP 5 USERS ──
+        top_users           = top_users,
+
+        # ── DEPT & DESIGNATION DISTRIBUTIONS ──
+        dept_labels         = dept_labels,
+        dept_values         = dept_values,
+        desig_labels        = desig_labels,
+        desig_values        = desig_values,
+
+        # ── CATEGORY PERFORMANCE ──
+        cat_names           = cat_names,
+        cat_avg_scores      = cat_avg_scores,
+        cat_counts          = cat_counts,
+
+        # ── LEVEL PROGRESS FUNNEL ──
+        funnel_levels       = funnel_levels,
+        funnel_total        = funnel_total,
+        funnel_completed    = funnel_completed,
+
+        # ── TIME‐SPENT HEATMAP ──
+        heatmap_labels      = heatmap_labels,
+        heatmap_depts       = heatmap_depts,
+        heatmap_data        = heatmap_data,
+
+        # ── TOP MISSED QUESTIONS ──
+        missed_labels       = missed_labels,
+        missed_values       = missed_values,
+
+        # ── TASKS ASSIGNED vs COMPLETED by Dept ──
+        task_depts          = task_depts,
+        task_assigned       = task_assigned,
+        task_completed      = task_completed,
+
+        # ── EXAM & COURSE BAR DATA ──
+        exam_labels         = exam_labels,
+        exam_avg_scores     = exam_avg_scores,
+        course_labels       = course_labels,
+        course_avg_progress = course_avg_progress,
+
+        # ── SCORE TREND ──
+        ts_labels           = ts_labels,
+        ts_avg_scores       = ts_avg_scores,
+        spec_ts_labels      = spec_ts_labels,
+        spec_ts_avg_scores  = spec_ts_avg_scores,
+
+        # ── 3D SCATTER METRICS ──
+        metrics             = metrics,
+        axis_options        = axis_options,
+        default_x           = default_x,
+        default_y           = default_y,
+        default_z           = default_z
     )
 
 @admin_routes.route('/admin/analytics/users')
@@ -963,10 +1418,15 @@ def analytics_user_list():
             (User.last_name.ilike(f'%{q}%')) |
             (User.employee_email.ilike(f'%{q}%'))
         )
+
+    #  ↓ Replace the old single-department filter with many-to-many ↓
     if dept_id:
-        users_query = users_query.filter(User.department_id == int(dept_id))
+        users_query = users_query.filter(
+            User.departments.any(Department.id == int(dept_id))
+        )
 
     users = users_query.order_by(User.last_name, User.first_name).all()
+
     # Gather stats
     user_stats = []
     for user in users:
@@ -981,6 +1441,7 @@ def analytics_user_list():
             'courses_taken': courses_taken,
             'avg_progress': avg_progress
         })
+
     # Sorting
     if sort == 'score_desc':
         user_stats.sort(key=lambda x: x['avg_score'], reverse=True)
@@ -992,7 +1453,16 @@ def analytics_user_list():
         user_stats.sort(key=lambda x: x['avg_progress'])
 
     departments = Department.query.order_by(Department.name).all()
-    return render_template('admin_analytics_users.html', user_stats=user_stats, departments=departments, search_query=q, dept_id=dept_id, sort=sort, departments_list=departments)
+    return render_template(
+        'admin_analytics_users.html',
+        user_stats=user_stats,
+        departments=departments,
+        search_query=q,
+        dept_id=dept_id,
+        sort=sort,
+        departments_list=departments
+    )
+
 
 @admin_routes.route('/admin/analytics/user/<int:user_id>')
 @login_required
@@ -1187,7 +1657,7 @@ def download_report():
         for u in users:
             total  = UserScore.query.filter_by(user_id=u.id).count()
             avg    = db.session.query(func.avg(UserScore.score)).filter_by(user_id=u.id).scalar() or 0
-            passed = UserScore.query.filter_by(user_id=u.id).filter(UserScore.score>=56).count()
+            passed = UserScore.query.filter_by(user_id=u.id).filter(UserScore.score >= 56).count()
             cw.writerow([u.id, f"{u.first_name} {u.last_name}", total, round(avg,2), passed])
         filename = 'exam_performance.csv'
 
@@ -1238,10 +1708,12 @@ def download_report():
             fl_q = fl_q.order_by(ts_col.desc())
         for fl in fl_q.all():
             ts = None
-            for col in (fl.timestamp if hasattr(fl, 'timestamp') else None,
-                        getattr(fl, 'created_at', None),
-                        getattr(fl, 'attempted_at', None),
-                        getattr(fl, 'logged_at', None)):
+            for col in (
+                fl.timestamp if hasattr(fl, 'timestamp') else None,
+                getattr(fl, 'created_at', None),
+                getattr(fl, 'attempted_at', None),
+                getattr(fl, 'logged_at', None)
+            ):
                 if col:
                     ts = col
                     break
@@ -1272,7 +1744,7 @@ def download_report():
                 u.first_name,
                 u.last_name,
                 u.employee_email,
-                u.department.name if u.department else '',
+                ", ".join([dept.name for dept in u.departments]) if u.departments else '',
                 u.join_date.strftime('%Y-%m-%d') if u.join_date else '',
             ])
         filename = 'users.csv'
@@ -1281,7 +1753,7 @@ def download_report():
         cw.writerow(['Department','User Count','Avg Exam Score','Avg Progress','Completion Rate'])
         departments = Department.query.all()
         for d in departments:
-            d_users = User.query.filter_by(department_id=d.id).all()
+            d_users = User.query.filter(User.departments.any(Department.id == d.id)).all()
             ids = [u.id for u in d_users]
             if not ids:
                 continue
@@ -1289,7 +1761,7 @@ def download_report():
             avg_progress = db.session.query(func.avg(UserProgress.progress_percentage)).filter(UserProgress.user_id.in_(ids)).scalar() or 0
             total_assigned = UserProgress.query.filter(UserProgress.user_id.in_(ids)).count()
             total_completed = UserProgress.query.filter(UserProgress.user_id.in_(ids), UserProgress.progress_percentage >= 100).count()
-            completion_rate = (total_completed/total_assigned*100) if total_assigned else 0
+            completion_rate = (total_completed / total_assigned * 100) if total_assigned else 0
             cw.writerow([
                 d.name,
                 len(ids),
@@ -1326,7 +1798,7 @@ def download_report():
             attempts = scores.count()
             avg_score = scores.with_entities(func.avg(UserScore.score)).scalar() or 0
             pass_count = scores.filter(UserScore.score >= 56).count()
-            pass_rate = (pass_count/attempts*100) if attempts else 0
+            pass_rate = (pass_count / attempts * 100) if attempts else 0
             top_score = scores.order_by(UserScore.score.desc()).first()
             top_user = f"{top_score.user.first_name} {top_score.user.last_name}" if top_score and top_score.user else ""
             cw.writerow([
@@ -1348,7 +1820,7 @@ def download_report():
             cw.writerow([
                 f"{u.first_name} {u.last_name}",
                 u.employee_email,
-                u.department.name if u.department else '',
+                ", ".join([dept.name for dept in u.departments]) if u.departments else '',
                 completed,
                 round(avg_score,2),
                 int(time_spent) if time_spent else 0
@@ -1373,7 +1845,7 @@ def download_report():
                 cw.writerow([
                     f"{u.first_name} {u.last_name}",
                     u.employee_email,
-                    u.department.name if u.department else '',
+                    ", ".join([dept.name for dept in u.departments]) if u.departments else '',
                 ])
         filename = 'inactive_users.csv'
 
@@ -1387,7 +1859,7 @@ def download_report():
                     "first_name": lambda u: u.first_name,
                     "last_name": lambda u: u.last_name,
                     "employee_email": lambda u: u.employee_email,
-                    "department": lambda u: u.department.name if u.department else '',
+                    "department": lambda u: ", ".join([dept.name for dept in u.departments]) if u.departments else '',
                     "join_date": lambda u: u.join_date.strftime('%Y-%m-%d') if u.join_date else '',
                 }
             },
@@ -1456,7 +1928,6 @@ def download_report():
     output.headers["Content-Disposition"] = f"attachment; filename={filename}"
     output.headers["Content-type"] = "text/csv"
     return output
-
 
 @admin_routes.route('/admin/reports/custom')
 @login_required

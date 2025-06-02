@@ -291,17 +291,18 @@
           <h4 class="section-title"><i class="fas fa-briefcase"></i> Work Information</h4>
           <div class="row">
             <div class="col-md-6 form-group">
-              <label for="department"><i class="fas fa-building"></i> Department</label>
-              <select class="form-control" id="department" name="department" required>
-                <option value="" disabled>Select Department</option>
+              <label for="departments"><i class="fas fa-building"></i> Departments</label>
+              <select class="form-control" id="departments" name="departments" multiple required>
                 {% for dept in departments %}
                   <option value="{{ dept.id }}"
-                    {% if user.department and user.department.id == dept.id %}selected{% endif %}>
+                    {% if dept in user.departments %}selected{% endif %}>
                     {{ dept.name }}
                   </option>
                 {% endfor %}
               </select>
+              <small class="text-muted">Hold Ctrl (Win) or Command (Mac) to select multiple</small>
             </div>
+
             <div class="col-md-6 form-group">
               <label for="designation_id"><i class="fas fa-id-badge"></i> Designation</label>
               <select class="form-control" id="designation_id" name="designation_id" required>

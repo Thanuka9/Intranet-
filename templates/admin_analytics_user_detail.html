@@ -22,7 +22,13 @@
         </div>
         <div class="card-body">
           <p><strong>Email:</strong> {{ user.employee_email }}</p>
-          <p><strong>Department:</strong> {{ user.department.name if user.department else '-' }}</p>
+          <p><strong>Departments:</strong>
+            {% if user.departments %}
+              {{ user.departments | map(attribute='name') | join(', ') }}
+            {% else %}
+              -
+            {% endif %}
+          </p>
           <p><strong>Designation:</strong> {{ user.designation.title if user.designation else '-' }}</p>
           <p><strong>Join Date:</strong> {{ user.join_date.strftime('%Y-%m-%d') if user.join_date else '-' }}</p>
           <p><strong>Current Level:</strong> {{ user.get_current_level() }}</p>

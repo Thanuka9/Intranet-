@@ -252,20 +252,24 @@
 
           <!-- Department (Dynamic from DB) -->
           <div class="mb-3">
-            <label for="department" class="form-label"
-              ><strong>Department</strong></label
+            <label for="departments" class="form-label"
+              ><strong>Departments</strong></label
             >
             <select
               class="form-control"
-              id="department"
-              name="department"
+              id="departments"
+              name="departments"
+              multiple
               required
             >
-              <option value="" disabled selected>Select Department</option>
               {% for dept in departments %}
               <option value="{{ dept.id }}">{{ dept.name }}</option>
               {% endfor %}
             </select>
+            <small class="text-muted">
+              Hold down Ctrl (Windows) or Command (Mac) to select multiple
+              departments.
+            </small>
           </div>
 
           <!-- Designation (Dynamic from DB) -->

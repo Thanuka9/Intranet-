@@ -1,5 +1,7 @@
+{# admin_users.html #}
 {% extends 'admin_base.html' %}
 {% block title %}Users{% endblock %}
+
 {% block content %}
   <h1>All Users{% if status %} – {{ status|capitalize }}{% endif %}</h1>
 
@@ -11,7 +13,7 @@
         <th>Employee ID</th>
         <th>Phone</th>
         <th>Email</th>
-        <th>Department</th>
+        <th>Departments</th>
         <th>Joined</th>
         <th>Status</th>
         <th>Designation</th>
@@ -26,7 +28,61 @@
         <td>{{ u.employee_id or '—' }}</td>
         <td>{{ u.phone_number or '—' }}</td>
         <td>{{ u.employee_email or '—' }}</td>
-        <td>{{ u.department.name if u.department else '—' }}</td>
+
+        {# ===== Departments Column ===== #}
+        <td style="min-width: 200px;">
+          {% if u.departments %}
+            <div class="mb-1">
+              {% for d in u.departments %}
+                <span class="badge bg-secondary">{{ d.name }}</span>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="mb-1"><em>No Departments</em></div>
+          {% endif %}
+
+          <div class="dropdown">
+            <button
+              class="btn btn-sm btn-outline-primary dropdown-toggle"
+              type="button"
+              id="deptDropdown-{{ u.id }}"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              Edit
+            </button>
+            <div class="dropdown-menu p-3" aria-labelledby="deptDropdown-{{ u.id }}">
+              <form
+                action="{{ url_for('admin_routes.change_user_departments', user_id=u.id) }}"
+                method="POST"
+                id="deptForm-{{ u.id }}"
+              >
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div style="max-height: 150px; overflow-y: auto;">
+                  {% for d in all_departments %}
+                    <div class="form-check">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        name="departments"
+                        value="{{ d.id }}"
+                        id="dept-{{ u.id }}-{{ d.id }}"
+                        {% if d in u.departments %}checked{% endif %}
+                      >
+                      <label class="form-check-label" for="dept-{{ u.id }}-{{ d.id }}">
+                        {{ d.name }}
+                      </label>
+                    </div>
+                  {% endfor %}
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary w-100 mt-2">
+                  Save
+                </button>
+              </form>
+            </div>
+          </div>
+        </td>
+
         <td>{{ u.join_date.strftime('%Y-%m-%d') }}</td>
         <td>
           {% if u.is_verified %}
@@ -35,6 +91,7 @@
             <span class="badge bg-secondary">Unverified</span>
           {% endif %}
         </td>
+
         <td>
           <form
             action="{{ url_for('admin_routes.change_designation', user_id=u.id) }}"
@@ -47,14 +104,15 @@
               class="form-select form-select-sm"
               onchange="this.form.submit()"
             >
-              {% for d in designations %}
-                <option value="{{ d.id }}" {% if u.designation_id == d.id %}selected{% endif %}>
-                  {{ d.title }}
+              {% for dsg in designations %}
+                <option value="{{ dsg.id }}" {% if u.designation_id == dsg.id %}selected{% endif %}>
+                  {{ dsg.title }}
                 </option>
               {% endfor %}
             </select>
           </form>
         </td>
+
         <td class="text-center">
           {% if u.is_verified %}
             <form
@@ -101,5 +159,4 @@
       {% endfor %}
     </tbody>
   </table>
-  
 {% endblock %}

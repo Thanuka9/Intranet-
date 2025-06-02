@@ -112,7 +112,16 @@
               <p><strong>Designation:</strong> {{ designation_title }}</p>
               <p><strong>Employee ID:</strong> {{ user.employee_id }}</p>
               <p><strong>Email:</strong> {{ user.employee_email }}</p>
-              <p><strong>Department:</strong> {{ user_department }}</p>
+              <p><strong>Departments:</strong>
+              {% if user.departments %}
+                {% for dept in user.departments %}
+                  {{ dept.name }}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+              {% else %}
+                Not Assigned
+              {% endif %}
+            </p>
+
             </div>
           </div>
         </div>

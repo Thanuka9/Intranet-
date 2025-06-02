@@ -11,12 +11,21 @@ from flask import request
 from sqlalchemy.dialects.postgresql import ARRAY 
 
 # -------------------------------
-# Association Table
+# Association Table for User and Tasks
 # -------------------------------
 user_task_association = Table(
     'user_task_association', db.Model.metadata,
     Column('user_id', Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
     Column('task_id', Integer, ForeignKey('tasks.id', ondelete='CASCADE'), primary_key=True),
+)
+
+# -------------------------------
+# Association Table for Departments
+# -------------------------------
+user_departments = Table(
+    'user_departments', db.Model.metadata,
+    Column('user_id', Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
+    Column('department_id', Integer, ForeignKey('departments.id', ondelete='CASCADE'), primary_key=True),
 )
 
 # -------------------------------------
@@ -285,8 +294,11 @@ class User(db.Model, UserMixin):
     last_login = db.Column(db.DateTime, nullable=True)
 
     # Using a relationship to link to the Department model
-    department_id = Column(Integer, ForeignKey('departments.id'), nullable=True)
-    department = relationship("Department", back_populates="users")
+    departments = relationship(
+        "Department",
+        secondary=user_departments,
+        back_populates="users"
+    )
 
     is_super_admin = Column(Boolean, default=False)  # Super admin privileges
     current_level = Column(Integer, default=0)  # Tracks the user's current active level
@@ -881,7 +893,11 @@ class Department(db.Model):
     name = Column(String(100), unique=True, nullable=False)
     
     # Relationship: Users assigned to this department
-    users = relationship("User", back_populates="department", cascade="all, delete-orphan")
+    users = relationship(
+        "User",
+        secondary=user_departments,
+        back_populates="departments"
+    )
     
     def __repr__(self):
         return f"<Department(id={self.id}, name='{self.name}')>"

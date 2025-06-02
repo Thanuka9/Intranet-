@@ -122,7 +122,6 @@
           transform: translateY(0);
         }
       }
-      
     </style>
   </head>
   <body>
@@ -301,5 +300,8 @@
         });
       }, 300000); // every 5 minutes
     </script>
+
+    <!-- Analytics and other page-specific scripts will be injected here -->
+    {% block scripts %}{% endblock %}
   </body>
 </html>

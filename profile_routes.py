@@ -27,7 +27,8 @@ def profile():
     profile_picture = get_profile_picture(current_user.id)
 
     # Use the department relationship
-    user_department = current_user.department.name if current_user.department else "Not Assigned"
+    user_departments = current_user.departments if current_user.departments else []
+
 
     # --- Determine selected exam level ---
     try:
@@ -69,7 +70,7 @@ def profile():
         calendar_events=calendar_events,
         designation_title=designation_title,
         profile_picture=profile_picture,
-        user_department=user_department,
+        user_departments=user_departments,
         performance_labels=performance_labels,
         user_performance=user_performance,
         average_performance=overall_performance,
@@ -95,11 +96,10 @@ def edit_profile():
             user.employee_id    = request.form.get('employee_id', user.employee_id)
             user.phone_number   = request.form.get('phone_number', user.phone_number)
             
-            # Update department (single select)
-            dept_id = request.form.get('department', type=int)
-            if dept_id:
-                user.department = Department.query.get(dept_id)
-            
+            # Update departments (multi-select)
+            dept_ids = request.form.getlist('departments', type=int)
+            user.departments = Department.query.filter(Department.id.in_(dept_ids)).all() if dept_ids else []
+
             # Update designation (single select)
             desig_id = request.form.get('designation_id', type=int)
             if desig_id:

@@ -41,7 +41,7 @@ def register():
         employee_email = request.form['employee_email']
         password = request.form['password']
         designation_id = request.form['designation']
-        department_id = request.form['department']
+        department_ids = request.form.getlist('departments', type=int)
         employee_id = request.form['employee_id']
         join_date = request.form['join_date']
         client_ids = request.form.getlist('clients', type=int)
@@ -59,24 +59,26 @@ def register():
         # 4. Generate & assign email-verification token
         token = s.dumps(employee_email, salt='email-confirmation')
 
-        # 5. Create user with token
+        # 5. Create user WITHOUT department_id (no such column anymore)
         new_user = User(
             first_name=first_name,
             last_name=last_name,
             employee_email=employee_email,
             employee_id=employee_id,
             join_date=join_date,
-            department_id=department_id,
             designation_id=designation_id,
             is_verified=False,
             verification_token=token
         )
         new_user.set_password(password)
 
-        # 6. Add to session before relationships
         db.session.add(new_user)
 
-        # 7. Assign clients
+        # 6. Assign departments (many-to-many)
+        if department_ids:
+            new_user.departments = Department.query.filter(Department.id.in_(department_ids)).all()
+
+        # 7. Assign clients (many-to-many)
         if client_ids:
             new_user.clients = Client.query.filter(Client.id.in_(client_ids)).all()
 
