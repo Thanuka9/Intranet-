@@ -588,14 +588,18 @@
             id="profileDropdown"
             aria-label="Profile actions"
           >
-            <a href="/privacy-policy"
-              ><i class="fa-solid fa-shield-halved"></i> Privacy Policy</a
-            >
-            <a href="/help"><i class="fa-solid fa-circle-question"></i> Help</a>
-            <a href="/support"><i class="fa-solid fa-headset"></i> Support</a>
-            <a href="{{ url_for('auth_routes.logout') }}" class="btn-logout"
-              ><i class="fas fa-sign-out-alt"></i> Logout</a
-            >
+            <a href="{{ url_for('general_routes.privacy_policy') }}">
+              <i class="fa-solid fa-shield-halved"></i> Privacy Policy
+            </a>
+            <a href="{{ url_for('general_routes.help_page') }}">
+              <i class="fa-solid fa-circle-question"></i> Help
+            </a>
+            <a href="{{ url_for('general_routes.support') }}">
+              <i class="fa-solid fa-headset"></i> Support
+            </a>
+            <a href="{{ url_for('auth_routes.logout') }}" class="btn-logout">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
           </div>
         </div>
       </div>
