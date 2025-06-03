@@ -959,3 +959,82 @@ class PasswordResetRequest(db.Model):
         passive_deletes=True
     )
 
+# -------------------------------------
+# SupportTicket Model
+# -------------------------------------
+class SupportTicket(db.Model):
+    __tablename__ = 'support_tickets'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='CASCADE'),
+        nullable=False
+    )
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+
+    # ──────────────── New Column ─────────────────
+    # Stores the administrator’s response text
+    admin_response = db.Column(db.Text, nullable=True)
+    # ───────────────────────────────────────────────
+
+    status = db.Column(db.String(50), default="Open")  # Open, In Progress, Resolved
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    resolved_at = db.Column(db.DateTime, nullable=True)
+    assigned_to = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id'),
+        nullable=True
+    )
+
+    # Relationships
+    user = db.relationship(
+        "User",
+        foreign_keys=[user_id],
+        backref="support_tickets",
+        passive_deletes=True
+    )
+    assignee = db.relationship(
+        "User",
+        foreign_keys=[assigned_to],
+        lazy='joined'
+    )
+    attachments = db.relationship(
+        "SupportAttachment",
+        back_populates="ticket",
+        cascade="all, delete-orphan"
+    )
+
+    def time_taken_minutes(self):
+        if self.resolved_at:
+            delta = self.resolved_at - self.created_at
+            return int(delta.total_seconds() // 60)
+        return None
+
+    def __repr__(self):
+        return f"<SupportTicket(id={self.id}, user_id={self.user_id}, status={self.status})>"
+
+
+# -------------------------------------
+# SupportAttachment Model
+# -------------------------------------
+class SupportAttachment(db.Model):
+    __tablename__ = 'support_attachments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(255), nullable=False)
+    mimetype = db.Column(db.String(100), nullable=False)
+    data = db.Column(db.LargeBinary, nullable=False)
+    upload_time = db.Column(db.DateTime, default=datetime.utcnow)
+    ticket_id = db.Column(
+        db.Integer,
+        db.ForeignKey('support_tickets.id', ondelete='CASCADE'),
+        nullable=False
+    )
+
+    # Relationship
+    ticket = db.relationship("SupportTicket", back_populates="attachments")
+
+    def __repr__(self):
+        return f"<SupportAttachment(id={self.id}, filename='{self.filename}', ticket_id={self.ticket_id})>"

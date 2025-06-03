@@ -9,7 +9,7 @@ from models import (
     User, Designation, Exam, Question, UserScore,
     Category, Level, Area, UserLevelProgress,
     SpecialExamRecord, Client, LevelArea,
-    Task, TaskDocument, FailedLogin, Event, Role, ExamAccessRequest, IncorrectAnswer, Department, user_departments
+    Task, TaskDocument, FailedLogin, Event, Role, ExamAccessRequest, IncorrectAnswer, Department, user_departments, SupportAttachment, SupportTicket
 )
 import logging
 from datetime import datetime, timedelta
@@ -3067,3 +3067,104 @@ def delete_category(id):
         )
 
     return redirect(url_for('admin_routes.manage_seeds'))
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# 1) LIST ALL SUPPORT TICKETS (super‐admins only)
+# ────────────────────────────────────────────────────────────────────────────
+@admin_routes.route('/admin/support_tickets')
+@login_required
+@super_admin_required
+def admin_list_tickets():
+    """
+    Show all support tickets. Only super‐admins may view/assign.
+    """
+    tickets = (
+        SupportTicket.query
+        .options(
+            db.joinedload(SupportTicket.user),      # load the submitter
+            db.joinedload(SupportTicket.assignee)   # load the current assignee
+        )
+        .order_by(SupportTicket.created_at.desc())
+        .all()
+    )
+    return render_template('admin_support_index.html', tickets=tickets)
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# 2) VIEW & RESPOND TO A SINGLE TICKET (super‐admins only)
+# ────────────────────────────────────────────────────────────────────────────
+@admin_routes.route('/admin/support_tickets/<int:ticket_id>', methods=['GET', 'POST'])
+@login_required
+@super_admin_required
+def admin_view_ticket(ticket_id):
+    """
+    GET  → Display ticket details + super‐admin response form.
+    POST → Save status, assigned_to, admin_response, and set resolved_at if needed.
+    """
+    ticket = SupportTicket.query.get_or_404(ticket_id)
+
+    # 1) Gather all IT‐department users
+    it_dept = Department.query.filter_by(name="IT Department").first()
+    it_users = it_dept.users if it_dept else []
+
+    # 2) Gather all super‐admins
+    super_admins = User.query.filter_by(is_super_admin=True).all()
+
+    # 3) Combine into one “assignable” list
+    #    (If a super‐admin is also in IT Dept, they’ll appear twice here; 
+    #     you can dedupe if needed, but typically they’re distinct.)
+    assignable_users = it_users + super_admins
+
+    if request.method == 'POST':
+        # 4a) Read the form data
+        new_status   = request.form.get('status', ticket.status)
+        assigned_id  = request.form.get('assigned_to', type=int)
+        admin_resp   = request.form.get('admin_response', '').strip()
+
+        # 4b) Validate the selected assignee
+        if assigned_id:
+            chosen = User.query.get(assigned_id)
+            if not chosen:
+                flash("Selected user does not exist.", "danger")
+                return redirect(
+                    url_for('admin_routes.admin_view_ticket', ticket_id=ticket.id)
+                )
+            if chosen not in assignable_users:
+                flash("You may only assign to an IT Dept user or a super‐admin.", "danger")
+                return redirect(
+                    url_for('admin_routes.admin_view_ticket', ticket_id=ticket.id)
+                )
+            ticket.assigned_to = assigned_id
+        else:
+            ticket.assigned_to = None
+
+        # 4c) Update status & possibly resolved_at
+        ticket.status = new_status
+        if new_status == "Resolved" and not ticket.resolved_at:
+            ticket.resolved_at = datetime.utcnow()
+        elif new_status != "Resolved":
+            ticket.resolved_at = None
+
+        # 4d) Save the super‐admin’s response text
+        ticket.admin_response = admin_resp or None
+
+        # 4e) Commit to the database
+        try:
+            db.session.commit()
+            flash("Ticket updated successfully.", "success")
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error updating ticket #{ticket.id}: {e}")
+            flash("Failed to update ticket. Please try again.", "danger")
+
+        return redirect(
+            url_for('admin_routes.admin_view_ticket', ticket_id=ticket.id)
+        )
+
+    # On GET: render the detail page, passing the combined assignable_users
+    return render_template(
+        'admin_support_detail.html',
+        ticket=ticket,
+        assignable_users=assignable_users
+    )

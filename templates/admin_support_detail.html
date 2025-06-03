@@ -1,0 +1,183 @@
+{% extends "admin_base.html" %}
+{% block title %}Ticket #{{ ticket.id }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <!-- Ticket Header -->
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold">
+      <i class="fas fa-ticket-alt text-primary me-2"></i>
+      Ticket #{{ ticket.id }} – {{ ticket.title }}
+    </h2>
+    <span class="text-muted">
+      Created at {{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}
+    </span>
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <!-- 1) Ticket Details Card -->
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <div class="card shadow-sm mb-5">
+    <div class="card-header bg-light">
+      <strong>Ticket Details</strong>
+    </div>
+    <div class="card-body">
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Submitted By:</strong></p>
+          <p class="mb-0">
+            <i class="fas fa-user-circle text-secondary me-1"></i>
+            {{ ticket.user.first_name }} {{ ticket.user.last_name }}<br>
+            <small class="text-muted">{{ ticket.user.employee_email }}</small>
+          </p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Status:</strong></p>
+          {% if ticket.status == 'Resolved' %}
+            <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Resolved</span>
+          {% elif ticket.status == 'In Progress' %}
+            <span class="badge bg-warning text-dark"><i class="fas fa-spinner me-1"></i>In Progress</span>
+          {% else %}
+            <span class="badge bg-secondary"><i class="fas fa-clock me-1"></i>Open</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <hr class="my-3">
+
+      <h5 class="fw-semibold mb-2"><i class="fas fa-align-left text-secondary me-2"></i>Description</h5>
+      <p class="ms-3 text-body">{{ ticket.description }}</p>
+
+      <hr class="my-3">
+
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <p class="mb-1"><strong>Assigned To:</strong></p>
+          {% if ticket.assignee %}
+            <p class="mb-0">
+              <i class="fas fa-user-cog text-secondary me-1"></i>
+              {{ ticket.assignee.first_name }} {{ ticket.assignee.last_name }}
+            </p>
+          {% else %}
+            <p class="mb-0 text-muted"><em>Unassigned</em></p>
+          {% endif %}
+        </div>
+        <div class="col-md-4 mb-3">
+          <p class="mb-1"><strong>Resolved At:</strong></p>
+          {% if ticket.resolved_at %}
+            <p class="mb-0">
+              <i class="fas fa-calendar-check text-secondary me-1"></i>
+              {{ ticket.resolved_at.strftime('%Y-%m-%d %H:%M') }}
+            </p>
+          {% else %}
+            <p class="mb-0 text-muted"><em>—</em></p>
+          {% endif %}
+        </div>
+        <div class="col-md-4 mb-3">
+          <p class="mb-1"><strong>Time Taken:</strong></p>
+          {% if ticket.time_taken_minutes() %}
+            <p class="mb-0">
+              <i class="fas fa-hourglass-half text-secondary me-1"></i>
+              {{ ticket.time_taken_minutes() }} minutes
+            </p>
+          {% else %}
+            <p class="mb-0 text-muted"><em>—</em></p>
+          {% endif %}
+        </div>
+      </div>
+
+      <hr class="my-3">
+
+      <h5 class="fw-semibold mb-2"><i class="fas fa-paperclip text-secondary me-2"></i>Attachments</h5>
+      {% if ticket.attachments %}
+        <ul class="list-unstyled ms-3">
+          {% for att in ticket.attachments %}
+            <li class="mb-2">
+              <a
+                href="{{ url_for('general_routes.download_attachment', attachment_id=att.id) }}"
+                class="text-decoration-none"
+              >
+                <i class="fas fa-file-download text-primary me-1"></i>
+                {{ att.filename }}
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="ms-3 text-muted"><em>No files attached.</em></p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <!-- 2) Super-Admin Response & Assignment Form -->
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-light">
+      <strong>Admin Actions</strong>
+    </div>
+    <div class="card-body">
+      <form method="POST">
+        <!-- CSRF token for Flask-WTF protection -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row g-4">
+          <!-- 2a) Status -->
+          <div class="col-md-4">
+            <div class="mb-3">
+              <label for="status" class="form-label fw-semibold"><i class="fas fa-tasks me-1"></i>Status</label>
+              <select name="status" id="status" class="form-select">
+                <option value="Open" {% if ticket.status == 'Open' %}selected{% endif %}>Open</option>
+                <option value="In Progress" {% if ticket.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                <option value="Resolved" {% if ticket.status == 'Resolved' %}selected{% endif %}>Resolved</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 2b) Assign To -->
+          <div class="col-md-8">
+            <div class="mb-3">
+              <label for="assigned_to" class="form-label fw-semibold"><i class="fas fa-user-shield me-1"></i>Assign To</label>
+              <select name="assigned_to" id="assigned_to" class="form-select">
+                <option value="" {% if not ticket.assigned_to %}selected{% endif %}>— Unassigned —</option>
+                {% for user in assignable_users %}
+                  <option value="{{ user.id }}" {% if ticket.assigned_to == user.id %}selected{% endif %}>
+                    {{ user.first_name }} {{ user.last_name }} ({{ user.employee_email }})
+                  </option>
+                {% endfor %}
+              </select>
+              <div class="form-text">
+                IT Department users &mdash; OR &mdash; Super‐admins
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2c) Response Message -->
+        <div class="mb-4">
+          <label for="admin_response" class="form-label fw-semibold"><i class="fas fa-reply me-1"></i>Response Message</label>
+          <textarea
+            name="admin_response"
+            id="admin_response"
+            class="form-control"
+            rows="5"
+            placeholder="Type your response here…"
+          >{{ ticket.admin_response or "" }}</textarea>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex align-items-center">
+          <button type="submit" class="btn btn-primary me-3">
+            <i class="fas fa-save me-1"></i>Save Changes
+          </button>
+          <a href="{{ url_for('admin_routes.admin_list_tickets') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back to All Tickets
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

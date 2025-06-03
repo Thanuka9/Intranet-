@@ -1,0 +1,41 @@
+{% extends "base.html" %} {% block content %}
+<div class="container mt-5 mb-5" style="position: relative; z-index: 2">
+  <h2 class="mb-4">Submit a Support Request</h2>
+
+  <form
+    method="POST"
+    enctype="multipart/form-data"
+    style="position: relative; z-index: 2"
+  >
+    {{ form.hidden_tag() }}
+
+    <div class="mb-3">
+      {{ form.title.label(class="form-label", for="title") }} {{
+      form.title(class="form-control", id="title", style="pointer-events:
+      auto;") }} {% if form.title.errors %}
+      <div class="text-danger small">{{ form.title.errors[0] }}</div>
+      {% endif %}
+    </div>
+
+    <div class="mb-3">
+      {{ form.description.label(class="form-label", for="description") }} {{
+      form.description( class="form-control", id="description", rows="5",
+      style="pointer-events: auto;" ) }} {% if form.description.errors %}
+      <div class="text-danger small">{{ form.description.errors[0] }}</div>
+      {% endif %}
+    </div>
+
+    <div class="mb-3">
+      {{ form.attachment.label(class="form-label", for="attachment") }} {{
+      form.attachment(class="form-control", id="attachment",
+      style="pointer-events: auto;") }} {% if form.attachment.errors %}
+      <div class="text-danger small">{{ form.attachment.errors[0] }}</div>
+      {% endif %}
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="pointer-events: auto">
+      <i class="fas fa-paper-plane"></i> Submit Ticket
+    </button>
+  </form>
+</div>
+{% endblock %}

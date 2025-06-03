@@ -1,14 +1,26 @@
-from flask import Blueprint, render_template, session, logging, jsonify
+from flask import Blueprint, render_template, session, logging, jsonify, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from datetime import date
+from datetime import date, datetime
+from flask import send_file
+from wtforms import StringField, TextAreaField, FileField
+from wtforms.validators import DataRequired
+from flask_wtf import FlaskForm
+from io import BytesIO
+from werkzeug.utils import secure_filename
 from models import (
     db,
     StudyMaterial,
     UserProgress,
     UserScore,
     SpecialExamRecord,
-    Task              # ← make sure Task is imported
+    Task,
+    SupportTicket, 
+    SupportAttachment             
 )
+class SupportRequestForm(FlaskForm):
+    title       = StringField('Issue Title', validators=[DataRequired()])
+    description = TextAreaField('Detailed Description', validators=[DataRequired()])
+    attachment  = FileField('Attach File (Optional)')
 
 # Initialize Blueprint
 general_routes = Blueprint('general_routes', __name__)
@@ -129,6 +141,73 @@ def privacy_policy():
 def help_page():
     return render_template('help.html')
 
+@general_routes.route('/request-support', methods=['GET', 'POST'])
+@login_required
+def request_support():
+    form = SupportRequestForm()
+
+    if form.validate_on_submit():
+        title       = form.title.data
+        description = form.description.data
+        uploaded_file = form.attachment.data  # FileStorage or None
+
+        ticket = SupportTicket(
+            user_id     = current_user.id,
+            title       = title,
+            description = description,
+            status      = 'Open',
+            created_at  = datetime.utcnow()
+        )
+
+        if uploaded_file and uploaded_file.filename:
+            filename  = secure_filename(uploaded_file.filename)
+            file_data = uploaded_file.read()
+            mimetype  = uploaded_file.mimetype or 'application/octet-stream'
+
+            attachment = SupportAttachment(
+                filename    = filename,
+                data        = file_data,
+                mimetype    = mimetype,
+                upload_time = datetime.utcnow()
+            )
+            ticket.attachments.append(attachment)
+
+        db.session.add(ticket)
+        db.session.commit()
+
+        flash(f"Support ticket #{ticket.id} created successfully.", "success")
+        return redirect(url_for('general_routes.support'))
+
+    return render_template('submit_support.html', form=form)
+
+
+# ─── 2) View Your Submitted Tickets ────────────────────────────────────
 @general_routes.route('/support')
-def support_page():
-    return render_template('support.html')
+@login_required
+def support():
+    tickets = (
+        SupportTicket.query
+        .filter_by(user_id=current_user.id)
+        .order_by(SupportTicket.created_at.desc())
+        .all()
+    )
+    return render_template('support.html', user_tickets=tickets)
+
+
+# ─── 3) Download an Attachment ─────────────────────────────────────────
+@general_routes.route('/support/attachment/<int:attachment_id>')
+@login_required
+def download_attachment(attachment_id):
+    attachment = SupportAttachment.query.get_or_404(attachment_id)
+
+    # Ensure the current user owns this ticket (or is assigned to it)
+    if attachment.ticket.user_id != current_user.id and attachment.ticket.assigned_to != current_user.id:
+        flash("You do not have permission to download this file.", "danger")
+        return redirect(url_for('general_routes.support'))
+
+    return send_file(
+        BytesIO(attachment.data),
+        download_name=attachment.filename,
+        mimetype=attachment.mimetype,
+        as_attachment=True
+    )

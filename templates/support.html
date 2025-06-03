@@ -1,55 +1,211 @@
 {% extends "base.html" %} {% block content %}
-<div class="container mt-5 mb-5">
-  <h2 class="mb-4">Support</h2>
-  <p>
-    If you're facing technical difficulties, system errors, or require
-    assistance with features or content, you're in the right place.
-  </p>
+<div class="container my-5">
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <!-- 1) HEADER & INTRODUCTION CARD (icons made a bit larger for contrast) -->
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <div class="card shadow-sm mb-5">
+    <div class="card-body">
+      <h2 class="card-title mb-3">
+        <i class="fas fa-headset text-danger fs-3 me-2"></i>
+        Support Center
+      </h2>
+      <p class="card-text text-secondary">
+        If you're facing technical difficulties, system errors, or need
+        assistance with any feature or content, you're in the right place.
+        Browse existing tickets below or submit a new request.
+      </p>
+    </div>
+  </div>
 
-  <hr class="my-4" />
-  <h4>Contact Support</h4>
-  <p>
-    For general intranet issues, account problems, or content access:
-    <br />
-    📧
-    <a href="mailto:intranet@collectivercm.com">intranet@collectivercm.com</a>
-  </p>
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <!-- 2) CONTACT INFORMATION CARD (icons removed)                             -->
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h5 class="card-subtitle text-primary mb-3">Contact Information</h5>
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <div>
+            <h6 class="fw-semibold">General Intranet Issues</h6>
+            <p class="mb-0">
+              📧
+              <a href="mailto:intranet@collectivercm.com"
+                >intranet@collectivercm.com</a
+              >
+            </p>
+          </div>
+        </div>
+        <div class="col-md-4 mb-3">
+          <div>
+            <h6 class="fw-semibold">Report a Bug / Broken Page</h6>
+            <p class="mb-0">
+              📧
+              <a href="mailto:intranet@collectivercm.com"
+                >intranet@collectivercm.com</a
+              ><br />
+              Or message <strong>Thanuka Ellepola</strong> directly via internal
+              channels.
+            </p>
+          </div>
+        </div>
+        <div class="col-md-4 mb-3">
+          <div>
+            <h6 class="fw-semibold">Device / Infrastructure</h6>
+            <p class="mb-0">
+              Contact your <strong>IT Department</strong> for hardware or
+              network issues.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <p>
-    For critical system bugs, feature malfunctions, or to report broken pages:
-    <br />
-    📧
-    <a href="mailto:intranet@collectivercm.com">intranet@collectivercm.com</a>
-    <br />
-    Or contact <strong>Thanuka Ellepola</strong> directly via approved internal
-    channels.
-  </p>
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <!-- 3) TICKET RESPONSE TIME CARD (icons enlarged)                           -->
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h5 class="card-subtitle text-primary mb-3">
+        <i class="fas fa-clock fs-2 me-2"></i>Ticket Response Time
+      </h5>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item ps-0 border-0">
+          <i class="fas fa-bolt text-danger fs-5 me-2"></i>
+          <strong>High Priority:</strong> Within 2 business hours
+        </li>
+        <li class="list-group-item ps-0 border-0">
+          <i class="fas fa-tasks text-warning fs-5 me-2"></i>
+          <strong>Standard Issues:</strong> 1–2 business days
+        </li>
+        <li class="list-group-item ps-0 border-0">
+          <i class="fas fa-info-circle text-secondary fs-5 me-2"></i>
+          <strong>General Queries:</strong> Usually same day
+        </li>
+      </ul>
+    </div>
+  </div>
 
-  <p>
-    For device, hardware, or network-related concerns (e.g., screen freezes,
-    upload issues, local errors), contact:
-    <br />
-    🖥️ Your local <strong>IT Department</strong>
-  </p>
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <!-- 4) SUBMIT NEW TICKET BUTTON                                              -->
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <div class="text-center mb-5">
+    <a
+      href="{{ url_for('general_routes.request_support') }}"
+      class="btn btn-lg btn-danger px-5 shadow-sm"
+    >
+      <i class="fas fa-paper-plane me-2"></i>Submit a New Ticket
+    </a>
+  </div>
 
-  <hr class="my-4" />
-  <h4>Ticket Response Time</h4>
-  <ul>
-    <li><strong>High Priority:</strong> Within 2 business hours</li>
-    <li><strong>Standard Issues:</strong> 1–2 business days</li>
-    <li><strong>General Queries:</strong> Usually same day</li>
-  </ul>
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <!-- 5) YOUR SUBMITTED TICKETS HEADER                                         -->
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">
+      <i class="fas fa-ticket-alt text-primary fs-3 me-2"></i>
+      Your Submitted Tickets
+    </h4>
+    <!-- You can remove this search box if you prefer not to filter client-side -->
+    <div class="input-group w-50">
+      <span class="input-group-text bg-light border-end-0">
+        <i class="fas fa-search text-muted fs-5"></i>
+      </span>
+      <input
+        id="ticketSearch"
+        type="text"
+        class="form-control border-start-0"
+        placeholder="Search tickets by title..."
+        onkeyup="filterTickets()"
+      />
+    </div>
+  </div>
 
-  <hr class="my-4" />
-  <h4>Submit an Internal Request</h4>
-  <p>
-    Use the “Request Support” button available on your dashboard (if enabled) to
-    submit tickets with attached screenshots and logs.
-  </p>
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <!-- 6) TICKET TABLE (no more accordion dropdown)                              -->
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  {% if user_tickets %}
+  <div class="table-responsive shadow-sm">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th scope="col">Ticket ID</th>
+          <th scope="col">Title</th>
+          <th scope="col">Status</th>
+          <th scope="col">Created At</th>
+          <th scope="col">Assigned To</th>
+          <th scope="col">Attachments</th>
+        </tr>
+      </thead>
+      <tbody id="ticketTableBody">
+        {% for ticket in user_tickets %}
+        <tr data-ticket-title="{{ ticket.title | lower }}">
+          <td>#{{ ticket.id }}</td>
+          <td>{{ ticket.title }}</td>
+          <td>
+            {% if ticket.status == 'Resolved' %}
+            <span class="badge bg-success">Resolved</span>
+            {% elif ticket.status == 'In Progress' %}
+            <span class="badge bg-warning text-dark">In Progress</span>
+            {% else %}
+            <span class="badge bg-secondary">Open</span>
+            {% endif %}
+          </td>
+          <td>{{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td>
+            {% if ticket.assignee %} {{ ticket.assignee.name }} {% else %}
+            <em>Unassigned</em>
+            {% endif %}
+          </td>
+          <td>
+            {% if ticket.attachments %} {% for att in ticket.attachments %}
+            <a
+              href="{{ url_for('general_routes.download_attachment', attachment_id=att.id) }}"
+              class="text-decoration-none me-2"
+              title="Download {{ att.filename }}"
+            >
+              <i class="fas fa-paperclip text-muted fs-5"></i>
+            </a>
+            {% endfor %} {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
-  <p class="mt-4">
-    We appreciate your patience as we continue improving the CollectiveRCM
-    platform for all users.
-  </p>
+  {% else %}
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <!-- 7) NO TICKETS CARD                                                       -->
+  <!-- ──────────────────────────────────────────────────────────────────────── -->
+  <div class="card shadow-sm border-0">
+    <div class="card-body text-center text-muted">
+      <i class="fas fa-inbox fa-3x mb-3"></i>
+      <p class="mb-0 fs-5">You have not submitted any support tickets.</p>
+      <p class="small">
+        Click “Submit a New Ticket” above to create your first request.
+      </p>
+    </div>
+  </div>
+  {% endif %}
 </div>
+
+{% endblock %} {% block extra_scripts %}
+<script>
+  // Simple client-side filter: hides table rows whose title does not match
+  function filterTickets() {
+    const query = document.getElementById("ticketSearch").value.toLowerCase();
+    const rows = document.querySelectorAll("#ticketTableBody tr");
+    rows.forEach((row) => {
+      const title = row.getAttribute("data-ticket-title") || "";
+      if (title.includes(query)) {
+        row.style.display = "";
+      } else {
+        row.style.display = "none";
+      }
+    });
+  }
+</script>
 {% endblock %}
