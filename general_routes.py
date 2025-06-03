@@ -120,3 +120,15 @@ def client_materials():
 @login_required
 def hr_management():
     return render_template('hr_management.html')
+
+@general_routes.route('/privacy-policy')
+def privacy_policy():
+    return render_template('privacy_policy.html')
+
+@general_routes.route('/help')
+def help_page():
+    return render_template('help.html')
+
+@general_routes.route('/support')
+def support_page():
+    return render_template('support.html')
