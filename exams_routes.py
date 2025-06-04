@@ -14,7 +14,7 @@ from flask import redirect, flash, url_for
 from utils.progress_utils import has_finished_study
 
 # Blueprint setup
-exams_routes = Blueprint('exams_routes', __name__, url_prefix='/exams')
+exams_routes = Blueprint('exams_routes', __name__)
 
 # -------------------------------
 # Route to Create an Exam 

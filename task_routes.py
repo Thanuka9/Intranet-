@@ -17,7 +17,7 @@ import pandas as pd
 from sqlalchemy import func
 
 # Define Blueprint for task routes
-task_routes = Blueprint('task_routes', __name__, url_prefix="/tasks")
+task_routes = Blueprint('task_routes', __name__)
 
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'docx', 'xlsx'}
 MAX_FILE_SIZE = 25 * 1024 * 1024  # 25MB per file (applies to uploads in assign/edit)

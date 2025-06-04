@@ -10,7 +10,7 @@ import logging
 
 profile_routes = Blueprint('profile_routes', __name__)
 
-@profile_routes.route('/profile')
+@profile_routes.route('/')
 @login_required
 def profile():
     """
@@ -78,7 +78,7 @@ def profile():
         selected_level=selected_level
     )
 
-@profile_routes.route('/profile/edit', methods=['GET', 'POST'])
+@profile_routes.route('/edit', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
     """
@@ -146,7 +146,7 @@ def edit_profile():
     )
 
 
-@profile_routes.route('/profile/delete_picture', methods=['POST'])
+@profile_routes.route('/delete_picture', methods=['POST'])
 @login_required
 def delete_profile_picture_handler():
     """
