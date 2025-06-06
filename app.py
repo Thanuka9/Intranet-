@@ -18,6 +18,7 @@ from mongodb_operations import initialize_mongodb, setup_collections
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
+from utils.email_utils import init_scheduler 
 from datetime import datetime, timedelta
 
 # Load environment variables from .env file
@@ -107,6 +108,7 @@ except Exception as e:
 # APScheduler
 # ----------------------------------------------------------------------
 scheduler.init_app(app)
+init_scheduler(scheduler)
 scheduler.start()
 
 # ----------------------------------------------------------------------

@@ -1109,23 +1109,36 @@ def view_analytics():
     missed_labels = []
     missed_values = []
     for qid, cnt in top_missed:
-        question = Question.query.get(qid)
-        if question:
-            # Determine “Rg-1” or “SP1”/“SP2” prefix and question number
-            question_num = getattr(question, 'question_number', question.id)
+        # Fetch one sample IncorrectAnswer record for this question_id
+        sample_rec = (
+            IncorrectAnswer.query
+            .filter_by(question_id=qid)
+            .order_by(IncorrectAnswer.id.asc())
+            .first()
+        )
 
-            # Example assumes Question.paper_type in {'regular','special1','special2'}
-            ptype = getattr(question, 'paper_type', None)
-            if ptype == 'regular':
-                prefix = 'Rg-1'
-            elif ptype == 'special1':
-                prefix = 'SP1'
-            elif ptype == 'special2':
-                prefix = 'SP2'
+        if sample_rec:
+            # Determine whether this is a special‐paper or regular exam
+            if sample_rec.special_paper:
+                sp = sample_rec.special_paper.lower()
+                if sp == 'paper1':
+                    prefix = f"SP1-{sample_rec.exam_id or ''}"
+                elif sp == 'paper2':
+                    prefix = f"SP2-{sample_rec.exam_id or ''}"
+                else:
+                    prefix = f"SP-{sample_rec.exam_id or ''}"
             else:
-                prefix = (str(ptype) or '').upper()
+                # regular exam uses exam_id column
+                prefix = f"R-{sample_rec.exam_id or ''}"
 
-            label = f"{prefix} Q-{question_num}"
+            # Now fetch the Question to get its question_number (fallback to id)
+            question = Question.query.get(qid)
+            if question:
+                question_num = getattr(question, 'question_number', None) or question.id
+            else:
+                question_num = qid
+
+            label = f"{prefix}-{question_num}"
         else:
             label = f"{qid}-N/A"
 
@@ -1161,6 +1174,7 @@ def view_analytics():
     task_depts     = [ts['dept']      for ts in task_stats]
     task_assigned  = [ts['assigned']  for ts in task_stats]
     task_completed = [ts['completed'] for ts in task_stats]
+
 
     # ── 14) SCORE TREND (dual‐line) ────────────────────────
     ts = (
@@ -1412,12 +1426,15 @@ def view_analytics():
 @login_required
 @admin_required
 def analytics_user_list():
-    # Filtering
+    # 1) Get search and filter parameters
     q = request.args.get('q', '').strip()
     dept_id = request.args.get('dept', '').strip()
-    sort = request.args.get('sort', '')
+    sort = request.args.get('sort', '').strip()
 
+    # 2) Base query
     users_query = User.query
+
+    # 3) Apply text search if provided
     if q:
         users_query = users_query.filter(
             (User.first_name.ilike(f'%{q}%')) |
@@ -1425,21 +1442,35 @@ def analytics_user_list():
             (User.employee_email.ilike(f'%{q}%'))
         )
 
-    #  ↓ Replace the old single-department filter with many-to-many ↓
+    # 4) Apply many-to-many department filter
     if dept_id:
-        users_query = users_query.filter(
-            User.departments.any(Department.id == int(dept_id))
-        )
+        try:
+            dept_int = int(dept_id)
+            users_query = users_query.filter(
+                User.departments.any(Department.id == dept_int)
+            )
+        except ValueError:
+            # ignore invalid dept_id
+            pass
 
+    # 5) Execute query (ordered by last then first name)
     users = users_query.order_by(User.last_name, User.first_name).all()
 
-    # Gather stats
+    # 6) Gather per-user statistics
     user_stats = []
     for user in users:
         exams_taken = len(user.scores)
-        avg_score = round(sum([s.score for s in user.scores]) / exams_taken, 2) if exams_taken else 0
+        avg_score = (
+            round(sum(s.score for s in user.scores) / exams_taken, 2)
+            if exams_taken else 0
+        )
+
         courses_taken = len(user.study_progress)
-        avg_progress = round(sum([sp.progress_percentage for sp in user.study_progress]) / courses_taken, 2) if courses_taken else 0
+        avg_progress = (
+            round(sum(sp.progress_percentage for sp in user.study_progress) / courses_taken, 2)
+            if courses_taken else 0
+        )
+
         user_stats.append({
             'user': user,
             'exams_taken': exams_taken,
@@ -1448,7 +1479,7 @@ def analytics_user_list():
             'avg_progress': avg_progress
         })
 
-    # Sorting
+    # 7) Sort the list of dicts in Python if requested
     if sort == 'score_desc':
         user_stats.sort(key=lambda x: x['avg_score'], reverse=True)
     elif sort == 'score_asc':
@@ -1458,16 +1489,19 @@ def analytics_user_list():
     elif sort == 'progress_asc':
         user_stats.sort(key=lambda x: x['avg_progress'])
 
+    # 8) Fetch all departments for the dropdown
     departments = Department.query.order_by(Department.name).all()
+
+    # 9) Render template
     return render_template(
         'admin_analytics_users.html',
         user_stats=user_stats,
         departments=departments,
         search_query=q,
         dept_id=dept_id,
-        sort=sort,
-        departments_list=departments
+        sort=sort
     )
+
 
 
 @admin_routes.route('/admin/analytics/user/<int:user_id>')
@@ -1628,20 +1662,22 @@ def reports_landing():
     search = request.args.get('search', '').strip()
     return render_template("admin_reports_landing.html", custom_table=custom_table, search=search)
 
+
 @admin_routes.route('/admin/reports/download', methods=['GET', 'POST'])
 @login_required
 def download_report():
     """
     Download CSV for type in [
         'course_progress','exam_performance','special_exams','audit_logs','users',
-        'departments','courses','exams','leaderboard','inactive_users','custom'
+        'departments','courses','exams','leaderboard','inactive_users','custom',
+        'incorrect_answers','incorrect_top10'
     ]
     Optional ?search= filter. For custom: Accepts ?type=custom&report_model=users&fields=id&fields=first_name, etc.
     """
-    rpt_type = request.args.get('type')
-    search   = request.args.get('search', '').strip()
+    rpt_type     = request.args.get('type')
+    search       = request.args.get('search', '').strip()
     report_model = request.args.get('report_model')
-    fields = request.args.getlist('fields')
+    fields       = request.args.getlist('fields')
 
     si = io.StringIO()
     cw = csv.writer(si)
@@ -1855,7 +1891,58 @@ def download_report():
                 ])
         filename = 'inactive_users.csv'
 
-    # 3. Fully Custom Report
+    # 2. Incorrect Answers → all details
+    elif rpt_type == 'incorrect_answers':
+        cw.writerow([
+            'User ID',
+            'User Name',
+            'Exam ID',
+            'Question ID',
+            'User Answer',
+            'Correct Answer',
+            'Date'
+        ])
+        # Join with User to allow optional filtering by name/email
+        records_q = IncorrectAnswer.query.join(User, IncorrectAnswer.user_id == User.id)
+        if search:
+            records_q = records_q.filter(or_(
+                User.first_name.ilike(f'%{search}%'),
+                User.last_name.ilike(f'%{search}%'),
+                User.employee_email.ilike(f'%{search}%')
+            ))
+        # Order by answered_at descending (newest first)
+        for rec in records_q.order_by(IncorrectAnswer.answered_at.desc()).all():
+            user = User.query.get(rec.user_id)
+            cw.writerow([
+                rec.user_id,
+                f"{user.first_name} {user.last_name}" if user else 'Unknown User',
+                rec.exam_id,
+                rec.question_id,
+                rec.user_answer,
+                rec.correct_answer,
+                rec.answered_at.strftime('%Y-%m-%d') if rec.answered_at else ''
+            ])
+        filename = 'incorrect_answers.csv'
+
+    # 3. Top 10 missed questions across all users
+    elif rpt_type == 'incorrect_top10':
+        cw.writerow(['Exam ID', 'Question ID', 'Times Missed'])
+        top10 = (
+            db.session.query(
+                IncorrectAnswer.exam_id,
+                IncorrectAnswer.question_id,
+                func.count(IncorrectAnswer.id).label('miss_count')
+            )
+            .group_by(IncorrectAnswer.exam_id, IncorrectAnswer.question_id)
+            .order_by(func.count(IncorrectAnswer.id).desc())
+            .limit(10)
+            .all()
+        )
+        for exam_id, question_id, miss_count in top10:
+            cw.writerow([exam_id, question_id, miss_count])
+        filename = 'top10_missed_questions.csv'
+
+    # 4. Fully Custom Report
     elif rpt_type == 'custom' and report_model and fields:
         REPORT_MODELS = {
             "users": {
@@ -1935,6 +2022,7 @@ def download_report():
     output.headers["Content-type"] = "text/csv"
     return output
 
+
 @admin_routes.route('/admin/reports/custom')
 @login_required
 def custom_report():
@@ -1978,8 +2066,8 @@ def custom_report():
         ],
     }
     return render_template("admin_custom_report.html", report_models=REPORT_MODELS)
-# ──────────────── 1) VIEW AND ASSIGN ROLES ─────────────────
 
+# ──────────────── 1) VIEW AND ASSIGN ROLES ─────────────────
 @admin_routes.route('/admin/roles')
 @login_required
 @super_admin_required

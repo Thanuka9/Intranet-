@@ -17,7 +17,7 @@ import pandas as pd
 from sqlalchemy import func
 
 # Define Blueprint for task routes
-task_routes = Blueprint('task_routes', __name__, url_prefix="/tasks")
+task_routes = Blueprint('task_routes', __name__)
 
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'docx', 'xlsx'}
 MAX_FILE_SIZE = 25 * 1024 * 1024  # 25MB per file (applies to uploads in assign/edit)
@@ -156,12 +156,19 @@ def assign_task():
     """
     if request.method == 'POST':
         # 1) Gather form data
-        title       = request.form['title']
-        description = request.form['description']
-        due_date    = request.form['due_date']
-        priority    = request.form.get('priority', 'Medium')
-        task_type   = request.form.get('task_type', 'internal')
-        client_id   = current_user.clients[0].id if current_user.clients else None
+        title         = request.form['title']
+        description   = request.form['description']
+        due_date_str  = request.form['due_date']  # e.g. "2025-06-07T14:30"
+        priority      = request.form.get('priority', 'Medium')
+        task_type     = request.form.get('task_type', 'internal')
+        client_id     = current_user.clients[0].id if current_user.clients else None
+
+        # Parse due_date into a datetime object
+        try:
+            due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+        except ValueError:
+            # Fallback if seconds or a different ISO format are included
+            due_date = datetime.fromisoformat(due_date_str)
 
         # 2) Create & add the Task
         task = Task(
@@ -187,14 +194,27 @@ def assign_task():
         # 4) Save attachments (25MB max each)
         for f in request.files.getlist('attachments'):
             if f and allowed_file(f.filename):
-                current_app.logger.info(f"Processing attachment {f.filename} for new task (task_id: {task.id}, title: {title}) in assign_task.")
+                current_app.logger.info(
+                    f"Processing attachment {f.filename} for new task "
+                    f"(task_id: {task.id}, title: {title}) in assign_task."
+                )
                 saved_successfully = save_task_document(f, task.id)
                 if not saved_successfully:
-                    current_app.logger.warning(f"Failed to save attachment {f.filename} for task {task.id} in assign_task. Triggering rollback.")
+                    current_app.logger.warning(
+                        f"Failed to save attachment {f.filename} for task {task.id} "
+                        "in assign_task. Triggering rollback."
+                    )
                     db.session.rollback()
-                    flash("One of your attachments could not be saved (e.g., size limit exceeded or DB error). Task not created.", "danger")
+                    flash(
+                        "One of your attachments could not be saved "
+                        "(e.g., size limit exceeded or DB error). Task not created.",
+                        "danger"
+                    )
                     return redirect(url_for('task_routes.assign_task'))
-                current_app.logger.info(f"Successfully processed attachment {f.filename} for task {task.id} in assign_task.")
+                current_app.logger.info(
+                    f"Successfully processed attachment {f.filename} "
+                    f"for task {task.id} in assign_task."
+                )
 
         # 5) Link assignees
         key = 'assignees' if task_type == 'internal' else 'external_assignees'
@@ -233,7 +253,6 @@ def assign_task():
         external_users=external_users,
         back_url=url_for('task_routes.view_tasks')
     )
-
 
 @task_routes.route('/task/<int:task_id>', methods=['GET', 'POST'])
 @login_required
@@ -344,7 +363,14 @@ def edit_task(task_id):
     if request.method == 'POST':
         task.title = request.form['title']
         task.description = request.form['description']
-        task.due_date = request.form['due_date']
+
+        # Parse due_date string into a datetime object
+        due_date_str = request.form['due_date']  # e.g., "2025-06-07T14:30"
+        try:
+            task.due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+        except ValueError:
+            task.due_date = datetime.fromisoformat(due_date_str)
+
         task.priority = request.form.get('priority', 'Medium')
 
         total_size = sum(len(file.read()) for file in request.files.getlist('attachments'))
@@ -360,29 +386,49 @@ def edit_task(task_id):
                 if file_size > MAX_FILE_SIZE:
                     flash(f"'{file.filename}' exceeds 25MB and was not uploaded.", "danger")
                     return redirect(url_for('task_routes.edit_task', task_id=task.id))
-                current_app.logger.info(f"Processing new attachment {file.filename} for task_id: {task_id} in edit_task.")
+                current_app.logger.info(
+                    f"Processing new attachment {file.filename} for task_id: {task_id} in edit_task."
+                )
                 saved_successfully = save_task_document(file, task.id)
                 if not saved_successfully:
-                    current_app.logger.warning(f"Failed to save new attachment {file.filename} for task {task_id} in edit_task. Triggering rollback.")
+                    current_app.logger.warning(
+                        f"Failed to save new attachment {file.filename} for task {task_id} in edit_task. Triggering rollback."
+                    )
                     db.session.rollback()
-                    flash("File upload failed (e.g., size restrictions or DB error). Changes not saved.", "danger")
+                    flash(
+                        "File upload failed (e.g., size restrictions or DB error). Changes not saved.",
+                        "danger"
+                    )
                     return redirect(url_for('task_routes.edit_task', task_id=task.id))
-                current_app.logger.info(f"Successfully processed new attachment {file.filename} for task {task_id} in edit_task.")
+                current_app.logger.info(
+                    f"Successfully processed new attachment {file.filename} for task {task_id} in edit_task."
+                )
 
         attachment_ids_to_delete = request.form.getlist('delete_attachments')
         if attachment_ids_to_delete:
-            current_app.logger.info(f"Attachments marked for deletion for task {task_id}: {attachment_ids_to_delete}")
+            current_app.logger.info(
+                f"Attachments marked for deletion for task {task_id}: {attachment_ids_to_delete}"
+            )
         for attachment_id in attachment_ids_to_delete:
-            current_app.logger.info(f"Attempting to delete TaskDocument with id: {attachment_id} for task_id: {task_id}.")
+            current_app.logger.info(
+                f"Attempting to delete TaskDocument with id: {attachment_id} for task_id: {task_id}."
+            )
             document = TaskDocument.query.filter_by(id=attachment_id, task_id=task.id).first()
             if document:
                 try:
                     db.session.delete(document)
-                    current_app.logger.info(f"Successfully deleted TaskDocument {attachment_id} for task {task_id} from session.")
+                    current_app.logger.info(
+                        f"Successfully deleted TaskDocument {attachment_id} for task {task_id} from session."
+                    )
                 except Exception as e:
-                    current_app.logger.error(f"Error deleting TaskDocument {attachment_id} for task {task_id} from DB session: {e}", exc_info=True)
+                    current_app.logger.error(
+                        f"Error deleting TaskDocument {attachment_id} for task {task_id} from DB session: {e}",
+                        exc_info=True
+                    )
             else:
-                current_app.logger.warning(f"TaskDocument with id: {attachment_id} not found for task_id: {task_id} during deletion attempt.")
+                current_app.logger.warning(
+                    f"TaskDocument with id: {attachment_id} not found for task_id: {task_id} during deletion attempt."
+                )
 
         try:
             db.session.commit()

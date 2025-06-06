@@ -20,42 +20,7 @@ content %}
     </div>
   </form>
 
-  <!-- Improved Quick Stats: Always Show Stats -->
-  <h3 class="mb-3">Quick Stats</h3>
-  <div class="row mb-4">
-    {% if custom_table is defined and custom_table|length > 0 %} {% for stat in
-    custom_table %}
-    <div class="col-md-3 col-6 mb-3">
-      <div class="card text-center shadow-sm border-primary">
-        <div class="card-body">
-          <div class="mb-2" style="font-size: 2em">
-            {% if "User" in stat.name %}
-            <i class="fas fa-users"></i>
-            {% elif "Department" in stat.name %}
-            <i class="fas fa-building"></i>
-            {% elif "Course" in stat.name %}
-            <i class="fas fa-book"></i>
-            {% elif "Exam" in stat.name %}
-            <i class="fas fa-clipboard-check"></i>
-            {% else %}
-            <i class="fas fa-info-circle"></i>
-            {% endif %}
-          </div>
-          <h5 class="card-title">
-            {{ stat.value if stat.value is not none else 0 }}
-          </h5>
-          <p class="card-text">{{ stat.name }}</p>
-        </div>
-      </div>
-    </div>
-    {% endfor %} {% else %}
-    <div class="col-12">
-      <div class="alert alert-info text-center">No statistics available.</div>
-    </div>
-    {% endif %}
-  </div>
-
-  <!-- Download Section (unchanged) -->
+  <!-- Download Section (updated) -->
   <h3>Download Reports</h3>
   <div class="list-group mb-4">
     <a
@@ -107,6 +72,18 @@ content %}
       href="{{ url_for('admin_routes.download_report', type='inactive_users', search=search) }}"
       class="list-group-item list-group-item-action"
       ><i class="fas fa-user-slash me-2"></i> Inactive Users</a
+    >
+
+    <!-- Newly added links for Incorrect Answers and Top 10 Missed Questions -->
+    <a
+      href="{{ url_for('admin_routes.download_report', type='incorrect_answers', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-times-circle me-2"></i> Incorrect Answers</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='incorrect_top10', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-list-ol me-2"></i> Top 10 Missed Questions</a
     >
   </div>
 

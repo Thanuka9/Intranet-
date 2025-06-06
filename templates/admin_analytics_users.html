@@ -62,7 +62,20 @@
         </div>
       </td>
       <td>{{ entry.user.employee_email }}</td>
-      <td>{{ entry.user.department.name if entry.user.department else '-' }}</td>
+
+      <!-- Updated Department column for many-to-many -->
+      <td>
+        {% if entry.user.departments %}
+          <div class="mb-1">
+            {% for d in entry.user.departments %}
+              <span class="badge bg-secondary">{{ d.name }}</span>
+            {% endfor %}
+          </div>
+        {% else %}
+          <span class="text-muted">-</span>
+        {% endif %}
+      </td>
+
       <td>{{ entry.user.designation.title if entry.user.designation else '-' }}</td>
       <td>{{ entry.exams_taken }}</td>
       <td>
@@ -85,7 +98,9 @@
       </td>
       <td>{{ entry.user.join_date.strftime('%Y-%m-%d') if entry.user.join_date else '-' }}</td>
       <td>
-        <a href="{{ url_for('admin_routes.analytics_user_detail', user_id=entry.user.id) }}" class="btn btn-sm btn-outline-primary" title="View detailed analytics"><i class="bi bi-bar-chart"></i> View</a>
+        <a href="{{ url_for('admin_routes.analytics_user_detail', user_id=entry.user.id) }}" class="btn btn-sm btn-outline-primary" title="View detailed analytics">
+          <i class="bi bi-bar-chart"></i> View
+        </a>
       </td>
     </tr>
     {% endfor %}

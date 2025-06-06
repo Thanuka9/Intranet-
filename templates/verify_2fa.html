@@ -57,6 +57,10 @@
       .countdown-finish {
         animation: pulse 1s ease-in-out infinite;
       }
+      /* Ensure multiple alerts stack nicely */
+      .flash-container .alert {
+        margin-bottom: 1rem;
+      }
     </style>
   </head>
 
@@ -67,7 +71,7 @@
       class="container d-flex align-items-center justify-content-center vh-100"
     >
       <div class="form-container animate__animated animate__fadeInDown">
-        <!-- Logo + Title (using your original logo image) -->
+        <!-- Logo + Title -->
         <div
           class="logo-title text-center mb-4 animate__animated animate__bounceIn"
         >
@@ -86,11 +90,56 @@
         <!-- Subtitle -->
         <h2 class="text-center mb-3">Verify 2FA</h2>
 
-        <!-- Error Alert -->
-        <div
-          id="errorAlert"
-          class="alert alert-danger text-center d-none animate__animated"
-        ></div>
+        <!-- Flash Messages Container -->
+        <div class="flash-container">
+          {% for category, message in get_flashed_messages(with_categories=true)
+          %} {% if category == "error" %}
+          <div
+            class="alert alert-danger alert-dismissible fade show animate__animated animate__shakeX"
+            role="alert"
+          >
+            {{ message }}
+            <button
+              type="button"
+              class="close"
+              data-dismiss="alert"
+              aria-label="Close"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          {% elif category == "warning" %}
+          <div
+            class="alert alert-warning alert-dismissible fade show animate__animated animate__fadeInDown"
+            role="alert"
+          >
+            {{ message }}
+            <button
+              type="button"
+              class="close"
+              data-dismiss="alert"
+              aria-label="Close"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          {% elif category == "info" %}
+          <div
+            class="alert alert-info alert-dismissible fade show animate__animated animate__fadeInDown"
+            role="alert"
+          >
+            {{ message }}
+            <button
+              type="button"
+              class="close"
+              data-dismiss="alert"
+              aria-label="Close"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          {% endif %} {% endfor %}
+        </div>
 
         <!-- Verification Form -->
         <form
@@ -152,20 +201,6 @@
     <script>
       console.log("2FA script loaded");
       document.addEventListener("DOMContentLoaded", () => {
-        // Flash messages
-        const flashMessages = {{ get_flashed_messages(with_categories=true)|tojson }};
-        const errorAlert = document.getElementById("errorAlert");
-
-        if (flashMessages) {
-          flashMessages.forEach(([category, text]) => {
-            if (category === "error") {
-              errorAlert.textContent = text;
-              errorAlert.classList.remove("d-none");
-              errorAlert.classList.add("animate__shakeX");
-            }
-          });
-        }
-
         // Countdown timer
         let countdown = 30;
         const timerEl = document.getElementById("timer");
@@ -181,8 +216,7 @@
             resendBtn.classList.add("countdown-finish");
             resendBtn.innerHTML = '<i class="fas fa-redo-alt"></i> Resend Code';
             resendBtn.addEventListener("click", () => {
-              window.location.href =
-                "{{ url_for('auth_routes.resend_2fa') }}";
+              window.location.href = "{{ url_for('auth_routes.resend_2fa') }}";
             });
           }
         }, 1000);

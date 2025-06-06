@@ -128,7 +128,7 @@
     <!-- Top Bar -->
     <div class="top-bar">
       <a
-        href="{{ request.referrer or url_for('admin_routes.admin_dashboard') }}"
+        href="javascript:(history.length>1 ? history.back() : window.location.href='{{ url_for('admin_routes.admin_dashboard') }}');"
         class="back-btn-top"
       >
         <i class="fas fa-arrow-left"></i> Back

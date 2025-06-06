@@ -242,17 +242,56 @@ def verify_2fa():
         return redirect(url_for('auth_routes.login'))
 
     user = User.query.get(user_id)
+    now = datetime.utcnow()
+
+    # On GET: if there’s no valid code or it’s already expired, let the user know
+    if request.method == 'GET':
+        if not user.two_fa_code or not user.two_fa_expiration or user.two_fa_expiration <= now:
+            flash("Your 2FA code has expired. Please click “Resend Code” to get a new one.", "warning")
+
+    # Initialize (or preserve) a counter for failed 2FA attempts in this session
+    if '2fa_attempts' not in session:
+        session['2fa_attempts'] = 0
+
     if request.method == 'POST':
         code = request.form.get('2fa_code')
-        if code and user.two_fa_code == code and user.two_fa_expiration > datetime.utcnow():
+        session['2fa_attempts'] += 1
+
+        # If the user tries more than 5 times, force them to log in again
+        if session['2fa_attempts'] > 5:
+            session.pop('2fa_attempts', None)
+            session.pop('user_id', None)
+            flash("Too many failed attempts. Please log in again.", "error")
+            logging.warning(f"User {user_id} exceeded 2FA attempts from {request.remote_addr}")
+            return redirect(url_for('auth_routes.login'))
+
+        # Check submitted code against what’s in the database and ensure it hasn't expired
+        if (
+            code
+            and user.two_fa_code == code
+            and user.two_fa_expiration
+            and user.two_fa_expiration > now
+        ):
+            # ✅ Correct code: clear it out, commit, then log in the user
             user.two_fa_code = None
             user.two_fa_expiration = None
-            db.session.commit()
 
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                logging.error(f"Database error clearing 2FA code: {e}")
+                flash("Server error. Please try again.", "error")
+                return redirect(url_for('auth_routes.login'))
+
+            session.pop('2fa_attempts', None)
             login_user(user)
-            logging.info(f"User {user.id} logged in from {request.remote_addr}")
+            logging.info(f"User {user.id} passed 2FA from {request.remote_addr}")
             return redirect(url_for('general_routes.dashboard'))
+
+        # ❌ Invalid or expired code
         flash("Invalid or expired 2FA code.", "error")
+        logging.warning(f"Invalid 2FA attempt for user {user.id} from {request.remote_addr}")
         return redirect(url_for('auth_routes.verify_2fa'))
 
     return render_template('verify_2fa.html')
@@ -265,6 +304,20 @@ def resend_2fa():
         return redirect(url_for('auth_routes.login'))
 
     user = User.query.get(user_id)
+    now = datetime.utcnow()
+
+    # If there’s still a valid (non-expired) code, enforce a 30s “cooldown” before regenerating
+    if user.two_fa_expiration and user.two_fa_expiration > now:
+        # generation_timestamp = (expiration_timestamp - 5 minutes)
+        gen_time = user.two_fa_expiration - timedelta(minutes=5)
+        allowed_time = gen_time + timedelta(seconds=30)
+
+        if now < allowed_time:
+            wait_seconds = int((allowed_time - now).total_seconds())
+            flash(f"Please wait {wait_seconds}s before requesting a new code.", "error")
+            return redirect(url_for('auth_routes.verify_2fa'))
+
+    # Generate a fresh 2FA code (assumes User.generate_2fa_code() sets two_fa_code and two_fa_expiration = now + 5m)
     user.generate_2fa_code()
     try:
         db.session.commit()
@@ -273,6 +326,8 @@ def resend_2fa():
         logging.error(f"Database error during 2FA resend: {e}")
         flash("Server error. Please try again.", "error")
         return redirect(url_for('auth_routes.login'))
+
+    # Email the new code
     msg = Message(
         subject="Your 2FA Code",
         recipients=[user.employee_email]
@@ -284,9 +339,9 @@ def resend_2fa():
         code=user.two_fa_code
     )
     mail.send(msg)
+
     flash("New 2FA code sent.", "info")
     return redirect(url_for('auth_routes.verify_2fa'))
-
 
 @auth_routes.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():

@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, render_template
 from extensions import db
-from models import Exam, Question, UserScore, User, Category, Level, Area, UserLevelProgress, Designation, LevelArea, StudyMaterial, ExamAccessRequest, IncorrectAnswer, UserProgress
+from models import (Exam, Question, UserScore, User, Category, Level, Area, UserLevelProgress, 
+    Designation, LevelArea, StudyMaterial, ExamAccessRequest, IncorrectAnswer, UserProgress)
 from flask_login import current_user, login_required
 from datetime import datetime, timezone, timedelta
 from jinja2 import TemplateNotFound
@@ -14,7 +15,7 @@ from flask import redirect, flash, url_for
 from utils.progress_utils import has_finished_study
 
 # Blueprint setup
-exams_routes = Blueprint('exams_routes', __name__, url_prefix='/exams')
+exams_routes = Blueprint('exams_routes', __name__)
 
 # -------------------------------
 # Route to Create an Exam 
@@ -959,10 +960,16 @@ def start_exam(exam_id):
         force   = request.args.get("force", "").lower() == "true"
         now_utc = datetime.utcnow()
 
-        # ─── 1) Prerequisite Study Check ─────────────────────────────────
-        if not has_finished_study(current_user.id, exam.level_id, exam.area_id):
+        # ─── 1) Prerequisite Study Check (exact‐course) ────────────────────
+        prog = UserProgress.query.filter_by(
+            user_id=current_user.id,
+            study_material_id=exam.course_id,
+            completed=True
+        ).first()
+        if not prog:
             flash("Please finish the study material first.", "danger")
             return redirect(url_for("exams_routes.list_exams"))
+
 
         # ─── 2) Access Approval Check ────────────────────────────────────
         access_req = (
@@ -1054,8 +1061,13 @@ def debug_start_exam(exam_id):
     try:
         exam = Exam.query.get_or_404(exam_id)
 
-        # ─── 1) Prerequisite Study Check (same as above) ───────────────
-        if not has_finished_study(current_user.id, exam.level_id, exam.area_id):
+        # ─── 1) Prerequisite Study Check (exact‐course) ───────────────────
+        prog = UserProgress.query.filter_by(
+            user_id=current_user.id,
+            study_material_id=exam.course_id,
+            completed=True
+        ).first()
+        if not prog:
             flash("Please finish the study material first.", "danger")
             return redirect(url_for("exams_routes.list_exams"))
 
@@ -1114,6 +1126,7 @@ def debug_start_exam(exam_id):
         logging.error(f"Unexpected error in debug_start_exam for Exam ID {exam_id}: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
 
+
 # -------------------------------
 # Route to Fetch Dropdown Data for Exam Creation
 # -------------------------------
@@ -1166,37 +1179,39 @@ def get_exam_dropdowns():
 @exams_routes.route('/<int:exam_id>/request_access', methods=['POST'])
 @login_required
 def request_exam_access(exam_id):
-    from models import ExamAccessRequest, Exam, UserScore
-
+ 
     exam = Exam.query.get_or_404(exam_id)
 
-    if not has_finished_study(current_user.id, exam.level_id, exam.area_id):
+    # ─── 1) Prerequisite Study Check (exact‐course) ───────────────────
+    prog = UserProgress.query.filter_by(
+        user_id=current_user.id,
+        study_material_id=exam.course_id,
+        completed=True
+    ).first()
+    if not prog:
         flash("Complete the course before requesting access.", "warning")
         return redirect(url_for('exams_routes.list_exams'))
 
     now = datetime.utcnow()
 
-    # Get score record
+    # ─── 2) Most Recent Score Check ─────────────────────────────────
     score_record = (
         UserScore.query
         .filter_by(user_id=current_user.id, exam_id=exam_id)
         .order_by(UserScore.created_at.desc())
         .first()
     )
-
-    # Already passed
     if score_record and score_record.score >= 56:
         flash("You already passed this exam.", "info")
         return redirect(url_for('exams_routes.list_exams'))
 
-    # Request history
+    # ─── 3) Recent Access‐Request History ────────────────────────────
     recent_requests = (
         ExamAccessRequest.query
         .filter_by(user_id=current_user.id, exam_id=exam_id)
         .order_by(ExamAccessRequest.requested_at.desc())
         .all()
     )
-
     latest = recent_requests[0] if recent_requests else None
     recent_count = sum(1 for r in recent_requests if r.requested_at > now - timedelta(days=1))
 
@@ -1205,14 +1220,24 @@ def request_exam_access(exam_id):
         return redirect(url_for('exams_routes.list_exams'))
 
     if latest and latest.status == 'approved' and (not score_record or score_record.score < 56):
+        # User must re-request: create new request, then flash exactly this message
+        new_request = ExamAccessRequest(
+            user_id=current_user.id,
+            exam_id=exam_id,
+            status='pending',
+            requested_at=now
+        )
+        db.session.add(new_request)
+        db.session.commit()
+
         flash("You must re-request access to retry this exam.", "warning")
-        # Do not return here, continue to create new request
+        return redirect(url_for('exams_routes.list_exams'))
 
     if recent_count >= 3:
         flash("Too many requests in the past 24 hours. Try again later.", "warning")
         return redirect(url_for('exams_routes.list_exams'))
 
-    # Submit new access request
+    # ─── 4) Submit New Access Request ────────────────────────────────
     new_request = ExamAccessRequest(
         user_id=current_user.id,
         exam_id=exam_id,
