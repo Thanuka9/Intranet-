@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Collective Privacy Policy Agreement</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Google Font -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Bootstrap Icons -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #0062ff;
+        --primary-hover: #004fcc;
+        --danger: #dc3545;
+        --danger-hover: #ba2532;
+        --light-bg: #f6f8fb;
+        --white: #fff;
+        --radius: 28px;
+        --border: #eaeaea;
+        --shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.1);
+        --header-height: 80px;
+        --brand-red: #dc3545;
+        --brand-black: #232c3d;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        background: var(--light-bg);
+        margin: 0;
+        padding-bottom: 98px;
+        min-height: 100vh;
+      }
+      header {
+        width: 100vw;
+        height: var(--header-height);
+        background: var(--white);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        box-shadow: 0 1px 10px rgba(0, 0, 0, 0.04);
+      }
+      .header-inner {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 1.2rem;
+        padding: 0 2.4rem;
+      }
+      .logo {
+        height: 52px;
+        width: 52px;
+        border-radius: 10px;
+        background: #eee;
+        object-fit: contain;
+        margin-right: 0.5rem;
+      }
+      .brand-title {
+        font-size: 2rem;
+        font-weight: 800;
+        margin: 0;
+        letter-spacing: -1.1px;
+        display: flex;
+        align-items: center;
+        user-select: none;
+      }
+      .brand-title .collect {
+        color: var(--brand-black);
+      }
+      .brand-title .ive {
+        color: var(--brand-red);
+      }
+      .brand-title .privacy-policy {
+        color: var(--brand-black);
+        font-weight: 700;
+        margin-left: 0.7rem;
+        font-size: 1.5rem;
+        letter-spacing: -0.5px;
+      }
+      .policy-outer {
+        width: 100%;
+        min-height: calc(100vh - var(--header-height));
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 2.8vw 1vw 0 1vw;
+      }
+      .policy-container {
+        width: 100%;
+        max-width: 900px;
+        background: var(--white);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        margin: 0 auto;
+        padding: 2.7rem 2.2rem 1.5rem 2.2rem;
+        animation: fadeInUp 0.8s cubic-bezier(0.19, 1, 0.22, 1) 0s 1 both;
+      }
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(44px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .policy-container h2 {
+        font-weight: 900;
+        color: var(--brand-black);
+        margin-bottom: 2.2rem;
+        font-size: 2.2rem;
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+      }
+      .policy-container h2 b {
+        font-weight: 900;
+      }
+      .policy-container h4 {
+        font-weight: 700;
+        margin-top: 2.6rem;
+        margin-bottom: 0.85rem;
+        color: var(--brand-black);
+      }
+      .policy-container ul,
+      .policy-container ol {
+        margin-bottom: 1.1rem;
+        padding-left: 1.4rem;
+      }
+      .policy-container li {
+        margin-bottom: 0.38rem;
+        font-size: 1.07rem;
+      }
+      .policy-container a {
+        color: var(--primary);
+        text-decoration: underline;
+      }
+      .divider {
+        border: none;
+        border-bottom: 1px solid var(--border);
+        margin: 2.1rem 0 2rem 0;
+      }
+      .policy-container .section-title {
+        font-weight: 800;
+        font-size: 1.3rem;
+        margin-top: 2.2rem;
+        margin-bottom: 0.9rem;
+        color: var(--brand-black);
+      }
+      .policy-container .text-muted {
+        color: #6d747e !important;
+        font-size: 1rem;
+      }
+      .policy-container b {
+        font-weight: 700;
+      }
+      .agreement-btn {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100vw;
+        background: var(--white);
+        border-top: 1px solid var(--border);
+        box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.08);
+        padding: 1.3rem 0 1.3rem 0;
+        z-index: 999;
+        display: flex;
+        justify-content: center;
+        gap: 1.25rem;
+      }
+      .agreement-btn .btn {
+        font-size: 1.17rem;
+        font-weight: 700;
+        border-radius: 44px;
+        min-width: 150px;
+        padding: 0.7rem 2.2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        transition: background 0.18s, color 0.18s, border 0.18s;
+      }
+      .btn-agree {
+        background: var(--primary);
+        color: #fff;
+        border: 2px solid var(--primary);
+      }
+      .btn-agree:hover {
+        background: var(--primary-hover);
+        border-color: var(--primary-hover);
+      }
+      .btn-disagree {
+        background: #fff;
+        color: var(--danger);
+        border: 2px solid var(--danger);
+      }
+      .btn-disagree:hover {
+        background: var(--danger);
+        color: #fff;
+      }
+      .policy-icon {
+        font-size: 2.1rem;
+        vertical-align: middle;
+        color: var(--primary);
+        margin-right: 0.7rem;
+      }
+      .section-icon {
+        font-size: 1.25rem;
+        color: var(--primary);
+        margin-right: 0.37rem;
+      }
+      @media (max-width: 700px) {
+        .policy-outer {
+          padding: 1.3rem 0.1vw 0 0.1vw;
+        }
+        .policy-container {
+          padding: 1.2rem 0.6rem 0.7rem 0.6rem;
+          margin-top: 0.5rem;
+        }
+        .header-inner {
+          padding: 0 0.5rem;
+        }
+        .logo {
+          height: 40px;
+          width: 40px;
+        }
+        .brand-title {
+          font-size: 1.3rem;
+        }
+        .policy-container h2 {
+          font-size: 1.25rem;
+        }
+        .agreement-btn .btn {
+          font-size: 1rem;
+          min-width: 110px;
+          padding: 0.5rem 1.1rem;
+        }
+      }
+      /* Custom scrollbar for desktop */
+      ::-webkit-scrollbar {
+        width: 8px;
+        background: #f2f3f5;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #dee2e6;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-inner">
+        <img
+          src="{{ url_for('static', filename='images/logo.png') }}"
+          alt="Collective Logo"
+          class="logo"
+        />
+        <span class="brand-title">
+          <span class="collect">Collect</span><span class="ive">ive</span>
+          <span class="privacy-policy ms-2">Intranet Privacy Policy</span>
+        </span>
+      </div>
+    </header>
+    <div class="policy-outer">
+      <main class="policy-container" tabindex="0">
+        <h2>
+          <i class="bi bi-shield-lock policy-icon"></i>
+          <b>Privacy Policy Agreement</b>
+        </h2>
+        <p class="text-muted mb-1">
+          <i class="bi bi-calendar3 section-icon"></i>
+          <b>Effective Date:</b> January 1, 2025
+        </p>
+        <p>
+          Welcome to the <b>Collective Intranet System</b> (the “System”). This
+          Privacy Policy outlines how we collect, use, store, and protect
+          information pertaining to employees, administrators, and other
+          authorized users of this platform.
+        </p>
+
+        <hr class="divider" />
+        <h4>1. Information We Collect</h4>
+        <ul>
+          <li>
+            <b>Personal Data:</b> Name, email address, employee ID, department,
+            designation, and user role.
+          </li>
+          <li>
+            <b>Authentication Data:</b> Password hashes (securely encrypted),
+            login logs, and optional 2FA keys.
+          </li>
+          <li>
+            <b>Usage Data:</b> Task interactions, exam scores, course progress,
+            dashboard activity.
+          </li>
+          <li>
+            <b>Files &amp; Uploads:</b> Documents and images submitted through
+            tasks or assignments (stored via GridFS).
+          </li>
+          <li>
+            <b>Technical Metadata:</b> IP address, device type, browser details
+            — used for audit and security logs only.
+          </li>
+        </ul>
+
+        <hr class="divider" />
+        <h4>2. How We Use Your Data</h4>
+        <ul>
+          <li>To provide secure, role-specific access to system features.</li>
+          <li>
+            To assign, track, and evaluate user tasks and learning outcomes.
+          </li>
+          <li>To generate personal dashboards and institutional reports.</li>
+          <li>To detect and prevent unauthorized system access or misuse.</li>
+          <li>
+            To deliver internal messages, announcements, and notifications.
+          </li>
+        </ul>
+
+        <hr class="divider" />
+        <h4>3. Legal Basis for Processing</h4>
+        <p>
+          We process your data on the basis of legitimate interest and
+          operational necessity within the scope of Collective’s educational and
+          administrative mandate.
+        </p>
+
+        <hr class="divider" />
+        <h4>4. Data Access &amp; Sharing</h4>
+        <ul>
+          <li>
+            Your data is accessible only to authorized system administrators and
+            managers based on your role and designation.
+          </li>
+          <li>
+            We do not sell, trade, or disclose any personal data to third
+            parties.
+          </li>
+          <li>
+            Access audits and logs are periodically reviewed for compliance.
+          </li>
+        </ul>
+
+        <hr class="divider" />
+        <h4>5. Document &amp; File Storage</h4>
+        <ul>
+          <li>
+            All user-uploaded files are securely stored using MongoDB GridFS.
+          </li>
+          <li>
+            Upload limits, file types, and permissions are enforced by backend
+            validation.
+          </li>
+          <li>
+            Document access is strictly role-restricted and encrypted in
+            transit.
+          </li>
+        </ul>
+
+        <hr class="divider" />
+        <h4>6. Data Retention &amp; Removal</h4>
+        <p>
+          We retain user data only for as long as necessary to meet
+          administrative and operational needs. Upon resignation, role change,
+          or account deactivation, user data is archived or securely deleted
+          following HR compliance protocols.
+        </p>
+
+        <hr class="divider" />
+        <h4>7. Your Rights</h4>
+        <p>Users of the system may:</p>
+        <ul>
+          <li>Request a summary of data stored about them.</li>
+          <li>Request correction of profile data if inaccurate.</li>
+          <li>
+            Request deletion of their account (subject to management approval
+            and audit constraints).
+          </li>
+        </ul>
+        <p>
+          To initiate any data request, contact us at
+          <a href="mailto:intranet@collectivercm.com"
+            >intranet@collectivercm.com</a
+          >.
+        </p>
+
+        <hr class="divider" />
+        <h4>8. Cookies &amp; Session Management</h4>
+        <p>
+          We use only essential session cookies to maintain secure login
+          sessions. No third-party analytics or tracking cookies are used.
+        </p>
+
+        <hr class="divider" />
+        <h4>9. Security Measures</h4>
+        <ul>
+          <li>Passwords are encrypted using bcrypt.</li>
+          <li>All communication is secured over HTTPS (TLS 1.2+).</li>
+          <li>Cross-site request forgery (CSRF) protection is enforced.</li>
+          <li>
+            Access control is enforced through user role verification on all
+            sensitive routes.
+          </li>
+          <li>
+            All uploads and user inputs are sanitized against XSS and injection
+            risks.
+          </li>
+        </ul>
+
+        <hr class="divider" />
+        <h4>10. Updates to This Policy</h4>
+        <p>
+          This policy may be updated to reflect legal, technical, or operational
+          changes. Users will be notified via the dashboard upon any significant
+          updates.
+        </p>
+
+        <hr class="divider" />
+        <h4>11. Contact Us</h4>
+        <p>
+          For questions or concerns about your privacy, please contact our
+          system administrator at
+          <a href="mailto:intranet@collectivercm.com"
+            >intranet@collectivercm.com</a
+          >.
+        </p>
+
+        <hr class="divider" />
+        <h4>12. Exam Rules &amp; Conditions</h4>
+        <p>
+          By participating in any assessments or evaluations hosted on the
+          Collective platform, users agree to abide by the following rules:
+        </p>
+        <ul>
+          <li>
+            <b>Identity:</b> Exams must be completed by the assigned user only.
+            Impersonation is strictly prohibited.
+          </li>
+          <li>
+            <b>External Assistance:</b> No unauthorized materials, notes, or
+            digital tools may be used unless explicitly permitted.
+          </li>
+          <li>
+            <b>System Monitoring:</b> All exam interactions (timing, IP address,
+            attempts, scores) are logged and may be reviewed by system admins.
+          </li>
+          <li>
+            <b>Result Integrity:</b> Any detected manipulation or breach of
+            policy may result in disqualification, score removal, or
+            disciplinary review.
+          </li>
+          <li>
+            <b>Confidentiality:</b> Exam questions and answers are confidential
+            and may not be shared, copied, or distributed in any form.
+          </li>
+        </ul>
+        <p>
+          Violation of these rules may result in warnings, restricted access,
+          exam invalidation, or reporting to HR for further action.
+        </p>
+
+        <hr class="divider" />
+        <h4>13. Copyright &amp; Intellectual Property</h4>
+        <p>
+          All internal study materials, exam documents, training resources, and
+          associated intellectual content distributed through the Collective
+          Intranet are the exclusive property of <b>Collective</b>.
+        </p>
+        <p>
+          All source code, routing logic, backend modules, UI/UX design,
+          authentication workflows, MongoDB integration, and system architecture
+          are the intellectual property of <b>Thanuka Ellepola</b>. No portion
+          of this platform may be copied, replicated, reverse-engineered, or
+          reused without explicit written permission.
+        </p>
+        <p>
+          Unauthorized use or distribution of this content may result in
+          disciplinary action and/or legal consequences.
+        </p>
+        <div class="text-center my-4">
+          <i
+            class="bi bi-shield-check"
+            style="font-size: 2.5rem; color: var(--primary)"
+          ></i>
+        </div>
+      </main>
+    </div>
+    <!-- CSRF token -->
+    <input type="hidden" id="csrfToken" value="{{ csrf_token() }}" />
+    <div class="agreement-btn">
+      <button id="disagreeBtn" type="button" class="btn btn-disagree">
+        <i class="bi bi-x-circle me-1"></i> Disagree
+      </button>
+      <button id="agreeBtn" type="button" class="btn btn-agree">
+        <i class="bi bi-check-circle me-1"></i> I Agree
+      </button>
+    </div>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      document
+        .getElementById("agreeBtn")
+        .addEventListener("click", function () {
+          const token = document.getElementById("csrfToken").value;
+          fetch("/privacy-policy-agreement", {
+            method: "POST",
+            headers: { "X-CSRFToken": token },
+            credentials: "include",
+          }).then(() => (window.location.href = "/dashboard"));
+        });
+      document
+        .getElementById("disagreeBtn")
+        .addEventListener("click", function () {
+          window.location.href = "/auth/login";
+        });
+    </script>
+  </body>
+</html>

@@ -8,7 +8,7 @@ from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timedelta
 import logging
-
+from audit import log_event
 from extensions import db, mail
 from models import (
     User, Department, Designation, Client, Role,
@@ -163,10 +163,10 @@ def verify_email(token):
 def login():
     if request.method == 'POST':
         email = request.form.get('employee_email')
-        pwd = request.form.get('password')
-        user = User.query.filter_by(employee_email=email).first()
+        pwd   = request.form.get('password')
+        user  = User.query.filter_by(employee_email=email).first()
 
-        # 1) Locked-out users
+        # 1) Locked‐out users
         if user and user.is_locked:
             flash(
                 "Your account has been locked due to too many failed login attempts. "
@@ -177,19 +177,24 @@ def login():
 
         # 2) Correct password path
         if user and user.check_password(pwd):
+            # ─── Audit: successful login ─────────────────────────────
+            log_event('USER_LOGIN', user=user)
+
+            # reset counters & 2FA
             user.failed_login_count = 0
-            user.is_locked = False
-            user.locked_at = None
+            user.is_locked          = False
+            user.locked_at          = None
             db.session.commit()
 
             if not user.is_verified:
                 flash("Account not verified. Contact support.", "error")
                 return redirect(url_for('auth_routes.login'))
 
-            session['user_id'] = user.id
-            session['is_super_admin'] = user.is_super_admin
-            session['role_id'] = user.roles[0].id if user.roles else None
-            session['designation_id'] = user.designation_id
+            # put user info into session
+            session['user_id']          = user.id
+            session['is_super_admin']   = user.is_super_admin
+            session['role_id']          = user.roles[0].id if user.roles else None
+            session['designation_id']   = user.designation_id
 
             # generate & send 2FA
             user.generate_2fa_code()
@@ -197,9 +202,10 @@ def login():
                 db.session.commit()
             except SQLAlchemyError as e:
                 db.session.rollback()
-                logging.error(f"Database error during 2FA code generation: {e}")
+                logging.error(f"DB error during 2FA setup: {e}")
                 flash("Server error. Please try again.", "error")
                 return redirect(url_for('auth_routes.login'))
+
             msg = Message(
                 subject="Your 2FA Code",
                 recipients=[user.employee_email]
@@ -219,21 +225,35 @@ def login():
         if user:
             user.failed_login_count += 1
             if user.failed_login_count >= MAX_FAILED_ATTEMPTS:
-                user.is_locked = True
-                user.locked_at = datetime.utcnow()
+                user.is_locked  = True
+                user.locked_at  = datetime.utcnow()
                 flash("Too many failed attempts. Your account has been locked.", "error")
             else:
                 flash("Invalid email or password.", "error")
+
             db.session.commit()
-            log_failed_login_attempt(user.employee_email)
+
+            # ─── Audit: failed login with known email ───────────────
+            log_event(
+                'FAILED_LOGIN',
+                user=None,
+                email=user.employee_email
+            )
         else:
             flash("Invalid email or password.", "error")
+
+            # ─── Audit: failed login with unknown email ─────────────
+            log_event(
+                'FAILED_LOGIN',
+                user=None,
+                email=email
+            )
 
         logging.warning(f"Failed login for {email} from {request.remote_addr}")
         return redirect(url_for('auth_routes.login'))
 
+    # GET -> just render the form
     return render_template('login.html')
-
 
 @auth_routes.route('/verify_2fa', methods=['GET', 'POST'])
 def verify_2fa():

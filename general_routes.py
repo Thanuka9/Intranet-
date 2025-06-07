@@ -211,3 +211,20 @@ def download_attachment(attachment_id):
         mimetype=attachment.mimetype,
         as_attachment=True
     )
+
+# ─── One-Time Privacy Policy Agreement ─────────────────────────────
+@general_routes.route('/privacy-policy-agreement', methods=['GET', 'POST'])
+@login_required
+def privacy_policy_agreement():
+    if request.method == 'POST':
+        # mark their consent
+        current_user.privacy_agreed    = True
+        current_user.privacy_agreed_at = datetime.utcnow()
+        db.session.commit()
+        # redirect to dashboard (not root)
+        next_url = session.pop('next', url_for('general_routes.dashboard'))
+        return redirect(next_url)
+
+    # on GET, show the standalone agreement page
+    return render_template('privacy_policy1.html')
+

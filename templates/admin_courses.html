@@ -3,18 +3,17 @@
 {% block title %}Manage Courses{% endblock %}
 
 {% block content %}
-<h1>Manage Courses</h1>
+<h1 class="mb-4">Manage Courses</h1>
 
-<table class="table table-bordered table-hover">
-  <thead>
+<table class="table table-bordered table-hover mb-5">
+  <thead class="table-light">
     <tr>
       <th>ID</th>
       <th>Title</th>
       <th>Description</th>
       <th>Category</th>
       <th>Level</th>
-      <th>Min Designation</th>
-      <th>Restricted To</th>
+      <th>Minimum Level</th>
       <th>Actions</th>
     </tr>
   </thead>
@@ -26,27 +25,26 @@
       <td>{{ c.description }}</td>
       <td>{{ c.category.name if c.category else '—' }}</td>
       <td>{{ c.level.level_number if c.level else '—' }}</td>
-      <td>{{ c.minimum_designation.title if c.minimum_designation else 'None' }}</td>
-      <td>{{ c.restriction_level or 'None' }}</td>
-      <td>
-        <!-- Edit button triggers modal -->
+      <td>Level {{ c.minimum_level }}</td>
+      <td class="text-center">
+        <!-- Edit button -->
         <button
-          class="btn btn-primary btn-sm"
+          class="btn btn-sm btn-primary"
           data-bs-toggle="modal"
           data-bs-target="#editCourseModal{{ c.id }}"
+          title="Edit Course #{{ c.id }}"
         >
           <i class="fas fa-edit"></i>
         </button>
-
-        <!-- Delete form with CSRF token -->
+        <!-- Delete form -->
         <form
           action="{{ url_for('admin_routes.delete_course', course_id=c.id) }}"
           method="POST"
-          style="display: inline;"
+          class="d-inline"
           onsubmit="return confirm('Delete this course?');"
         >
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-danger btn-sm">
+          <button type="submit" class="btn btn-sm btn-danger" title="Delete Course #{{ c.id }}">
             <i class="fas fa-trash-alt"></i>
           </button>
         </form>
@@ -54,13 +52,13 @@
     </tr>
     {% else %}
     <tr>
-      <td colspan="8" class="text-center">No courses available.</td>
+      <td colspan="7" class="text-center">No courses available.</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 
-{# Edit Course modals #}
+{# Edit Course Modals #}
 {% for c in courses %}
 <div
   class="modal fade"
@@ -72,7 +70,9 @@
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="editCourseLabel{{ c.id }}">Edit Course #{{ c.id }}</h5>
+        <h5 class="modal-title" id="editCourseLabel{{ c.id }}">
+          Edit Course #{{ c.id }}
+        </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form
@@ -104,6 +104,7 @@
               id="desc{{ c.id }}"
               name="description"
               rows="3"
+              required
             >{{ c.description }}</textarea>
           </div>
 
@@ -163,31 +164,39 @@
             </select>
           </div>
 
-          <!-- Min Designation -->
+          <!-- Minimum Designation -->
           <div class="mb-3">
-            <label for="minDesig{{ c.id }}" class="form-label">Min Designation</label>
-            <select class="form-select" id="minDesig{{ c.id }}" name="minimum_designation_id">
-              <option value="">None</option>
+            <label for="minLevel{{ c.id }}" class="form-label">Minimum Designation</label>
+            <select
+              class="form-select"
+              id="minLevel{{ c.id }}"
+              name="minimum_level"
+              required
+            >
+              <option value="1" {% if c.minimum_level <= 1 %}selected{% endif %}>
+                1 (Open to All)
+              </option>
               {% for des in designations %}
                 <option
-                  value="{{ des.id }}"
-                  {% if c.minimum_designation and c.minimum_designation.id == des.id %}selected{% endif %}
-                >{{ des.title }}</option>
+                  value="{{ des.starting_level }}"
+                  {% if c.minimum_level == des.starting_level %}selected{% endif %}
+                >
+                  {{ des.title }} (Level {{ des.starting_level }})
+                </option>
               {% endfor %}
             </select>
           </div>
 
-          <!-- Existing Attachments: Delete or Replace -->
+          <!-- Existing Attachments -->
           {% if c.files %}
           <h6 class="mt-4">Current Files</h6>
           {% for file_entry in c.files %}
             {% set fid, fname = file_entry.split('|') %}
             <div class="border p-2 mb-2">
-              <!-- Delete checkbox -->
               <div class="form-check">
                 <input
-                  type="checkbox"
                   class="form-check-input"
+                  type="checkbox"
                   id="delFile{{ fid }}"
                   name="delete_files"
                   value="{{ fid }}"
@@ -196,12 +205,11 @@
                   Delete “{{ fname }}”
                 </label>
               </div>
-              <!-- Replace input -->
               <div class="mt-2">
                 <label for="repFile{{ fid }}" class="form-label">Replace file</label>
                 <input
-                  type="file"
                   class="form-control form-control-sm"
+                  type="file"
                   id="repFile{{ fid }}"
                   name="replace_files"
                 >
@@ -219,24 +227,22 @@
           <div class="mb-3 mt-4">
             <label for="newFiles{{ c.id }}" class="form-label">Attach New Files</label>
             <input
-              type="file"
               class="form-control"
+              type="file"
               id="newFiles{{ c.id }}"
               name="new_files"
               multiple
             >
           </div>
+        </div>
 
-        </div><!-- /.modal-body -->
-        
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Save changes</button>
         </div>
       </form>
-    </div><!-- /.modal-content -->
-  </div><!-- /.modal-dialog -->
-</div><!-- /.modal -->
+    </div>
+  </div>
+</div>
 {% endfor %}
-
 {% endblock %}

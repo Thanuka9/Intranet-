@@ -77,14 +77,14 @@ def calculate_total_pages(file_like, filetype):
         logging.error(f"Error calculating total pages for {filetype}: {e}")
         return 0
 
-@study_material_routes.route('/upload_course', methods=['POST', 'GET'])
+@study_material_routes.route('/upload_course', methods=['GET', 'POST'])
 def upload_course():
     """
-    Handle uploading of study materials and subtopics, with metadata stored in PostgreSQL
-    and files stored in MongoDB (GridFS).
+    Handle uploading of study materials and subtopics,
+    with metadata in PostgreSQL and files in MongoDB (GridFS).
     """
     try:
-        # Optional: check if user is admin or super_admin
+        # Permission check
         if not session.get('is_super_admin', False):
             user_role = session.get('role')
             user_designation = session.get('designation_id')
@@ -92,52 +92,53 @@ def upload_course():
                 flash("You do not have permission to upload study materials.", "error")
                 return redirect(url_for('study_material_routes.list_study_materials'))
 
+        # Render form
         if request.method == 'GET':
             return render_template('upload_study.html')
 
         # -------------------------
         # 1) Get Form Fields
         # -------------------------
-        title = request.form.get('title')
+        title       = request.form.get('title')
         description = request.form.get('description')
         course_time = request.form.get('course_time')
-        max_time = request.form.get('max_time')
-
-        # These are the extra fields you had in the form
-        level_id = request.form.get('level_id')
+        max_time    = request.form.get('max_time')
+        level_id    = request.form.get('level_id')
         category_id = request.form.get('category_id')
-        minimum_level = request.form.get('minimum_level')
+        # Always default to 1 if missing/invalid
+        try:
+            minimum_level = int(request.form.get('minimum_level') or 1)
+        except ValueError:
+            minimum_level = 1
 
         subtopic_titles = request.form.getlist('subtopic_titles')
-        subtopic_files = request.files.getlist('subtopic_files')
+        subtopic_files  = request.files.getlist('subtopic_files')
 
-        if not title or not description or not course_time or not max_time:
+        # Basic validation
+        if not (title and description and course_time and max_time):
             flash("All fields are required.", "error")
             return redirect(url_for('study_material_routes.upload_course'))
 
         try:
             course_time = int(course_time)
-            max_time = int(max_time)
+            max_time    = int(max_time)
         except ValueError:
             flash("Course time and max time must be integers.", "error")
             return redirect(url_for('study_material_routes.upload_course'))
 
-        # Convert optional fields to int if possible
+        # Convert optional fk's
         try:
             level_id = int(level_id) if level_id else None
-        except:
+        except ValueError:
             level_id = None
+
         try:
             category_id = int(category_id) if category_id else None
-        except:
+        except ValueError:
             category_id = None
-        try:
-            minimum_level = int(minimum_level) if minimum_level else None
-        except:
-            minimum_level = None
 
         # -------------------------
-        # 2) Create StudyMaterial in PostgreSQL
+        # 2) Create StudyMaterial
         # -------------------------
         study_material = StudyMaterial(
             title=title,
@@ -145,7 +146,7 @@ def upload_course():
             course_time=course_time,
             max_time=max_time,
             total_pages=0,
-            files=[],  # will fill this later
+            files=[],
             level_id=level_id,
             category_id=category_id,
             minimum_level=minimum_level
@@ -157,28 +158,25 @@ def upload_course():
         # -------------------------
         # 3) Main Documents
         # -------------------------
-        files = request.files.getlist('main_documents')  # must match <input name="main_documents">
+        files = request.files.getlist('main_documents')
         file_ids = []
         total_pages = 0
 
         for file in files:
-            if file and allowed_file(file.filename):
-                if not validate_file_size(file, MAX_FILE_SIZE_MB):
-                    flash(f"{file.filename} exceeds the {MAX_FILE_SIZE_MB}MB limit.", "error")
-                    continue
+            if not (file and allowed_file(file.filename)):
+                continue
 
-                file_data = file.read()
-                # Store in MongoDB (GridFS)
-                mongo_id = grid_fs.put(file_data, filename=secure_filename(file.filename))
-                # Keep a reference in PostgreSQL
-                file_ids.append(f"{mongo_id}|{file.filename}")
+            if not validate_file_size(file, MAX_FILE_SIZE_MB):
+                flash(f"{file.filename} exceeds the {MAX_FILE_SIZE_MB}MB limit.", "error")
+                continue
 
-                # Use BytesIO for page count
-                file_like = BytesIO(file_data)
-                extension = file.filename.rsplit('.', 1)[1].lower()
-                total_pages += calculate_total_pages(file_like, extension)
+            data = file.read()
+            mongo_id = grid_fs.put(data, filename=secure_filename(file.filename))
+            file_ids.append(f"{mongo_id}|{file.filename}")
 
-        # Update the files list and total_pages
+            pages = calculate_total_pages(BytesIO(data), file.filename.rsplit('.',1)[1].lower())
+            total_pages += pages
+
         study_material.files = file_ids
         study_material.total_pages = total_pages
         db.session.commit()
@@ -187,41 +185,33 @@ def upload_course():
         # -------------------------
         # 4) Subtopics
         # -------------------------
-        for idx, subtopic_title in enumerate(subtopic_titles):
-            if not subtopic_title:
-                # Skip if the subtopic title is empty
+        for idx, title in enumerate(subtopic_titles):
+            if not title:
                 continue
 
-            subtopic_file = subtopic_files[idx] if idx < len(subtopic_files) else None
-            subtopic_file_id = None
-            subtopic_pages = 0
+            file = subtopic_files[idx] if idx < len(subtopic_files) else None
+            sub_pages = 0
+            sub_file_id = None
 
-            if subtopic_file and allowed_file(subtopic_file.filename):
-                if not validate_file_size(subtopic_file, MAX_FILE_SIZE_MB):
-                    flash(f"{subtopic_file.filename} exceeds size limit.", "error")
+            if file and allowed_file(file.filename):
+                if not validate_file_size(file, MAX_FILE_SIZE_MB):
+                    flash(f"{file.filename} exceeds size limit.", "error")
                     continue
 
-                subtopic_file_data = subtopic_file.read()
-                # Store in Mongo
-                mongo_id = grid_fs.put(subtopic_file_data, filename=secure_filename(subtopic_file.filename))
-                subtopic_file_id = str(mongo_id)
+                data = file.read()
+                mongo_id = grid_fs.put(data, filename=secure_filename(file.filename))
+                sub_file_id = str(mongo_id)
 
-                # Calculate pages
-                file_like = BytesIO(subtopic_file_data)
-                extension = subtopic_file.filename.rsplit('.', 1)[1].lower()
-                subtopic_pages = calculate_total_pages(file_like, extension)
+                sub_pages = calculate_total_pages(BytesIO(data), file.filename.rsplit('.',1)[1].lower())
 
-            # Create subtopic row in PostgreSQL
-            subtopic = SubTopic(
-                title=subtopic_title,
+            sub = SubTopic(
+                title=title,
                 study_material_id=study_material.id,
-                file_id=subtopic_file_id,
-                page_count=subtopic_pages
+                file_id=sub_file_id,
+                page_count=sub_pages
             )
-            db.session.add(subtopic)
-
-            # Add subtopic pages to the total
-            study_material.total_pages += subtopic_pages
+            db.session.add(sub)
+            study_material.total_pages += sub_pages
 
         db.session.commit()
         logging.info(f"Subtopics uploaded for study material ID: {study_material.id}")
@@ -234,6 +224,7 @@ def upload_course():
         db.session.rollback()
         flash("An error occurred while uploading the course.", "error")
         return redirect(url_for('study_material_routes.upload_course'))
+
     
 @study_material_routes.route('/start_course/<int:course_id>', methods=['POST'])
 def start_course(course_id):
@@ -251,18 +242,11 @@ def start_course(course_id):
 
         study_material = StudyMaterial.query.get_or_404(course_id)
 
-        # Ensure minimum_level is set (fallback to 1)
-        required_level = study_material.minimum_level or 1
-
-        if not isinstance(required_level, int):
-            try:
-                required_level = int(required_level)
-            except Exception:
-                required_level = 1
-
-        # Check access eligibility
-        if not can_access_level(user, required_level):
-            return jsonify({'error': f"You must complete earlier levels to access this course."}), 403
+        # Check access eligibility via our unified helper
+        if not can_access_study_material(user, study_material):
+            return jsonify({
+                'error': 'You must complete earlier levels to access this course.'
+            }), 403
 
         # Check if already started
         user_progress = UserProgress.query.filter_by(
@@ -388,12 +372,11 @@ def view_course(course_id):
         flash("Please log in.", "warning")
         return redirect(url_for("auth_routes.login"))
 
-    user         = User.query.get_or_404(user_id)
-    level_id     = study_material.restriction_level or 0
-    if not can_access_level(user, level_id):
-        flash(f"Complete previous levels to unlock Level {level_id}.", "danger")
+    user = User.query.get_or_404(user_id)
+    if not can_access_study_material(user, study_material):
+        flash("Complete previous levels to unlock this material.", "danger")
         return redirect(url_for("study_material_routes.list_study_materials"))
-
+    # 2 Check user progress ---------------------------------------------
     user_progress = (UserProgress.query
                      .filter_by(user_id=user_id, study_material_id=course_id)
                      .first())
@@ -761,26 +744,30 @@ def dashboard():
 
 def can_access_study_material(user, study_material):
     """
-    Check if the user can access the study material based on the study material's 
-    restriction level, the user's designation, and the user's current level.
-    
-    A None restriction_level is treated as 0.
+    Return True if the user may access this study_material, based on:
+      1) minimum_level == 0 → unrestricted
+      2) user.designation.starting_level >= minimum_level
+      3) user.get_current_level() >= minimum_level
     """
-    # Use a fallback of 0 if the restriction_level is None.
-    restriction_level = study_material.restriction_level or 0
-    # Retrieve the user's current level using the helper method.
-    user_level = user.get_current_level()
+    # 1) Get the gate level (default 0 if somehow None)
+    min_level = study_material.minimum_level or 0
 
-    # If there's no restriction level, allow access.
-    if restriction_level == 0:
+    # 2) Everyone gets free access to level-0 (or level-1) materials
+    if min_level <= 1:
         return True
 
-    # If the user's designation allows skipping this level, allow access.
-    if user.designation and user.designation.starting_level >= restriction_level:
+    # 3) Try to coerce user level to int
+    try:
+        user_level = int(user.get_current_level() or 0)
+    except (TypeError, ValueError):
+        user_level = 0
+
+    # 4) Check designation override
+    if user.designation and getattr(user.designation, "starting_level", 0) >= min_level:
         return True
 
-    # If the user's current level meets or exceeds the restriction, allow access.
-    if restriction_level <= user_level:
+    # 5) Check actual user progress
+    if user_level >= min_level:
         return True
 
     return False

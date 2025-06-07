@@ -3,12 +3,12 @@ import random
 from datetime import datetime, timedelta
 from extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import Column, Integer, String, LargeBinary, Date, DateTime, Boolean, ForeignKey, Text, Table, JSON
+from sqlalchemy import Column, Integer, String, LargeBinary, Date, DateTime, Boolean, ForeignKey, Text, Table, JSON, Index
 from sqlalchemy.orm import relationship
 from flask_login import UserMixin
 from sqlalchemy import Float
 from flask import request
-from sqlalchemy.dialects.postgresql import ARRAY 
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TIMESTAMP
 
 # -------------------------------
 # Association Table for User and Tasks
@@ -69,15 +69,13 @@ class Designation(db.Model):
     id = Column(Integer, primary_key=True)
     title = Column(String(50), unique=True, nullable=False)
     starting_level = Column(Integer, default=0)  # Minimum level required for this designation
-    
+
     # Relationships
     users = relationship("User", back_populates="designation")
-    # Relationship to study materials where this designation is used as minimum requirement.
-    study_materials = relationship("StudyMaterial", back_populates="minimum_designation", cascade="all, delete-orphan")
 
     def can_skip_level(self, target_level):
         """Check if the user can skip a level based on their designation."""
-        return self.starting_level <= target_level
+        return self.starting_level >= target_level
 
     def __repr__(self):
         return f"<Designation(id={self.id}, title='{self.title}', starting_level={self.starting_level})>"
@@ -141,32 +139,37 @@ class StudyMaterial(db.Model):
     course_time = Column(Integer, nullable=False)
     max_time = Column(Integer, nullable=False)
     total_pages = Column(Integer, nullable=True, default=0)
-    # Updated to store file IDs as a list (e.g. ["<mongo_id>|filename", ...])
-    files = Column(ARRAY(String), default=[])  
-    restriction_level = Column(Integer, nullable=True, default=0)
+    # store file IDs as a list of strings
+    files = Column(ARRAY(String), default=[])
+
+    # minimum_level now a simple integer gate (default = 1)
+    minimum_level = Column(Integer, nullable=False, default=1)
 
     # Foreign Keys
     category_id = Column(Integer, ForeignKey('categories.id'), nullable=True)
-    level_id = Column(Integer, ForeignKey('levels.id'), nullable=True)
-    # 'minimum_level' references the designation that defines the minimum required level.
-    minimum_level = Column(Integer, ForeignKey('designations.id'), nullable=False, default=1)
+    level_id    = Column(Integer, ForeignKey('levels.id'), nullable=True)
 
-    # Relationships using back_populates for two‑way linkage
-    category = relationship("Category", back_populates="study_materials")
-    level = relationship("Level", back_populates="study_materials")
-    minimum_designation = relationship("Designation", foreign_keys=[minimum_level], back_populates="study_materials")
-    subtopics = relationship("SubTopic", back_populates="study_material", cascade="all, delete-orphan")
+    # Relationships
+    category      = relationship("Category", back_populates="study_materials")
+    level         = relationship("Level", back_populates="study_materials")
+    subtopics     = relationship("SubTopic", back_populates="study_material", cascade="all, delete-orphan")
     user_progress = relationship("UserProgress", back_populates="study_material", cascade="all, delete-orphan")
-    exams = relationship("Exam", back_populates="course", cascade="all, delete-orphan")
+    exams         = relationship("Exam", back_populates="course", cascade="all, delete-orphan")
 
     def is_accessible(self, user):
-        """Check if the user can access this study material."""
-        user_level = user.get_current_level() or 1
-        required_level = self.minimum_designation.starting_level if self.minimum_designation else 1
-        return user_level >= required_level
+        """
+        Returns True if the user's current level meets or exceeds
+        this material's minimum_level requirement.
+        """
+        try:
+            user_level = int(user.get_current_level() or 1)
+        except (TypeError, ValueError):
+            user_level = 1
+
+        return user_level >= self.minimum_level
 
     def __repr__(self):
-        return f"<StudyMaterial(id={self.id}, title='{self.title}', category_id={self.category_id})>"
+        return f"<StudyMaterial(id={self.id}, title='{self.title}')>"
 
 
 # -------------------------------------
@@ -293,6 +296,19 @@ class User(db.Model, UserMixin):
     deleted_at        = Column(DateTime, nullable=True)
     last_login = db.Column(db.DateTime, nullable=True)
 
+        # One-time privacy policy consent
+    privacy_agreed = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+        index=True
+    )
+    privacy_agreed_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True
+    )
+
     # Using a relationship to link to the Department model
     departments = relationship(
         "Department",
@@ -333,6 +349,16 @@ class User(db.Model, UserMixin):
         "UserScore",
         back_populates="user",
         cascade="all, delete-orphan"
+    )
+
+    # ---------------------------------
+    # Audit Log Relationships
+    # ---------------------------------
+    audit_logs = relationship(
+    'AuditLog',
+    back_populates='actor_user',
+    cascade='all, delete-orphan',
+    passive_deletes=True
     )
 
     # ---------------------------------
@@ -1038,3 +1064,52 @@ class SupportAttachment(db.Model):
 
     def __repr__(self):
         return f"<SupportAttachment(id={self.id}, filename='{self.filename}', ticket_id={self.ticket_id})>"
+    
+# -------------------------------------
+# AuditLog Model
+# -------------------------------------
+class AuditLog(db.Model):
+    __tablename__ = 'audit_log'
+
+    # Primary Key
+    id = db.Column(Integer, primary_key=True)
+
+    # Event type (e.g. 'USER_LOGIN', 'FAILED_LOGIN', 'STUDY_UPLOAD')
+    event_type = db.Column(String(100), nullable=False, index=True)
+
+    # Who did it (nullable for anonymous actions)
+    actor_user_id = db.Column(
+        Integer,
+        ForeignKey('users.id', ondelete='SET NULL'),
+        nullable=True,
+        index=True
+    )
+    actor_user = relationship(
+        'User',
+        back_populates='audit_logs',
+        passive_deletes=True
+    )
+
+    # IP address (IPv4 or IPv6)
+    ip_address = db.Column(String(45), nullable=True, index=True)
+
+    # Reference to another record
+    target_table = db.Column(String(100), nullable=True, index=True)
+    target_id    = db.Column(Integer,        nullable=True, index=True)
+
+    # Arbitrary metadata—store anything as JSONB
+    description  = db.Column(JSONB, nullable=True)
+
+    # Timestamp of when it occurred
+    created_at   = db.Column(
+        TIMESTAMP(timezone=True),
+        server_default=db.func.now(),
+        nullable=False,
+        index=True
+    )
+
+    # Composite indexes for common query patterns
+    __table_args__ = (
+        Index('ix_audit_event_user', 'event_type', 'actor_user_id'),
+        Index('ix_audit_target', 'target_table', 'target_id'),
+    )

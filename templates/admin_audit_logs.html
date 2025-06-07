@@ -3,7 +3,7 @@ block content %}
 <h1 class="text-center mb-4">Activity &amp; Audit Logs</h1>
 
 <form method="get" class="row g-2 align-items-end mb-4">
-  <div class="col-md-3">
+  <div class="col-md-2">
     <label for="start" class="form-label">From</label>
     <input
       type="date"
@@ -13,7 +13,8 @@ block content %}
       value="{{ filters.start or '' }}"
     />
   </div>
-  <div class="col-md-3">
+
+  <div class="col-md-2">
     <label for="end" class="form-label">To</label>
     <input
       type="date"
@@ -23,29 +24,58 @@ block content %}
       value="{{ filters.end or '' }}"
     />
   </div>
-  <div class="col-md-4">
+
+  <div class="col-md-3">
     <label for="q" class="form-label">Search</label>
     <input
       type="text"
       id="q"
       name="q"
       class="form-control form-control-sm"
-      placeholder="Email or description…"
+      placeholder="Search events, IP, details..."
       value="{{ filters.q or '' }}"
     />
   </div>
-  <div class="col-md-2 d-grid">
+
+  <div class="col-md-2">
+    <label for="event_type" class="form-label">Event Type</label>
+    <input
+      type="text"
+      id="event_type"
+      name="event_type"
+      class="form-control form-control-sm"
+      placeholder="e.g. USER_LOGIN"
+      value="{{ filters.event_type or '' }}"
+    />
+  </div>
+
+  <div class="col-md-2">
+    <label for="user_id" class="form-label">User ID</label>
+    <input
+      type="text"
+      id="user_id"
+      name="user_id"
+      class="form-control form-control-sm"
+      placeholder="User ID"
+      value="{{ filters.user_id or '' }}"
+    />
+  </div>
+
+  <div class="col-md-1 d-grid">
     <button type="submit" class="btn btn-sm btn-primary">
       <i class="fas fa-filter"></i> Apply
     </button>
   </div>
+
   <div class="col-12 text-end">
     <a
       href="{{ url_for('admin_routes.download_report',
                        type='audit_logs',
                        start=filters.start,
                        end=filters.end,
-                       search=filters.q) }}"
+                       search=filters.q,
+                       event_type=filters.event_type,
+                       user_id=filters.user_id) }}"
       class="btn btn-sm btn-outline-secondary"
     >
       <i class="fas fa-file-csv"></i> Export CSV
@@ -53,76 +83,80 @@ block content %}
   </div>
 </form>
 
-<div class="row g-4">
-  <!-- Recent Events -->
-  <div class="col-md-6">
-    <div class="card shadow-sm">
-      <div class="card-header bg-primary text-white">
-        <i class="fas fa-history"></i> Recent Events
-      </div>
-      <div class="card-body p-0">
-        <table class="table table-sm mb-0">
-          <thead class="table-light">
-            <tr>
-              <th>Date</th>
-              <th>Type</th>
-              <th>Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% if events %} {% for ev in events %}
-            <tr>
-              <td>
-                {{ ev.date.strftime('%Y-%m-%d %H:%M:%S') if ev.date else '—' }}
-              </td>
-              <td>{{ ev.type or '—' }}</td>
-              <td>{{ ev.description or '—' }}</td>
-            </tr>
-            {% endfor %} {% else %}
-            <tr>
-              <td colspan="3" class="text-center py-3">No events found.</td>
-            </tr>
-            {% endif %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- Recent Failed Logins -->
-  <div class="col-md-6">
-    <div class="card shadow-sm">
-      <div class="card-header bg-danger text-white">
-        <i class="fas fa-user-lock"></i> Recent Failed Logins
-      </div>
-      <div class="card-body p-0">
-        <table class="table table-sm mb-0">
-          <thead class="table-light">
-            <tr>
-              <th>Time</th>
-              <th>Email</th>
-              <th>IP Address</th>
-              <th>User Agent</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% if failed_logins %} {% for fl in failed_logins %} {% set ts =
-            fl.timestamp or fl.created_at or fl.attempt_time or fl.logged_at %}
-            <tr>
-              <td>{{ ts.strftime('%Y-%m-%d %H:%M:%S') if ts else '—' }}</td>
-              <td>{{ fl.email or '—' }}</td>
-              <td>{{ fl.ip_address or '—' }}</td>
-              <td>{{ fl.user_agent or '—' }}</td>
-            </tr>
-            {% endfor %} {% else %}
-            <tr>
-              <td colspan="4" class="text-center py-3">No failed logins.</td>
-            </tr>
-            {% endif %}
-          </tbody>
-        </table>
-      </div>
-    </div>
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <table class="table table-striped table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>When</th>
+          <th>Type</th>
+          <th>User</th>
+          <th>IP Address</th>
+          <th>Target</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if audit_logs %} {% for log in audit_logs %}
+        <tr>
+          <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          <td>{{ log.event_type }}</td>
+          <td>
+            {% if log.actor_user %} {{ log.actor_user.employee_email }} {% else
+            %} &mdash; {% endif %}
+          </td>
+          <td>{{ log.ip_address or '&mdash;' }}</td>
+          <td>
+            {% if log.target_table %} {{ log.target_table }}#{{ log.target_id or
+            '' }} {% else %} &mdash; {% endif %}
+          </td>
+          <td>
+            <pre class="mb-0">{{ log.description | tojson(indent=2) }}</pre>
+          </td>
+        </tr>
+        {% endfor %} {% else %}
+        <tr>
+          <td colspan="6" class="text-center py-3">No audit logs found.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
   </div>
 </div>
-{% endblock %}
+
+<nav aria-label="Page navigation" class="mt-3">
+  <ul class="pagination justify-content-center mb-0">
+    {% if pagination.has_prev %}
+    <li class="page-item">
+      <a
+        class="page-link"
+        href="{{ url_for('admin_routes.view_audit_logs', page=pagination.prev_num, start=filters.start, end=filters.end, q=filters.q, event_type=filters.event_type, user_id=filters.user_id) }}"
+      >
+        Previous
+      </a>
+    </li>
+    {% else %}
+    <li class="page-item disabled"><span class="page-link">Previous</span></li>
+    {% endif %}
+
+    <li class="page-item disabled">
+      <span class="page-link"
+        >{{ pagination.page }} / {{ pagination.pages }}</span
+      >
+    </li>
+
+    {% if pagination.has_next %}
+    <li class="page-item">
+      <a
+        class="page-link"
+        href="{{ url_for('admin_routes.view_audit_logs', page=pagination.next_num, start=filters.start, end=filters.end, q=filters.q, event_type=filters.event_type, user_id=filters.user_id) }}"
+      >
+        Next
+      </a>
+    </li>
+    {% else %}
+    <li class="page-item disabled"><span class="page-link">Next</span></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endblock %} ```

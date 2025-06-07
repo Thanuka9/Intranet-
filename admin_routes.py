@@ -9,7 +9,8 @@ from models import (
     User, Designation, Exam, Question, UserScore,
     Category, Level, Area, UserLevelProgress,
     SpecialExamRecord, Client, LevelArea,
-    Task, TaskDocument, FailedLogin, Event, Role, ExamAccessRequest, IncorrectAnswer, Department, user_departments, SupportAttachment, SupportTicket
+    Task, TaskDocument, FailedLogin, Event, Role, ExamAccessRequest, IncorrectAnswer, Department, user_departments, SupportAttachment, 
+    SupportTicket, AuditLog
 )
 import logging
 from datetime import datetime, timedelta
@@ -17,18 +18,19 @@ from werkzeug.utils import secure_filename
 from gridfs import GridFS
 from pymongo import MongoClient
 from functools import wraps
-from sqlalchemy import func, or_, and_, case
-import io, csv
+from sqlalchemy import func, or_, and_, case, cast, text, func
+import io, csv, json
 from bson import ObjectId
 from flask import make_response
 import os
+from audit import log_event
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from gridfs import GridFS
+from sqlalchemy.types import String
 from sqlalchemy import desc
 from IPython.display import HTML
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import text, func
 from sqlalchemy.orm  import joinedload
 from collections import defaultdict
 
@@ -179,9 +181,10 @@ def admin_dashboard():
         special_exam_passed_1  = SpecialExamRecord.query.filter_by(paper1_passed=True).count()
         special_exam_passed_2  = SpecialExamRecord.query.filter_by(paper2_passed=True).count()
 
-        # 4) Course Progress
+        # 4) Course Progress / Restrictions
         course_completion_avg  = db.session.query(func.avg(UserProgress.progress_percentage)).scalar() or 0
-        restricted_courses     = StudyMaterial.query.filter(StudyMaterial.restriction_level.isnot(None)).count()
+        # Count materials that have a minimum_level > 1 (i.e. actually restricted)
+        restricted_courses     = StudyMaterial.query.filter(StudyMaterial.minimum_level > 1).count()
 
         # 5) Recent Events
         recent_events = Event.query.order_by(Event.date.desc()).limit(5).all()
@@ -237,30 +240,39 @@ def admin_dashboard():
 
 
 # --- Delete Course ---
-@admin_routes.route('/delete_course/<int:course_id>', methods=['POST'])
+@admin_routes.route('/admin/delete_course/<int:course_id>', methods=['POST'])
 @login_required
 @super_admin_required
 def delete_course(course_id):
     user_id = current_user.id
     ip      = request.remote_addr
     logging.info(f"user_id={user_id} deleting course_id={course_id} from {ip}")
+
     try:
+        # 1) Fetch and cascade‐delete related rows
         course = StudyMaterial.query.get_or_404(course_id)
         SubTopic.query.filter_by(study_material_id=course_id).delete()
         UserProgress.query.filter_by(study_material_id=course_id).delete()
 
-        # delete attached files
-        deleted_ids = delete_files_from_gridfs(course.files)
-        # remove from model
-        course.files = [f for f in course.files if f.split("|")[0] not in deleted_ids]
+        # 2) Remove files from GridFS and from the model
+        deleted_ids = delete_files_from_gridfs(course.files or [])
+        course.files = [
+            f for f in (course.files or [])
+            if f.split("|", 1)[0] not in deleted_ids
+        ]
 
+        # 3) Delete the course itself
         db.session.delete(course)
         db.session.commit()
+
         flash("Course deleted successfully!", "success")
     except Exception as e:
-        logging.error(f"user_id={user_id} error deleting course {course_id}: {e}")
+        logging.error(f"user_id={user_id} error deleting course {course_id}: {e}", exc_info=True)
+        db.session.rollback()
         flash("Failed to delete course. Please try again.", "error")
-    return redirect(url_for('admin_routes.admin_dashboard'))
+
+    # Redirect back to the Manage Courses page
+    return redirect(url_for('admin_routes.view_courses'))
 
 # --- Generate Reports ---
 @admin_routes.route('/admin/reports')
@@ -362,7 +374,6 @@ def set_restrictions():
         logging.error(f"user_id={user_id} error setting restrictions: {e}")
         return jsonify({'error':'Failed to set restrictions'}), 500
 
-# --- Edit Course ---
 @admin_routes.route('/admin/edit_course/<int:course_id>', methods=['POST'])
 @login_required
 @super_admin_required
@@ -374,53 +385,63 @@ def edit_course(course_id):
     try:
         course = StudyMaterial.query.get_or_404(course_id)
 
-        # 1) Update metadata fields
+        # 1) Update metadata
         course.title       = request.form['title']
         course.description = request.form['description']
         course.course_time = int(request.form['course_time'])
         course.max_time    = int(request.form['max_time'])
-        course.category_id = request.form.get('category_id') or None
-        course.level_id    = request.form.get('level_id')    or None
-        course.minimum_designation_id = (
-            request.form.get('minimum_designation_id') or None
-        )
 
-        # 2) Delete any attachments the user checked
-        delete_ids = request.form.getlist('delete_files')
-        for fid in delete_ids:
-            grid_fs.delete(ObjectId(fid))                           # remove from GridFS
+        # 2) Optional FKs
+        def parse_int(name):
+            val = request.form.get(name)
+            return int(val) if val and val.isdigit() else None
+
+        course.category_id = parse_int('category_id')
+        course.level_id    = parse_int('level_id')
+
+        # 3) Minimum Level comes from the designation dropdown (value = starting_level)
+        try:
+            course.minimum_level = int(request.form.get('minimum_level') or 1)
+        except ValueError:
+            course.minimum_level = 1
+
+        # 4) Delete checked files
+        for fid in request.form.getlist('delete_files'):
+            grid_fs.delete(ObjectId(fid))
             course.files = [f for f in course.files if not f.startswith(fid + '|')]
 
-        # 3) Replace attachments: for each old‐file you want to swap out
+        # 5) Replace files
         replace_ids   = request.form.getlist('replace_file_ids')
         replace_files = request.files.getlist('replace_files')
         for fid, new_file in zip(replace_ids, replace_files):
             if new_file and allowed_file(new_file.filename):
-                # delete old in GridFS & metadata
                 grid_fs.delete(ObjectId(fid))
                 course.files = [f for f in course.files if not f.startswith(fid + '|')]
 
-                # save the new one
                 filename = secure_filename(new_file.filename)
                 new_fid  = grid_fs.put(new_file, filename=filename,
                                        content_type=new_file.content_type)
                 course.files.append(f"{new_fid}|{filename}")
 
-        # 4) Add any additional new uploads
+        # 6) Add any brand-new uploads
         for extra in request.files.getlist('new_files'):
             if extra and allowed_file(extra.filename):
                 fn  = secure_filename(extra.filename)
-                fid = grid_fs.put(extra, filename=fn, content_type=extra.content_type)
+                fid = grid_fs.put(extra, filename=fn,
+                                  content_type=extra.content_type)
                 course.files.append(f"{fid}|{fn}")
 
         db.session.commit()
         flash("Course updated successfully.", "success")
 
     except Exception as e:
-        logging.error(f"user_id={user_id} error editing course {course_id}: {e}")
+        logging.error(f"user_id={user_id} error editing course {course_id}: {e}", exc_info=True)
+        db.session.rollback()
         flash("Failed to edit course. Please check your inputs.", "error")
 
-    return redirect(url_for('admin_routes.admin_dashboard'))
+    # Return to Manage Courses list
+    return redirect(url_for('admin_routes.view_courses'))
+
 
 # --- Delete a single question from an exam ---
 @admin_routes.route('/delete_exam/<int:exam_id>', methods=['POST'])
@@ -636,13 +657,12 @@ def change_user_departments(user_id):
 @login_required
 @super_admin_required
 def view_courses():
-    # eager‐load the FK relationships for display
+    # eager‐load only the remaining FK relationships
     courses = (
         StudyMaterial.query
         .options(
             db.joinedload(StudyMaterial.category),
-            db.joinedload(StudyMaterial.level),
-            db.joinedload(StudyMaterial.minimum_designation)
+            db.joinedload(StudyMaterial.level)
         )
         .order_by(StudyMaterial.title)
         .all()
@@ -651,7 +671,8 @@ def view_courses():
     # for filter dropdowns or edit forms
     categories   = Category.query.order_by(Category.name).all()
     levels       = Level.query.order_by(Level.level_number).all()
-    designations = Designation.query.order_by(Designation.title).all()
+    # load all designations so the "Minimum Designation" dropdown can show names
+    designations = Designation.query.order_by(Designation.starting_level).all()
 
     return render_template(
         'admin_courses.html',
@@ -1679,6 +1700,12 @@ def download_report():
     report_model = request.args.get('report_model')
     fields       = request.args.getlist('fields')
 
+    # audit-specific filters
+    start      = request.args.get('start')
+    end        = request.args.get('end')
+    event_type = request.args.get('event_type', '').strip()
+    user_id    = request.args.get('user_id', '').strip()
+
     si = io.StringIO()
     cw = csv.writer(si)
 
@@ -1727,47 +1754,43 @@ def download_report():
             ])
         filename = 'special_exams.csv'
 
-    elif rpt_type == 'audit_logs':
+    if rpt_type == 'audit_logs':
+        # 1) Write header
         cw.writerow([
-            'Record Type','Timestamp','User/Email',
-            'Description','IP Address','User Agent'
+            'Timestamp','Event Type','User ID','Email',
+            'IP Address','Target','Details'
         ])
-        ev_q = Event.query
+
+        # 2) Build unified AuditLog query
+        ql = AuditLog.query
+        if start:
+            ql = ql.filter(AuditLog.created_at >= start)
+        if end:
+            ql = ql.filter(AuditLog.created_at <= end)
+        if event_type:
+            ql = ql.filter(AuditLog.event_type == event_type)
+        if user_id:
+            ql = ql.filter(AuditLog.actor_user_id == int(user_id))
+
         if search:
-            ev_q = ev_q.filter(Event.description.ilike(f'%{search}%'))
-        for ev in ev_q.order_by(Event.date.desc()).all():
-            ts = ev.date.strftime('%Y-%m-%d %H:%M:%S') if ev.date else ''
-            cw.writerow(['EVENT', ts, '', ev.description or '', '', ''])
-        fl_q = FailedLogin.query
-        if search:
-            fl_q = fl_q.filter(FailedLogin.email.ilike(f'%{search}%'))
-        ts_col = None
-        for col in ('timestamp','created_at','attempted_at','logged_at'):
-            if hasattr(FailedLogin, col):
-                ts_col = getattr(FailedLogin, col)
-                break
-        if ts_col is not None:
-            fl_q = fl_q.order_by(ts_col.desc())
-        for fl in fl_q.all():
-            ts = None
-            for col in (
-                fl.timestamp if hasattr(fl, 'timestamp') else None,
-                getattr(fl, 'created_at', None),
-                getattr(fl, 'attempted_at', None),
-                getattr(fl, 'logged_at', None)
-            ):
-                if col:
-                    ts = col
-                    break
-            ts_str = ts.strftime('%Y-%m-%d %H:%M:%S') if ts else ''
+            ql = ql.filter(or_(
+                AuditLog.event_type.ilike(f'%{search}%'),
+                AuditLog.ip_address.ilike(f'%{search}%'),
+                cast(AuditLog.description, String).ilike(f'%{search}%')
+            ))
+
+        # 3) Stream each log as a CSV row
+        for log in ql.order_by(AuditLog.created_at.desc()).all():
             cw.writerow([
-                'FAILED_LOGIN',
-                ts_str,
-                fl.email or '',
-                '',
-                fl.ip_address or '',
-                fl.user_agent or ''
+                log.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                log.event_type,
+                log.actor_user_id or '',
+                log.actor_user.employee_email if log.actor_user else '',
+                log.ip_address or '',
+                f"{log.target_table}#{log.target_id}" if log.target_table else '',
+                '' if log.description is None else json.dumps(log.description)
             ])
+
         filename = 'audit_logs.csv'
 
     elif rpt_type == 'users':
@@ -2115,53 +2138,51 @@ def assign_role():
 @login_required
 @super_admin_required
 def view_audit_logs():
-    # --- Read optional filter params ---
-    start = request.args.get('start')  # e.g. '2025-05-01'
-    end   = request.args.get('end')    # e.g. '2025-05-07'
-    q     = request.args.get('q', '').strip()
+    # --- Read optional filter params ----
+    start      = request.args.get('start')       # e.g. '2025-05-01'
+    end        = request.args.get('end')         # e.g. '2025-05-07'
+    q          = request.args.get('q', '').strip()
+    event_type = request.args.get('type', '').strip()
+    user_id    = request.args.get('user_id', '').strip()
 
-    # --- 1) Query Events with date/text filters ---
-    ev_q = Event.query
+    # --- Build AuditLog query ---
+    ql = AuditLog.query
     if start:
-        ev_q = ev_q.filter(Event.date >= start)
+        ql = ql.filter(AuditLog.created_at >= start)
     if end:
-        ev_q = ev_q.filter(Event.date <= end)
-    if q:
-        ev_q = ev_q.filter(Event.description.ilike(f'%{q}%'))
-    try:
-        events = ev_q.order_by(Event.date.desc()).limit(50).all()
-    except Exception:
-        events = []
+        ql = ql.filter(AuditLog.created_at <= end)
+    if event_type:
+        ql = ql.filter(AuditLog.event_type == event_type)
+    if user_id:
+        ql = ql.filter(AuditLog.actor_user_id == int(user_id))
 
-    # --- 2) Identify the correct timestamp column on FailedLogin ---
-    ts_col = None
-    for col_name in ('timestamp', 'created_at', 'attempt_time', 'logged_at'):
-        if hasattr(FailedLogin, col_name):
-            ts_col = getattr(FailedLogin, col_name)
-            break
-
-    # --- 3) Query FailedLogin with same filters ---
-    fl_q = FailedLogin.query
-    if start and ts_col is not None:
-        fl_q = fl_q.filter(ts_col >= start)
-    if end and ts_col is not None:
-        fl_q = fl_q.filter(ts_col <= end)
+    # free‐text search over event_type, ip_address, description JSONB
     if q:
-        fl_q = fl_q.filter(FailedLogin.email.ilike(f'%{q}%'))
-    try:
-        if ts_col is not None:
-            fl_q = fl_q.order_by(ts_col.desc())
-        failed_logins = fl_q.limit(50).all()
-    except Exception:
-        failed_logins = []
+        ql = ql.filter(or_(
+            AuditLog.event_type.ilike(f'%{q}%'),
+            AuditLog.ip_address.ilike(f'%{q}%'),
+            cast(AuditLog.description, String).ilike(f'%{q}%')
+        ))
+
+    # --- Pagination & ordering ---
+    page     = int(request.args.get('page', 1))
+    per_page = 50
+    logs = ql.order_by(AuditLog.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
 
     return render_template(
         'admin_audit_logs.html',
-        events=events,
-        failed_logins=failed_logins,
-        filters={'start': start, 'end': end, 'q': q}
+        audit_logs=logs.items,
+        pagination=logs,
+        filters={
+            'start': start,
+            'end': end,
+            'q': q,
+            'type': event_type,
+            'user_id': user_id
+        }
     )
-
 
 @admin_routes.route('/admin/users/bulk-action', methods=['POST'])
 @login_required

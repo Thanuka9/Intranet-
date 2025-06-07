@@ -14,8 +14,6 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
       rel="stylesheet"
@@ -34,10 +32,10 @@
         --brand-brown: #634242;
         --brand-cyan: #0dcaf0;
         --brand-gray: #adb5bd;
-        --brand-bg: #f9f9f9;
+        --brand-bg: linear-gradient(135deg, #f7faff 65%, #e3eeff 100%);
         --brand-light: #fff;
-        --brand-shadow: 0 4px 18px rgba(44, 62, 80, 0.09);
-        --card-radius: 0.7rem;
+        --brand-shadow: 0 6px 24px rgba(44, 62, 80, 0.1);
+        --card-radius: 1.1rem;
         --transition: 0.22s cubic-bezier(0.26, 1, 0.48, 1);
         --main-text: #23272f;
         --card-text: #23272f;
@@ -46,7 +44,7 @@
         --footer-bg: #23272f;
       }
       .dark-theme {
-        --brand-bg: #191c22;
+        --brand-bg: linear-gradient(135deg, #191c22 60%, #23252b 100%);
         --brand-light: #23252b;
         --brand-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
         --main-text: #f2f2f2;
@@ -64,6 +62,32 @@
         margin: 0;
         display: flex;
         flex-direction: column;
+        transition: background 0.5s;
+        background-attachment: fixed;
+      }
+      /* Animated background dots */
+      .animated-bg {
+        position: fixed;
+        z-index: 0;
+        width: 100vw;
+        height: 100vh;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .dot {
+        position: absolute;
+        border-radius: 50%;
+        opacity: 0.07;
+        animation: floatDot 14s linear infinite alternate;
+        filter: blur(1.2px);
+      }
+      @keyframes floatDot {
+        to {
+          transform: translateY(-60px) scale(1.2) rotate(15deg);
+          opacity: 0.13;
+        }
       }
       /* Top Bar */
       .top-bar {
@@ -72,23 +96,28 @@
         align-items: center;
         padding: 0.5rem 1rem;
         background: var(--nav-bg);
-        border-bottom: 1px solid #ddd;
+        border-bottom: 1px solid #eee;
         box-shadow: 0 2px 8px rgba(44, 62, 80, 0.04);
+        z-index: 10;
+        position: relative;
       }
       .logo-section {
         display: flex;
         align-items: center;
       }
       .logo-section img {
-        height: 40px;
-        margin-right: 0.75rem;
+        height: 44px;
+        margin-right: 0.95rem;
+        filter: drop-shadow(0 2px 8px rgba(44, 62, 80, 0.07));
+        transition: filter 0.2s;
       }
       .logo {
-        font-size: 1.45rem;
+        font-size: 1.6rem;
         font-weight: bold;
         letter-spacing: 0.04em;
         display: flex;
         align-items: center;
+        user-select: none;
       }
       .logo .black {
         color: var(--logo-black);
@@ -100,8 +129,8 @@
       .btn-logout {
         background: var(--brand-red);
         color: #fff;
-        padding: 0.35rem 0.75rem;
-        border-radius: 0.32rem;
+        padding: 0.38rem 0.85rem;
+        border-radius: 0.42rem;
         font-weight: 600;
         text-decoration: none;
         border: none;
@@ -109,11 +138,13 @@
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 7px;
+        font-size: 1.05rem;
       }
       .btn-logout:hover {
-        background: #960c12;
+        background: #a2181a;
         color: #fff;
+        transform: scale(1.04);
       }
       .btn.btn-dark {
         background-color: var(--brand-dark);
@@ -122,6 +153,7 @@
       .btn.btn-dark:hover {
         background-color: #12141a;
       }
+
       /* Floating Dark Mode Toggle */
       .theme-toggle-fab {
         position: fixed;
@@ -132,174 +164,331 @@
         color: #ffe66d;
         border: none;
         border-radius: 50%;
-        width: 35px;
-        height: 35px;
+        width: 40px;
+        height: 40px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.09);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.2rem;
+        font-size: 1.26rem;
         cursor: pointer;
-        transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-        opacity: 0.9;
+        transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
+        opacity: 0.93;
       }
       .theme-toggle-fab:hover,
       .theme-toggle-fab:focus-visible {
         background: #24262e;
         color: #fffbe6;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.16);
+        transform: scale(1.13) rotate(-10deg);
       }
       @media (max-width: 650px) {
         .theme-toggle-fab {
           right: 10px;
           bottom: 67px;
-          width: 31px;
-          height: 31px;
+          width: 32px;
+          height: 32px;
           font-size: 1.06rem;
         }
       }
       /* Main Container */
       .container {
         flex: 1;
-        margin: 2rem auto;
-        max-width: 1200px;
-        background: var(--brand-light);
+        margin: 2.4rem auto 1.2rem auto;
+        max-width: 1240px;
+        background: rgba(255, 255, 255, 0.93);
         color: var(--main-text);
-        padding: 2rem;
-        border-radius: var(--card-radius);
+        padding: 2.2rem 1.2rem 1.5rem 1.2rem;
+        border-radius: 1.5rem;
         box-shadow: var(--brand-shadow);
         transition: background 0.3s, color 0.3s;
+        position: relative;
+        z-index: 1;
+        backdrop-filter: blur(2.5px);
+        margin-bottom: 2.5rem !important; /* for footer */
       }
+      .dark-theme .container {
+        background: rgba(35, 39, 47, 0.91);
+      }
+
       /* Dashboard Cards */
+      .row.g-3 {
+        --bs-gutter-x: 1.2rem;
+        --bs-gutter-y: 1.2rem;
+      }
       .row.g-3 .card {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 155px;
+        max-width: 235px;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 1.1rem 0.2rem 0.6rem 0.2rem;
         transition: transform var(--transition), box-shadow var(--transition),
           background 0.3s, color 0.3s;
-        border-radius: var(--card-radius);
-        box-shadow: var(--brand-shadow);
+        border-radius: 1.1rem;
+        box-shadow: 0 6px 24px rgba(44, 62, 80, 0.11);
         font-weight: 500;
         color: var(--card-text);
+        border: none;
+        overflow: hidden;
+        position: relative;
+        background-size: 180% 180%;
+        background-position: top left;
+        animation: cardGradientMove 8s linear infinite alternate;
+        text-align: center;
+      }
+      @keyframes cardGradientMove {
+        0% {
+          background-position: 0 0;
+        }
+        100% {
+          background-position: 100% 100%;
+        }
+      }
+      .row.g-3 .card .fa,
+      .row.g-3 .card .fas {
+        font-size: 2.1rem;
+        margin-bottom: 0.53rem;
+        margin-top: 0.1rem;
+        display: inline-block;
+        animation: bounceIcon 2.5s infinite;
+      }
+      @keyframes bounceIcon {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-8px);
+        }
       }
       .row.g-3 .card:hover {
-        transform: translateY(-5px) scale(1.02);
-        box-shadow: 0 9px 32px rgba(44, 62, 80, 0.13);
+        transform: translateY(-8px) scale(1.04) rotate(-1deg);
+        box-shadow: 0 14px 36px rgba(44, 62, 80, 0.15);
+        z-index: 2;
       }
       .card-title {
-        font-size: 1.04rem;
-        margin-bottom: 0.7rem;
+        font-size: 1.12rem;
+        margin-bottom: 0.5rem;
         font-weight: 700;
         letter-spacing: 0.01em;
         color: var(--card-text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
       }
       .card .card-body {
-        padding-bottom: 1rem;
+        width: 100%;
+        padding: 0.21rem 0.1rem 0 0.1rem;
+        z-index: 1;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       }
-      /* Card colors for clarity */
+      .card .card-body p,
+      .card .card-body small {
+        margin: 0.12rem 0;
+        width: 100%;
+      }
+      .card .card-body p {
+        font-size: 1rem;
+        font-weight: 600;
+      }
+      .card .card-body a {
+        font-weight: 700;
+        font-size: 1.01rem;
+      }
+      .card .card-body small {
+        margin-top: 0.12rem;
+        font-size: 0.93rem;
+      }
+      /* Card colors for clarity & modern effect */
       .card.bg-primary {
-        background: var(--brand-blue) !important;
+        background: linear-gradient(
+          135deg,
+          var(--brand-blue) 85%,
+          #7ea3f7 100%
+        ) !important;
         color: #fff !important;
       }
       .card.bg-success {
-        background: var(--brand-green) !important;
+        background: linear-gradient(
+          140deg,
+          var(--brand-green) 75%,
+          #7af5c9 100%
+        ) !important;
         color: #fff !important;
       }
       .card.bg-info {
-        background: var(--brand-cyan) !important;
+        background: linear-gradient(
+          135deg,
+          var(--brand-cyan) 75%,
+          #b9e8ff 100%
+        ) !important;
         color: #23272f !important;
       }
       .card.bg-warning {
-        background: var(--brand-yellow) !important;
+        background: linear-gradient(
+          135deg,
+          var(--brand-yellow) 85%,
+          #ffedc2 100%
+        ) !important;
         color: #23272f !important;
       }
       .card.bg-purple {
-        background: var(--brand-purple) !important;
+        background: linear-gradient(
+          135deg,
+          var(--brand-purple) 80%,
+          #c5a5f7 100%
+        ) !important;
         color: #fff !important;
       }
       .card.bg-teal {
-        background: var(--brand-teal) !important;
+        background: linear-gradient(
+          135deg,
+          var(--brand-teal) 80%,
+          #b8fff6 100%
+        ) !important;
         color: #fff !important;
       }
       .card.bg-pink {
-        background: var(--brand-pink) !important;
+        background: linear-gradient(
+          135deg,
+          var(--brand-pink) 90%,
+          #ffd6ef 100%
+        ) !important;
         color: #fff !important;
       }
       .card.bg-brown {
-        background: var(--brand-brown) !important;
+        background: linear-gradient(
+          135deg,
+          var(--brand-brown) 80%,
+          #bba4a4 100%
+        ) !important;
         color: #fff !important;
       }
       /* Admin Tools Nav */
       .nav-section {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.7rem;
+        gap: 0.8rem;
         justify-content: center;
-        margin: 2.2rem 0 1.8rem 0;
+        margin: 2rem 0 1.1rem 0;
+        z-index: 1;
+        position: relative;
       }
       .nav-section .btn {
-        min-width: 148px;
+        min-width: 140px;
         font-weight: 600;
         border: none;
-        border-radius: 0.45rem;
-        box-shadow: 0 2px 7px rgba(44, 62, 80, 0.05);
+        border-radius: 0.55rem;
+        box-shadow: 0 3px 11px rgba(44, 62, 80, 0.08);
         transition: transform var(--transition), box-shadow var(--transition),
-          background var(--transition), color var(--transition);
+          background var(--transition), color var(--transition), filter 0.22s;
         display: flex;
         align-items: center;
-        gap: 7px;
+        gap: 10px;
+        font-size: 1.01rem;
+        background-size: 160%;
+        background-position: right;
+        position: relative;
+        padding: 0.65rem 0.25rem;
       }
       .nav-section .btn:focus-visible {
         outline: 2px solid #ffdd57;
       }
       .nav-section .btn:hover {
-        transform: translateY(-2px) scale(1.03);
-        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
-        filter: brightness(1.04);
+        transform: translateY(-3px) scale(1.05) rotate(-1deg);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+        filter: brightness(1.08);
+        z-index: 2;
+      }
+      .nav-section .btn .fa,
+      .nav-section .btn .fas {
+        font-size: 1.13rem;
+        margin-right: 0.25em;
+        animation: pulseGlow 2.7s infinite;
+      }
+      @keyframes pulseGlow {
+        0%,
+        100% {
+          filter: drop-shadow(0 0 0px #fff4);
+        }
+        50% {
+          filter: drop-shadow(0 0 7px #ffed99);
+        }
       }
       .nav-section .btn-info {
-        background: var(--brand-cyan);
+        background: linear-gradient(90deg, var(--brand-cyan) 80%, #e7faff 100%);
         color: #23272f;
       }
       .nav-section .btn-dark {
-        background: var(--brand-dark);
+        background: linear-gradient(90deg, var(--brand-dark) 80%, #3b3c4a 100%);
         color: #fff;
       }
       .nav-section .btn-primary {
-        background: var(--brand-blue);
+        background: linear-gradient(90deg, var(--brand-blue) 78%, #a5c9fa 100%);
         color: #fff;
       }
       .nav-section .btn-success {
-        background: var(--brand-green);
+        background: linear-gradient(
+          90deg,
+          var(--brand-green) 78%,
+          #b4ffd2 100%
+        );
         color: #fff;
       }
       .nav-section .btn-warning {
-        background: var(--brand-yellow);
+        background: linear-gradient(
+          90deg,
+          var(--brand-yellow) 78%,
+          #fff9d1 100%
+        );
         color: #23272f;
       }
       .nav-section .btn-danger {
-        background: var(--brand-red);
+        background: linear-gradient(90deg, var(--brand-red) 81%, #ffe7e7 100%);
         color: #fff;
       }
       .nav-section .btn-secondary {
-        background: var(--brand-gray);
+        background: linear-gradient(90deg, var(--brand-gray) 80%, #e5e5e5 100%);
         color: #23272f;
       }
       .nav-section .btn-purple {
-        background: var(--brand-purple);
+        background: linear-gradient(
+          90deg,
+          var(--brand-purple) 80%,
+          #e8d8ff 100%
+        );
         color: #fff;
       }
       .nav-section .btn-teal {
-        background: var(--brand-teal);
+        background: linear-gradient(90deg, var(--brand-teal) 80%, #c4fff6 100%);
         color: #fff;
       }
       .nav-section .btn-orange {
-        background: var(--brand-orange);
+        background: linear-gradient(
+          90deg,
+          var(--brand-orange) 80%,
+          #ffe5d1 100%
+        );
         color: #fff;
       }
       .nav-section .btn-pink {
-        background: var(--brand-pink);
+        background: linear-gradient(90deg, var(--brand-pink) 80%, #ffdbe9 100%);
         color: #fff;
       }
       .nav-section .btn-brown {
-        background: var(--brand-brown);
+        background: linear-gradient(
+          90deg,
+          var(--brand-brown) 80%,
+          #e5dede 100%
+        );
         color: #fff;
       }
       .nav-section .btn-outline {
@@ -307,43 +496,83 @@
         color: #23272f;
         border: 1px solid #dee2e6;
       }
-      @media (max-width: 650px) {
-        .nav-section {
-          flex-direction: column;
-          align-items: stretch;
+      @media (max-width: 900px) {
+        .container {
+          padding: 1.1rem;
+        }
+        .row.g-3 {
+          --bs-gutter-x: 0.5rem;
+        }
+      }
+      @media (max-width: 600px) {
+        .container {
+          padding: 0.6rem;
+        }
+        .row.g-3 .card {
+          font-size: 0.95rem;
+          min-height: 120px;
+          max-width: 98vw;
         }
         .nav-section .btn {
           min-width: 100%;
         }
       }
-      /* Footer */
+      /* Heading Animations */
+      .dashboard-heading {
+        text-align: center;
+        margin-bottom: 2.2rem;
+        margin-top: 0.7rem;
+        font-size: 2.25rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        background: linear-gradient(
+          90deg,
+          #2563eb 20%,
+          #ffbe0b 60%,
+          #ba1e24 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: gradientMove 7s linear infinite alternate;
+      }
+      @keyframes gradientMove {
+        0% {
+          background-position: 0 50%;
+        }
+        100% {
+          background-position: 100% 50%;
+        }
+      }
+      /* Footer - black, small, not fixed */
       footer {
-        background: var(--footer-bg);
+        background: #23272f;
         color: #fff;
         text-align: center;
-        padding: 1rem 0;
-        margin-top: auto;
+        padding: 0.55rem 0 0.55rem 0;
         letter-spacing: 0.01em;
-        font-size: 1.03rem;
+        font-size: 0.98rem;
+        font-weight: 500;
+        z-index: 2;
+        box-shadow: 0 -2px 10px #23272f09;
+        border-top-left-radius: 0.7rem;
+        border-top-right-radius: 0.7rem;
+        margin-top: 0.7rem;
       }
-      /* Responsive container and cards */
-      @media (max-width: 900px) {
-        .container {
-          padding: 1rem;
-        }
-      }
-      @media (max-width: 600px) {
-        .container {
-          padding: 0.7rem;
-        }
-        .row.g-3 .card {
-          font-size: 0.97rem;
+      @media (max-width: 650px) {
+        footer {
+          font-size: 0.93rem;
+          padding: 0.45rem 0 0.45rem 0;
+          border-top-left-radius: 0.35rem;
+          border-top-right-radius: 0.35rem;
         }
       }
     </style>
   </head>
 
   <body>
+    <!-- Animated Background Dots -->
+    <div class="animated-bg" aria-hidden="true"></div>
     <!-- Top Bar -->
     <div class="top-bar">
       <a
@@ -377,16 +606,15 @@
 
     <!-- Page Content -->
     <div class="container">
-      <h1 class="text-center mb-4">Admin Dashboard</h1>
+      <h1 class="dashboard-heading">Admin Dashboard</h1>
 
       <!-- Metrics Row 1 -->
       <div class="row g-3 mb-4">
         <div class="col-md-3">
-          <div class="card bg-primary text-white h-100">
+          <div class="card bg-primary text-white h-100 shadow">
             <div class="card-body">
-              <h6 class="card-title">
-                <i class="fas fa-users" aria-hidden="true"></i> Users
-              </h6>
+              <i class="fas fa-users" aria-hidden="true"></i>
+              <div class="card-title mt-1">Users</div>
               <p><strong>{{ total_users }}</strong> Total</p>
               <p>
                 <a
@@ -401,33 +629,30 @@
           </div>
         </div>
         <div class="col-md-3">
-          <div class="card bg-success text-white h-100">
+          <div class="card bg-success text-white h-100 shadow">
             <div class="card-body">
-              <h6 class="card-title">
-                <i class="fas fa-graduation-cap" aria-hidden="true"></i> Exams
-              </h6>
+              <i class="fas fa-graduation-cap" aria-hidden="true"></i>
+              <div class="card-title mt-1">Exams</div>
               <p><strong>{{ total_exams }}</strong> Total</p>
               <p>Avg Score: <strong>{{ average_exam_score }}%</strong></p>
             </div>
           </div>
         </div>
         <div class="col-md-3">
-          <div class="card bg-info text-dark h-100">
+          <div class="card bg-info text-dark h-100 shadow">
             <div class="card-body">
-              <h6 class="card-title">
-                <i class="fas fa-book" aria-hidden="true"></i> Courses
-              </h6>
+              <i class="fas fa-book" aria-hidden="true"></i>
+              <div class="card-title mt-1">Courses</div>
               <p><strong>{{ total_study_materials }}</strong> Total</p>
               <p><strong>{{ restricted_courses }}</strong> Restricted</p>
             </div>
           </div>
         </div>
         <div class="col-md-3">
-          <div class="card bg-warning text-dark h-100">
+          <div class="card bg-warning text-dark h-100 shadow">
             <div class="card-body">
-              <h6 class="card-title">
-                <i class="fas fa-award" aria-hidden="true"></i> Special Exams
-              </h6>
+              <i class="fas fa-award" aria-hidden="true"></i>
+              <div class="card-title mt-1">Special Exams</div>
               <p><strong>{{ special_exam_count }}</strong> Records</p>
               <p>
                 Pass 1: <strong>{{ special_exam_passed_1 }}</strong> │ Pass 2:
@@ -441,43 +666,37 @@
       <!-- Metrics Row 2 -->
       <div class="row g-3 mb-4">
         <div class="col-md-3">
-          <div class="card bg-purple text-white h-100">
+          <div class="card bg-purple text-white h-100 shadow">
             <div class="card-body">
-              <h6 class="card-title">
-                <i class="fas fa-id-badge" aria-hidden="true"></i> Designations
-              </h6>
+              <i class="fas fa-id-badge" aria-hidden="true"></i>
+              <div class="card-title mt-1">Designations</div>
               <p><strong>{{ total_designations }}</strong></p>
             </div>
           </div>
         </div>
         <div class="col-md-3">
-          <div class="card bg-teal text-white h-100">
+          <div class="card bg-teal text-white h-100 shadow">
             <div class="card-body">
-              <h6 class="card-title">
-                <i class="fas fa-handshake" aria-hidden="true"></i> Clients
-              </h6>
+              <i class="fas fa-handshake" aria-hidden="true"></i>
+              <div class="card-title mt-1">Clients</div>
               <p><strong>{{ total_clients }}</strong></p>
             </div>
           </div>
         </div>
         <div class="col-md-3">
-          <div class="card bg-pink text-white h-100">
+          <div class="card bg-pink text-white h-100 shadow">
             <div class="card-body">
-              <h6 class="card-title">
-                <i class="fas fa-question-circle" aria-hidden="true"></i>
-                Questions
-              </h6>
+              <i class="fas fa-question-circle" aria-hidden="true"></i>
+              <div class="card-title mt-1">Questions</div>
               <p><strong>{{ total_questions }}</strong></p>
             </div>
           </div>
         </div>
         <div class="col-md-3">
-          <div class="card bg-brown text-white h-100">
+          <div class="card bg-brown text-white h-100 shadow">
             <div class="card-body">
-              <h6 class="card-title">
-                <i class="fas fa-layer-group" aria-hidden="true"></i> Level
-                Areas
-              </h6>
+              <i class="fas fa-layer-group" aria-hidden="true"></i>
+              <div class="card-title mt-1">Level Areas</div>
               <p><strong>{{ total_level_areas or 0 }}</strong></p>
             </div>
           </div>
@@ -582,49 +801,6 @@
           <i class="fas fa-headset"></i> Support
         </a>
       </div>
-
-      <!-- Set Restrictions Form -->
-      <h3>Set Restrictions</h3>
-      <form
-        action="{{ url_for('admin_routes.set_restrictions') }}"
-        method="POST"
-        class="row g-3 mb-5"
-      >
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <div class="col-md-6">
-          <label for="course_id" class="form-label">Course ID</label>
-          <input
-            type="number"
-            name="course_id"
-            id="course_id"
-            class="form-control"
-            required
-          />
-        </div>
-        <div class="col-md-6">
-          <label for="restriction_level" class="form-label"
-            >Restriction Level</label
-          >
-          <select
-            name="restriction_level"
-            id="restriction_level"
-            class="form-select"
-            required
-          >
-            <option value="">None</option>
-            {% for designation in designations %}
-            <option value="{{ designation.id }}">
-              {{ designation.title }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-12">
-          <button class="btn btn-success">
-            <i class="fas fa-lock" aria-hidden="true"></i> Set Restrictions
-          </button>
-        </div>
-      </form>
     </div>
 
     <!-- Footer -->
@@ -708,6 +884,30 @@
           }
         });
       }, 300000); // 5 minutes
+
+      // Animated background dots (modern aesthetic)
+      const dotColors = [
+        "var(--brand-blue)", "var(--brand-yellow)", "var(--brand-red)", "var(--brand-green)",
+        "var(--brand-purple)", "var(--brand-cyan)", "var(--brand-teal)",
+        "#fff", "var(--brand-orange)", "var(--brand-pink)"
+      ];
+      function createDots(num) {
+        const bg = document.querySelector('.animated-bg');
+        for (let i = 0; i < num; ++i) {
+          let dot = document.createElement('div');
+          dot.className = 'dot';
+          const size = Math.random() * 42 + 34;
+          dot.style.width = `${size}px`;
+          dot.style.height = `${size}px`;
+          dot.style.left = `${Math.random() * 100}vw`;
+          dot.style.top = `${Math.random() * 100}vh`;
+          dot.style.background = dotColors[Math.floor(Math.random()*dotColors.length)];
+          dot.style.opacity = (Math.random() * 0.06 + 0.04).toFixed(2);
+          dot.style.animationDuration = `${13 + Math.random() * 7}s`;
+          bg.appendChild(dot);
+        }
+      }
+      createDots(11);
     </script>
   </body>
 </html>

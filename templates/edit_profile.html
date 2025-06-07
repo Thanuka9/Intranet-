@@ -242,10 +242,15 @@
           {% if profile_picture %}
             <img src="{{ url_for('profile_routes.serve_profile_picture', user_id=user.id) }}" 
                  alt="Profile Picture" class="profile-picture-preview" id="profilePicPreview" />
-          {% else %}
-            <img src="{{ url_for('static', filename='images/default-profile.png') }}" 
-                 alt="Default Profile Picture" class="profile-picture-preview" id="profilePicPreview" />
-          {% endif %}
+{% else %}
+  <img
+    src="{{ url_for('static', filename='images/default-profile.jpg') }}"
+    alt="Default Profile Picture"
+    class="profile-picture-preview"
+    id="profilePicPreview"
+  />
+{% endif %}
+
           
           <div class="file-input-container">
             <input type="file" id="profile_picture" name="profile_picture" accept="image/*" />
