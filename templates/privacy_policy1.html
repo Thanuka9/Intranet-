@@ -42,7 +42,7 @@
         font-family: "Inter", sans-serif;
         background: var(--light-bg);
         margin: 0;
-        padding-bottom: 98px;
+        padding-bottom: 48px;
         min-height: 100vh;
       }
       header {
@@ -174,21 +174,18 @@
       .policy-container b {
         font-weight: 700;
       }
-      .agreement-btn {
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100vw;
-        background: var(--white);
-        border-top: 1px solid var(--border);
-        box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.08);
-        padding: 1.3rem 0 1.3rem 0;
-        z-index: 999;
+      /* Agreement buttons inside the content */
+      .agreement-btn-static {
         display: flex;
         justify-content: center;
         gap: 1.25rem;
+        background: none;
+        border: none;
+        box-shadow: none;
+        padding: 1.3rem 0 0.5rem 0;
+        position: static;
       }
-      .agreement-btn .btn {
+      .agreement-btn-static .btn {
         font-size: 1.17rem;
         font-weight: 700;
         border-radius: 44px;
@@ -247,11 +244,15 @@
         .policy-container h2 {
           font-size: 1.25rem;
         }
-        .agreement-btn .btn {
+        .agreement-btn-static .btn {
           font-size: 1rem;
           min-width: 110px;
           padding: 0.5rem 1.1rem;
         }
+      }
+      /* Hide the old fixed footer style if still present */
+      .agreement-btn {
+        display: none !important;
       }
       /* Custom scrollbar for desktop */
       ::-webkit-scrollbar {
@@ -274,7 +275,9 @@
         />
         <span class="brand-title">
           <span class="collect">Collect</span><span class="ive">ive</span>
-          <span class="privacy-policy ms-2">Intranet Privacy Policy</span>
+          <span class="privacy-policy ms-2"
+            >Intranet System Privacy & Data Protection Policy</span
+          >
         </span>
       </div>
     </header>
@@ -288,230 +291,240 @@
           <i class="bi bi-calendar3 section-icon"></i>
           <b>Effective Date:</b> January 1, 2025
         </p>
-        <p>
-          Welcome to the <b>Collective Intranet System</b> (the “System”). This
-          Privacy Policy outlines how we collect, use, store, and protect
-          information pertaining to employees, administrators, and other
-          authorized users of this platform.
+        <p class="text-muted mb-1">
+          <i class="bi bi-file-earmark-text section-icon"></i>
+          <b>Version:</b> 1.0
         </p>
-
+        <p>
+          Welcome to the <b>Collective Intranet System</b> (“the System”). This
+          Privacy Policy outlines how we collect, use, store, and protect
+          personal and activity data belonging to employees, administrators, and
+          other authorized users of this platform.
+        </p>
+        <p>
+          This Privacy Policy is governed by and construed in accordance with
+          the laws of Sri Lanka, including but not limited to the Personal Data
+          Protection Act, No. 9 of 2022 (“PDPA”) and the Intellectual Property
+          Act, No. 36 of 2003 (“IP Act”).
+        </p>
         <hr class="divider" />
         <h4>1. Information We Collect</h4>
+        <p>
+          In accordance with Section 27(1) of the PDPA, we may collect and store
+          the following categories of information:
+        </p>
         <ul>
           <li>
-            <b>Personal Data:</b> Name, email address, employee ID, department,
-            designation, and user role.
+            <b>Personal Data:</b> Name, official email, employee ID, department,
+            designation, and user role
           </li>
           <li>
-            <b>Authentication Data:</b> Password hashes (securely encrypted),
-            login logs, and optional 2FA keys.
+            <b>Authentication Data:</b> Password hashes (bcrypt-encrypted),
+            login logs, and optional 2FA tokens
           </li>
           <li>
-            <b>Usage Data:</b> Task interactions, exam scores, course progress,
-            dashboard activity.
+            <b>Usage Data:</b> Task interactions, course progress, exam scores,
+            and dashboard activity
           </li>
           <li>
-            <b>Files &amp; Uploads:</b> Documents and images submitted through
-            tasks or assignments (stored via GridFS).
+            <b>Files &amp; Uploads:</b> Files submitted through the system
+            (secured via MongoDB GridFS)
           </li>
           <li>
             <b>Technical Metadata:</b> IP address, device type, browser details
-            — used for audit and security logs only.
+            (used for security auditing only)
           </li>
         </ul>
-
         <hr class="divider" />
         <h4>2. How We Use Your Data</h4>
+        <p>Under Sections 5–6 of the PDPA, data is processed to:</p>
         <ul>
-          <li>To provide secure, role-specific access to system features.</li>
+          <li>Enable secure, role-based platform access</li>
           <li>
-            To assign, track, and evaluate user tasks and learning outcomes.
+            Assign, manage, and track tasks, training modules, and evaluations
           </li>
-          <li>To generate personal dashboards and institutional reports.</li>
-          <li>To detect and prevent unauthorized system access or misuse.</li>
-          <li>
-            To deliver internal messages, announcements, and notifications.
-          </li>
+          <li>Generate personalized dashboards and administrative reports</li>
+          <li>Prevent unauthorized access or misuse of the platform</li>
+          <li>Communicate announcements and task-related notifications</li>
         </ul>
-
         <hr class="divider" />
         <h4>3. Legal Basis for Processing</h4>
-        <p>
-          We process your data on the basis of legitimate interest and
-          operational necessity within the scope of Collective’s educational and
-          administrative mandate.
-        </p>
-
-        <hr class="divider" />
-        <h4>4. Data Access &amp; Sharing</h4>
+        <p>We process data on the legal bases of:</p>
         <ul>
+          <li>Operational necessity (PDPA §5(1))</li>
+          <li>Legitimate interest (PDPA §6(a))</li>
+          <li>User consent, where applicable (PDPA §7)</li>
           <li>
-            Your data is accessible only to authorized system administrators and
-            managers based on your role and designation.
-          </li>
-          <li>
-            We do not sell, trade, or disclose any personal data to third
-            parties.
-          </li>
-          <li>
-            Access audits and logs are periodically reviewed for compliance.
+            In alignment with data minimization (PDPA §11) and purpose
+            limitation (PDPA §10)
           </li>
         </ul>
-
         <hr class="divider" />
-        <h4>5. Document &amp; File Storage</h4>
+        <h4>4. Data Access and Sharing</h4>
         <ul>
           <li>
-            All user-uploaded files are securely stored using MongoDB GridFS.
+            Access is restricted to authorized administrators based on role and
+            necessity (PDPA §22)
           </li>
           <li>
-            Upload limits, file types, and permissions are enforced by backend
-            validation.
+            We do not sell, share, or disclose personal data to third parties
           </li>
           <li>
-            Document access is strictly role-restricted and encrypted in
-            transit.
+            Access logs and audit trails are regularly reviewed for compliance
           </li>
         </ul>
-
         <hr class="divider" />
-        <h4>6. Data Retention &amp; Removal</h4>
-        <p>
-          We retain user data only for as long as necessary to meet
-          administrative and operational needs. Upon resignation, role change,
-          or account deactivation, user data is archived or securely deleted
-          following HR compliance protocols.
-        </p>
-
-        <hr class="divider" />
-        <h4>7. Your Rights</h4>
-        <p>Users of the system may:</p>
+        <h4>5. Document and File Storage</h4>
         <ul>
-          <li>Request a summary of data stored about them.</li>
-          <li>Request correction of profile data if inaccurate.</li>
+          <li>Files are securely stored in MongoDB GridFS</li>
+          <li>Upload validation (type, size, permissions) is enforced</li>
           <li>
-            Request deletion of their account (subject to management approval
-            and audit constraints).
+            File access is encrypted in transit and restricted via role-based
+            controls
+          </li>
+        </ul>
+        <hr class="divider" />
+        <h4>6. Data Retention and Removal</h4>
+        <p>In accordance with PDPA §24:</p>
+        <ul>
+          <li>
+            Data is retained only for as long as required by operational or HR
+            needs
+          </li>
+          <li>
+            Upon resignation, role change, or deactivation, data is archived or
+            securely deleted based on HR protocols and statutory retention
+            requirements
+          </li>
+        </ul>
+        <hr class="divider" />
+        <h4>7. Your Rights Under the PDPA</h4>
+        <ul>
+          <li>Access personal data held (PDPA §13)</li>
+          <li>Correct inaccurate or outdated information (PDPA §14)</li>
+          <li>
+            Request deletion, subject to operational/legal constraints (PDPA
+            §15)
+          </li>
+          <li>Object to processing, under specific conditions (PDPA §17)</li>
+          <li>
+            Lodge a complaint with the Data Protection Authority of Sri Lanka
+            (PDPA §31)
           </li>
         </ul>
         <p>
-          To initiate any data request, contact us at
+          📧 To exercise any of the above rights, contact:
           <a href="mailto:intranet@collectivercm.com"
             >intranet@collectivercm.com</a
-          >.
+          >
         </p>
-
         <hr class="divider" />
-        <h4>8. Cookies &amp; Session Management</h4>
-        <p>
-          We use only essential session cookies to maintain secure login
-          sessions. No third-party analytics or tracking cookies are used.
-        </p>
-
+        <h4>8. Cookies and Session Management</h4>
+        <ul>
+          <li>Only essential session cookies are used</li>
+          <li>We do not employ analytics or third-party tracking cookies</li>
+        </ul>
         <hr class="divider" />
         <h4>9. Security Measures</h4>
+        <p>As required by PDPA §23, we implement:</p>
         <ul>
-          <li>Passwords are encrypted using bcrypt.</li>
-          <li>All communication is secured over HTTPS (TLS 1.2+).</li>
-          <li>Cross-site request forgery (CSRF) protection is enforced.</li>
-          <li>
-            Access control is enforced through user role verification on all
-            sensitive routes.
-          </li>
-          <li>
-            All uploads and user inputs are sanitized against XSS and injection
-            risks.
-          </li>
+          <li>bcrypt-encrypted password hashing</li>
+          <li>HTTPS/TLS 1.2+ secure communication</li>
+          <li>CSRF protection</li>
+          <li>Role-Based Access Control (RBAC)</li>
+          <li>Input sanitization to prevent injection and XSS attacks</li>
         </ul>
-
         <hr class="divider" />
-        <h4>10. Updates to This Policy</h4>
+        <h4>10. User Responsibility</h4>
+        <ul>
+          <li>Maintain confidentiality of credentials</li>
+          <li>Promptly report any unauthorized access or suspected breaches</li>
+          <li>Avoid impersonation or system circumvention</li>
+        </ul>
         <p>
-          This policy may be updated to reflect legal, technical, or operational
-          changes. Users will be notified via the dashboard upon any significant
-          updates.
+          Violations may result in disciplinary action or account suspension.
         </p>
-
         <hr class="divider" />
-        <h4>11. Contact Us</h4>
+        <h4>11. Updates to This Policy</h4>
         <p>
-          For questions or concerns about your privacy, please contact our
-          system administrator at
+          This Privacy Policy may be updated due to regulatory, operational, or
+          technical changes. Material changes will be communicated via the
+          system dashboard. Users are bound by the most current version
+          available.
+        </p>
+        <hr class="divider" />
+        <h4>12. Contact Information</h4>
+        <p>
+          System Administrator<br />
+          📧
           <a href="mailto:intranet@collectivercm.com"
             >intranet@collectivercm.com</a
-          >.
+          ><br />
+          🏛️ Subject to the Personal Data Protection Act, No. 9 of 2022 (PDPA)
         </p>
-
         <hr class="divider" />
-        <h4>12. Exam Rules &amp; Conditions</h4>
+        <h4>13. Terms of Use &amp; Exam Rules</h4>
         <p>
-          By participating in any assessments or evaluations hosted on the
-          Collective platform, users agree to abide by the following rules:
+          By using the System, you agree to the following conduct guidelines:
         </p>
         <ul>
           <li>
-            <b>Identity:</b> Exams must be completed by the assigned user only.
-            Impersonation is strictly prohibited.
+            <b>User Identity:</b> Exams must be taken only by the assigned
+            individual
           </li>
           <li>
-            <b>External Assistance:</b> No unauthorized materials, notes, or
-            digital tools may be used unless explicitly permitted.
+            <b>No External Assistance:</b> Unauthorized tools, notes, or aid are
+            prohibited
           </li>
           <li>
-            <b>System Monitoring:</b> All exam interactions (timing, IP address,
-            attempts, scores) are logged and may be reviewed by system admins.
+            <b>Monitoring:</b> Logs including IP, timestamps, and attempts are
+            retained
           </li>
           <li>
-            <b>Result Integrity:</b> Any detected manipulation or breach of
-            policy may result in disqualification, score removal, or
-            disciplinary review.
+            <b>Integrity:</b> Manipulation of results will lead to invalidation
+            or HR action
           </li>
           <li>
-            <b>Confidentiality:</b> Exam questions and answers are confidential
-            and may not be shared, copied, or distributed in any form.
+            <b>Confidentiality:</b> Exam content may not be shared, recorded, or
+            reproduced
           </li>
         </ul>
-        <p>
-          Violation of these rules may result in warnings, restricted access,
-          exam invalidation, or reporting to HR for further action.
-        </p>
-
         <hr class="divider" />
-        <h4>13. Copyright &amp; Intellectual Property</h4>
-        <p>
-          All internal study materials, exam documents, training resources, and
-          associated intellectual content distributed through the Collective
-          Intranet are the exclusive property of <b>Collective</b>.
-        </p>
-        <p>
-          All source code, routing logic, backend modules, UI/UX design,
-          authentication workflows, MongoDB integration, and system architecture
-          are the intellectual property of <b>Thanuka Ellepola</b>. No portion
-          of this platform may be copied, replicated, reverse-engineered, or
-          reused without explicit written permission.
-        </p>
-        <p>
-          Unauthorized use or distribution of this content may result in
-          disciplinary action and/or legal consequences.
-        </p>
+        <h4>14. Copyright &amp; Intellectual Property</h4>
+        <p>Pursuant to the IP Act (Sections 6–13, 170):</p>
+        <ul>
+          <li>
+            All training materials, exams, documents, and visual content are the
+            exclusive property of <b>Collective</b>
+          </li>
+          <li>
+            All source code, UI/UX components, backend logic, and database
+            structures are the intellectual property of <b>Thanuka Ellepola</b>
+          </li>
+          <li>
+            Unauthorized duplication, reverse engineering, or reuse is strictly
+            prohibited and may result in disciplinary or legal consequences
+          </li>
+        </ul>
         <div class="text-center my-4">
           <i
             class="bi bi-shield-check"
             style="font-size: 2.5rem; color: var(--primary)"
           ></i>
         </div>
+        <!-- Agreement buttons INSIDE the content, not fixed -->
+        <div class="agreement-btn-static text-center mt-4">
+          <button id="disagreeBtn" type="button" class="btn btn-disagree mx-2">
+            <i class="bi bi-x-circle me-1"></i> Disagree
+          </button>
+          <button id="agreeBtn" type="button" class="btn btn-agree mx-2">
+            <i class="bi bi-check-circle me-1"></i> I Agree
+          </button>
+        </div>
       </main>
     </div>
     <!-- CSRF token -->
     <input type="hidden" id="csrfToken" value="{{ csrf_token() }}" />
-    <div class="agreement-btn">
-      <button id="disagreeBtn" type="button" class="btn btn-disagree">
-        <i class="bi bi-x-circle me-1"></i> Disagree
-      </button>
-      <button id="agreeBtn" type="button" class="btn btn-agree">
-        <i class="bi bi-check-circle me-1"></i> I Agree
-      </button>
-    </div>
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
