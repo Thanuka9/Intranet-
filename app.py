@@ -134,23 +134,24 @@ init_scheduler(scheduler)
 scheduler.start()
 
 # ----------------------------------------------------------------------
-# Privacy Consent Middleware
+# Privacy Consent Middleware (temporarily disabled)
 # ----------------------------------------------------------------------
-@app.before_request
-def require_privacy_consent():
-    # Allow static assets, the login/logout routes, and the privacy page itself
-    if request.endpoint in (
-         'static',
-         'auth_routes.login',
-         'auth_routes.logout',
-         'general_routes.privacy_policy_agreement'
-    ):
-        return
+# @app.before_request
+# def require_privacy_consent():
+#     # Allow static assets, the login/logout routes, and the privacy page itself
+#     if request.endpoint in (
+#          'static',
+#          'auth_routes.login',
+#          'auth_routes.logout',
+#          'general_routes.privacy_policy_agreement'
+#     ):
+#         return
+#
+#     # If they’re logged in but haven’t agreed yet, redirect them to consent
+#     if current_user.is_authenticated and not current_user.privacy_agreed:
+#         session['next'] = request.url
+#         return redirect(url_for('general_routes.privacy_policy_agreement'))
 
-    # If they’re logged in but haven’t agreed yet, redirect them to consent
-    if current_user.is_authenticated and not current_user.privacy_agreed:
-        session['next'] = request.url
-        return redirect(url_for('general_routes.privacy_policy_agreement'))
 
 # ----------------------------------------------------------------------
 # Register Blueprints
