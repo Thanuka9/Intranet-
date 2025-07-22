@@ -190,9 +190,18 @@ def add_security_headers(response):
 # ----------------------------------------------------------------------
 # User session timeout
 def check_afk_timeout():
-    if request.endpoint in ['static', 'auth_routes.login', 'auth_routes.logout']:
+    if request.endpoint in [
+        'static',
+        'auth_routes.login',
+        'auth_routes.logout',
+        'special_exams_routes.exam_paper1',
+        'special_exams_routes.submit_paper1',
+        'special_exams_routes.exam_paper2',
+        'special_exams_routes.submit_paper2',
+        'exams_routes.exam_page',
+        'exams_routes.submit_exam'
+    ]:
         return
-
     if 'user_id' in session:
         now = datetime.utcnow()
         last_activity = session.get('last_activity')
