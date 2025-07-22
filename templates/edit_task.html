@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Task - Collective</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/edit_task.css') }}">
+    <style>
+        /* General styling */
+        body {
+            background-image: url("{{ url_for('static', filename='images/background.jpg') }}");
+            background-size: cover;
+            background-position: center;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Header styling */
+        .header {
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+        }
+
+        .header-logo img {
+            height: 35px;
+            margin-right: 8px;
+        }
+
+        .header-logo h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: bold;
+            color: #000;
+        }
+
+        .back-button {
+            font-size: 1rem;
+            padding: 8px 16px;
+            background-color: #6c757d;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        .back-button:hover {
+            background-color: #5a6268;
+        }
+
+        /* Content styling */
+        .edit-task-page {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #333;
+            font-weight: bold;
+        }
+
+        label.form-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+            width: 20%;
+            font-size: 1.1rem;
+            padding: 12px;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .form-control,
+        .form-select {
+            font-size: 1rem;
+            padding: 12px;
+            border-radius: 5px;
+        }
+
+        .form-text {
+            color: #888;
+        }
+
+        /* Footer Styling */
+        .footer {
+            background-color: #f8f9fa; /* Light background for footer */
+            color: #6c757d; /* Muted text color */
+            font-size: 0.9rem; /* Smaller font size */
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.1); /* Light shadow to lift the footer */
+        }
+
+        .footer p {
+            margin: 0;
+            font-weight: 600; /* Bold text */
+        }
+
+        /* Progress Bar Styling */
+        .progress-bar-custom {
+            height: 20px;
+            font-size: 1rem;
+            line-height: 40px;
+            transition: width 0.4s ease;
+            background-color: #28a745;
+            color: #fff;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        /* List Group Styling */
+        .list-group-item {
+            font-size: 1rem;
+            padding: 12px 15px;
+            border: none;
+        }
+
+        .list-group-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .list-group-item a {
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header with Collective Branding -->
+<header class="header d-flex justify-content-between align-items-center shadow-sm p-3">
+    <a href="{{ url_for('task_routes.view_tasks') }}" class="back-button">← Back to Tasks</a>
+    <div class="header-logo d-flex align-items-center">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Collective Logo" class="logo-img" style="height: 35px;">
+        <h1 class="ms-2 fs-4 fw-bold text-dark">COLLECTIVE</h1>
+    </div>
+</header>
+
+<div class="container edit-task-page">
+    <h2>Edit Task</h2>
+    <form id="edit-task-form" method="POST" enctype="multipart/form-data" action="{{ url_for('task_routes.edit_task', task_id=task.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Task Title -->
+        <div class="form-group mb-4">
+            <label for="title" class="form-label">Task Title</label>
+            <input type="text" class="form-control" id="title" name="title" value="{{ task.title }}" required>
+        </div>
+
+        <!-- Task Description -->
+        <div class="form-group mb-4">
+            <label for="description" class="form-label">Task Description</label>
+            <textarea class="form-control" id="description" name="description" rows="3">{{ task.description }}</textarea>
+        </div>
+
+        <!-- Task Priority -->
+        <div class="form-group mb-4">
+            <label for="priority" class="form-label">Priority</label>
+            <select class="form-select" id="priority" name="priority">
+                <option value="Low" {% if task.priority == 'Low' %}selected{% endif %}>Low</option>
+                <option value="Medium" {% if task.priority == 'Medium' %}selected{% endif %}>Medium</option>
+                <option value="High" {% if task.priority == 'High' %}selected{% endif %}>High</option>
+            </select>
+        </div>
+
+        <!-- Due Date -->
+        <div class="form-group mb-4">
+            <label for="due_date" class="form-label">Due Date</label>
+            <input type="date" class="form-control" id="due_date" name="due_date" value="{{ task.due_date.strftime('%Y-%m-%d') }}" required>
+        </div>
+
+        <!-- Existing Attachments with Delete Option -->
+        <div class="form-group mb-4">
+            <label class="form-label">Existing Attachments</label>
+            <ul class="list-group">
+                {% for document in attachments %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <input type="checkbox" class="form-check-input" name="delete_attachments" value="{{ document.id }}">
+                            <a href="{{ url_for('task_routes.download_attachment', task_id=task.id, attachment_id=document.id) }}">{{ document.filename }}</a>
+                        </div>
+                        <span class="badge bg-secondary">{{ document.filetype }}</span>
+                    </li>
+                {% else %}
+                    <li class="list-group-item text-muted">No attachments available.</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Attach New Files with Size Limit -->
+        <div class="form-group mb-4">
+            <label for="attachments" class="form-label">Attach New Files (Total Limit: 100MB)</label>
+            <input type="file" class="form-control" id="attachments" name="attachments" multiple>
+            <div class="form-text">Allowed formats: pdf, png, jpg, jpeg, docx, xlsx. Max file size: 100MB total.</div>
+        </div>
+
+        <!-- Update Button -->
+        <button type="submit" class="btn btn-primary">Update Task</button>
+    </form>
+</div>
+
+<!-- Footer -->
+<footer class="footer text-center">
+    <p>Collective Intranet© 2024</p>
+</footer>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Validate file size limit for attachments
+    document.getElementById('edit-task-form').addEventListener('submit', function (event) {
+        const files = document.getElementById('attachments').files;
+        let totalSize = 0;
+        for (let i = 0; i < files.length; i++) {
+            totalSize += files[i].size;
+        }
+        if (totalSize > 100 * 1024 * 1024) { // 100MB in bytes
+            event.preventDefault();
+            alert("The total size of attachments exceeds 100MB. Please reduce the file sizes.");
+        }
+    });
+</script>
+
+</body>
+</html>

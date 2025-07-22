@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Compare Users - Collective</title>
+
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <!-- Font Awesome (for icons) -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+
+    <style>
+      /* Basic page styling */
+      body {
+        background-color: #f4f7f9;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      /* Top bar styling */
+      .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 15px;
+        background-color: #fff;
+        border-bottom: 1px solid #ddd;
+      }
+      .top-bar-left,
+      .top-bar-center,
+      .top-bar-right {
+        display: flex;
+        align-items: center;
+      }
+      .btn-back-top {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        color: #fff;
+        background-color: #6c757d;
+        border: none;
+        border-radius: 5px;
+        text-decoration: none;
+        margin-right: 10px;
+      }
+      .btn-back-top:hover {
+        background-color: #5a6268;
+      }
+      .logo-section img {
+        height: 40px;
+        margin-right: 8px;
+      }
+      .brand {
+        font-size: 1.4rem;
+        font-weight: 600;
+      }
+      .brand .black {
+        color: #000;
+      }
+      .brand .red {
+        color: red;
+      }
+
+      /* Container & form styling */
+      .container {
+        max-width: 600px;
+        margin: 30px auto;
+        background: #fff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        flex: 1;
+      }
+      h1 {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      /* Footer styling */
+      footer {
+        background-color: #343a40;
+        color: #ffffff;
+        text-align: center;
+        padding: 15px 0;
+        margin-top: auto;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <!-- Adjust this link to go back to your HR Management page, or anywhere else you prefer -->
+        <a
+          href="{{ url_for('general_routes.hr_management') }}"
+          class="btn-back-top"
+        >
+          <i class="fas fa-arrow-left"></i> Back
+        </a>
+      </div>
+      <div class="top-bar-center logo-section">
+        <img
+          src="{{ url_for('static', filename='images/logo.png') }}"
+          alt="Logo"
+        />
+        <div class="brand">
+          <span class="black">Collect</span><span class="red">ive</span>
+        </div>
+      </div>
+      <div class="top-bar-right"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+      <h1>Compare Users</h1>
+      <form
+        action="{{ url_for('management_routes.compare_users') }}"
+        method="POST"
+      >
+        <!-- CSRF Token -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <div class="mb-3">
+          <label for="user1" class="form-label">Select User 1</label>
+          <select name="user1" id="user1" class="form-select" required>
+            <option value="">--Select User--</option>
+            {% for user in users %}
+            <option value="{{ user.id }}">
+              {{ user.first_name }} {{ user.last_name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label for="user2" class="form-label">Select User 2</label>
+          <select name="user2" id="user2" class="form-select" required>
+            <option value="">--Select User--</option>
+            {% for user in users %}
+            <option value="{{ user.id }}">
+              {{ user.first_name }} {{ user.last_name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-users"></i> Compare
+        </button>
+      </form>
+    </div>
+
+    <footer>
+      <p class="mb-0">Collective Intranet© 2024</p>
+    </footer>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

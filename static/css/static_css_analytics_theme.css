@@ -1,0 +1,37 @@
+:root {
+  --color-primary: #0056b3;
+  --color-success: #218838;
+  --color-warning: #ffc107;
+  --color-danger: #dc3545;
+  --color-info: #17a2b8;
+  --color-bg: #fff;
+  --color-text: #212529;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Summary cards for color contrast and accessibility */
+.summary-card.bg-info    { background-color: var(--color-info) !important; color: #fff !important; }
+.summary-card.bg-primary { background-color: var(--color-primary) !important; color: #fff !important; }
+.summary-card.bg-success { background-color: var(--color-success) !important; color: #fff !important; }
+.summary-card.bg-warning { background-color: var(--color-warning) !important; color: #222 !important; }
+
+.table-striped > tbody > tr:nth-child(odd) {
+  background-color: #f8f9fa;
+}
+
+/* Spinner overlay for charts */
+.spinner-border {
+  display: none;
+  margin: 0 auto;
+}
+canvas[aria-label] {
+  outline: 2px solid transparent;
+}
+
+@media (max-width: 767px) {
+  .summary-card { margin-bottom: 1rem !important; }
+}

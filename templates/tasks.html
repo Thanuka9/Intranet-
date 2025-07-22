@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task Dashboard - Collective</title>
+    <!-- Bootstrap 5 -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        margin: 0;
+        background: linear-gradient(120deg, #e7eaf6 0%, #fff 100%);
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+      .main-wrapper {
+        flex: 1;
+        padding: 2.5vw 0 2vw 0;
+        min-height: 0;
+      }
+      /* Top Bar */
+      .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 9px 2vw 8px 1vw;
+        background: rgba(255, 255, 255, 0.97);
+        border-bottom: 1px solid #e3e3e3;
+        min-height: 46px;
+        box-shadow: 0 1px 5px 0 rgba(120, 120, 120, 0.04);
+        font-size: 1.08rem;
+        z-index: 9;
+      }
+      .top-bar img {
+        height: 32px;
+        margin-right: 7px;
+        filter: drop-shadow(0 1px 1px #e3e3e3);
+      }
+      .brand {
+        font-size: 1.18rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        margin-left: 1px;
+      }
+      .brand .black {
+        color: #222;
+      }
+      .brand .red {
+        color: #ba1e24;
+      }
+      .btn-back {
+        font-size: 1rem;
+        padding: 6px 16px;
+        border-radius: 7px;
+        background: #e7eaf6;
+        color: #304075;
+        border: none;
+        transition: background 0.23s;
+      }
+      .btn-back:hover {
+        background: #c7d1e6;
+        color: #22285a;
+      }
+
+      /* Dashboard Card */
+      .dashboard-card {
+        background: #fff;
+        border-radius: 1.1rem;
+        box-shadow: 0 6px 32px rgba(58, 58, 80, 0.08),
+          0 1.5px 4px rgba(120, 120, 120, 0.05);
+        padding: 2.5rem 2.4rem 2.2rem 2.4rem;
+        max-width: 860px;
+        margin: 0 auto;
+        animation: fadeIn 0.5s cubic-bezier(0.57, 1.3, 0.29, 0.99);
+      }
+      .dashboard-card h2 {
+        font-weight: 700;
+        color: #22285a;
+        letter-spacing: 0.4px;
+      }
+      .dashboard-card p {
+        color: #6a7ab8;
+        font-size: 1.07rem;
+      }
+
+      /* Action Buttons */
+      .dashboard-buttons .btn {
+        min-width: 168px;
+        font-weight: 600;
+        letter-spacing: 0.4px;
+        border-radius: 7px;
+        font-size: 1.05rem;
+        margin-bottom: 6px;
+        margin-right: 8px;
+        box-shadow: 0 1.5px 6px 0 rgba(40, 80, 120, 0.06);
+        transition: background 0.2s, color 0.2s;
+      }
+      .dashboard-buttons .btn-primary {
+        background: linear-gradient(90deg, #3e64ff 60%, #5edfff 100%);
+        color: #fff;
+        border: none;
+      }
+      .dashboard-buttons .btn-primary:hover {
+        background: linear-gradient(90deg, #2749e8 60%, #48b8d9 100%);
+        color: #fff;
+      }
+      .dashboard-buttons .btn-info {
+        background: #e7f0fd;
+        color: #2540b5;
+        border: none;
+      }
+      .dashboard-buttons .btn-info:hover {
+        background: #b7c8f7;
+        color: #162c64;
+      }
+
+      /* Section Headings */
+      .section-heading {
+        margin-top: 2.4rem;
+        margin-bottom: 1.2rem;
+        font-size: 1.22rem;
+        color: #2540b5;
+        letter-spacing: 0.3px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+
+      /* Task Lists */
+      .list-group-item {
+        background: #f8fbfe;
+        border-radius: 0.8rem;
+        border: none;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 8px 0 rgba(58, 58, 80, 0.04);
+        padding: 1.18rem 1rem 1.09rem 1.1rem;
+        transition: box-shadow 0.15s;
+      }
+      .list-group-item:hover {
+        box-shadow: 0 6px 18px 0 rgba(58, 58, 80, 0.1);
+        background: #eef4fd;
+      }
+      .list-group-item h5 {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        color: #22285a;
+        word-break: break-word;
+      }
+      .list-group-item p {
+        margin-bottom: 0.18rem;
+        font-size: 1.01rem;
+        color: #8b97b6;
+      }
+      .list-group-item small {
+        font-size: 0.96rem;
+        color: #7a8caa;
+      }
+
+      /* Task Actions */
+      .task-actions .btn {
+        margin-right: 0.2rem;
+        min-width: 40px;
+        font-size: 0.97rem;
+        padding: 4px 10px;
+        border-radius: 6px;
+        box-shadow: none;
+      }
+      .task-actions .btn-info {
+        background: #e7f0fd;
+        color: #2540b5;
+      }
+      .task-actions .btn-info:hover {
+        background: #b7c8f7;
+        color: #162c64;
+      }
+      .task-actions .btn-warning {
+        background: #fff8e1;
+        color: #e6b200;
+      }
+      .task-actions .btn-warning:hover {
+        background: #ffecb3;
+        color: #987100;
+      }
+      .task-actions .btn-danger {
+        background: #fbe9e7;
+        color: #ba1e24;
+      }
+      .task-actions .btn-danger:hover {
+        background: #ffcdd2;
+        color: #8a161a;
+      }
+
+      /* Empty state */
+      .empty-state {
+        color: #b7c8f7;
+        font-style: italic;
+        margin-bottom: 1.5rem;
+        margin-top: 0.6rem;
+        font-size: 1.06rem;
+        text-align: center;
+      }
+
+      @media (max-width: 600px) {
+        .dashboard-card {
+          padding: 1.2rem 2vw 1.2rem 2vw;
+          max-width: 99vw;
+        }
+        .section-heading {
+          margin-top: 1.2rem;
+          font-size: 1.02rem;
+        }
+        .list-group-item {
+          padding: 0.85rem 3vw 0.85rem 3vw;
+        }
+        .dashboard-buttons .btn {
+          min-width: 120px;
+          font-size: 0.98rem;
+        }
+        .main-wrapper {
+          padding: 1.2vw 0 2vw 0;
+        }
+        .top-bar {
+          flex-direction: column;
+          align-items: flex-start;
+          min-height: 40px;
+          padding: 4px 2vw 4px 2vw;
+        }
+        .brand {
+          font-size: 1.05rem;
+        }
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(15px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      footer {
+        background: #343a40;
+        color: #fff;
+        text-align: center;
+        padding: 11px 0 8px 0;
+        font-size: 1rem;
+        margin-top: auto;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        box-shadow: 0 -1px 5px 0 rgba(100, 100, 120, 0.04);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="top-bar">
+      <a href="{{ url_for('general_routes.dashboard') }}" class="btn btn-back">
+        <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+      </a>
+      <div class="d-flex align-items-center">
+        <img
+          src="{{ url_for('static', filename='images/logo.png') }}"
+          alt="Logo"
+        />
+        <div class="brand">
+          <span class="black">Collect</span><span class="red">ive</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+      <div class="dashboard-card">
+        <h2 class="text-center mb-0">
+          <i class="fas fa-tachometer-alt me-2"></i>Task Dashboard
+        </h2>
+        <p class="text-muted text-center mb-4">
+          View and manage your internal tasks, external tasks, and those you’ve
+          assigned.
+        </p>
+
+        <!-- Action Buttons -->
+        <div class="text-center mb-4 dashboard-buttons">
+          <a
+            href="{{ url_for('task_routes.assign_task') }}"
+            class="btn btn-primary me-2"
+          >
+            <i class="fas fa-plus-circle me-1"></i> Assign New Task
+          </a>
+          <a
+            href="{{ url_for('task_routes.analytics_dashboard') }}"
+            class="btn btn-info"
+          >
+            <i class="fas fa-chart-bar me-1"></i> View Analytics
+          </a>
+        </div>
+
+        <!-- Internal Tasks -->
+        <div class="section-heading">
+          <i class="fas fa-tasks"></i> Internal Tasks
+        </div>
+        {% if internal_tasks %}
+        <div class="list-group mb-4">
+          {% for task in internal_tasks %}
+          <div class="list-group-item">
+            <div
+              class="d-flex justify-content-between align-items-center flex-wrap"
+            >
+              <div>
+                <h5 class="mb-1">{{ task.title or 'Untitled Task' }}</h5>
+                <p class="mb-1">
+                  {{ task.description or 'No description available' }}
+                </p>
+                <small>
+                  <i class="fas fa-calendar-alt me-1"></i>
+                  Due: {{ task.due_date.strftime('%Y-%m-%d') if task.due_date
+                  else '—' }}
+                </small>
+              </div>
+              <div class="task-actions d-flex">
+                <a
+                  href="{{ url_for('task_routes.view_task', task_id=task.id) }}"
+                  class="btn btn-info btn-sm"
+                >
+                  <i class="fas fa-eye"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">No internal tasks assigned to you.</div>
+        {% endif %}
+
+        <!-- External Tasks -->
+        <div class="section-heading">
+          <i class="fas fa-users"></i> External Tasks
+        </div>
+        {% if external_tasks %}
+        <div class="list-group mb-4">
+          {% for task in external_tasks %}
+          <div class="list-group-item">
+            <div
+              class="d-flex justify-content-between align-items-center flex-wrap"
+            >
+              <div>
+                <h5 class="mb-1">{{ task.title or 'Untitled Task' }}</h5>
+                <p class="mb-1">
+                  {{ task.description or 'No description available' }}
+                </p>
+                <small>
+                  <i class="fas fa-calendar-alt me-1"></i>
+                  Due: {{ task.due_date.strftime('%Y-%m-%d') if task.due_date
+                  else '—' }}
+                </small>
+              </div>
+              <div class="task-actions d-flex">
+                <a
+                  href="{{ url_for('task_routes.view_task', task_id=task.id) }}"
+                  class="btn btn-info btn-sm"
+                >
+                  <i class="fas fa-eye"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">No external tasks assigned to you.</div>
+        {% endif %}
+
+        <!-- Tasks Assigned by You -->
+        <div class="section-heading">
+          <i class="fas fa-user-check"></i> Tasks Assigned by You
+        </div>
+        {% if tasks_assigned_by_you %}
+        <div class="list-group mb-4">
+          {% for task in tasks_assigned_by_you %}
+          <div class="list-group-item">
+            <div
+              class="d-flex justify-content-between align-items-center flex-wrap"
+            >
+              <div>
+                <h5 class="mb-1">{{ task.title or 'Untitled Task' }}</h5>
+                <p class="mb-1">
+                  {{ task.description or 'No description available' }}
+                </p>
+                <small>
+                  <i class="fas fa-calendar-alt me-1"></i>
+                  Due: {{ task.due_date.strftime('%Y-%m-%d') if task.due_date
+                  else '—' }}
+                </small>
+              </div>
+              <div class="task-actions d-flex">
+                <a
+                  href="{{ url_for('task_routes.view_task', task_id=task.id) }}"
+                  class="btn btn-info btn-sm me-1"
+                  title="View"
+                >
+                  <i class="fas fa-eye"></i>
+                </a>
+                <a
+                  href="{{ url_for('task_routes.edit_task', task_id=task.id) }}"
+                  class="btn btn-warning btn-sm me-1"
+                  title="Edit"
+                >
+                  <i class="fas fa-edit"></i>
+                </a>
+                <form
+                  action="{{ url_for('task_routes.delete_task', task_id=task.id) }}"
+                  method="post"
+                  style="display: inline"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
+                  <button
+                    type="submit"
+                    class="btn btn-danger btn-sm"
+                    title="Delete"
+                    onclick="return confirm('Delete this task?')"
+                  >
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">No tasks assigned by you.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>Collective Intranet© 2024</footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

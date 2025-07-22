@@ -1,0 +1,67 @@
+{% extends 'admin_base.html' %} {% block title %}Custom Report Builder{%
+endblock %} {% block content %}
+
+<div class="container mt-4">
+  <h1 class="text-center mb-4">Custom Report Builder</h1>
+  <form method="get" action="{{ url_for('admin_routes.download_report') }}">
+    <div class="mb-3">
+      <label for="report_model" class="form-label">Select Data Model</label>
+      <select
+        class="form-select"
+        name="report_model"
+        id="report_model"
+        required
+      >
+        <option value="">-- Choose One --</option>
+        {% for model_key, fields in report_models.items() %}
+        <option value="{{ model_key }}">
+          {{ model_key.replace('_', ' ').title() }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Fields to Include</label>
+      {% for model_key, fields in report_models.items() %}
+      <div
+        class="fields-group mb-2"
+        data-model="{{ model_key }}"
+        style="display: none"
+      >
+        {% for f, label in fields %}
+        <div class="form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            name="fields"
+            value="{{ f }}"
+            id="{{ model_key }}-{{ f }}"
+          />
+          <label class="form-check-label" for="{{ model_key }}-{{ f }}"
+            >{{ label }}</label
+          >
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    <input type="hidden" name="type" value="custom" />
+    <button type="submit" class="btn btn-primary">Download Custom CSV</button>
+  </form>
+</div>
+
+<script>
+  // Simple JS to show only relevant fields for selected model
+  document.addEventListener("DOMContentLoaded", function () {
+    let modelSelector = document.getElementById("report_model");
+    let fieldsGroups = document.querySelectorAll(".fields-group");
+    modelSelector.addEventListener("change", function () {
+      let selected = this.value;
+      fieldsGroups.forEach(function (group) {
+        group.style.display =
+          group.getAttribute("data-model") === selected ? "" : "none";
+      });
+    });
+  });
+</script>
+{% endblock %}

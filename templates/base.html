@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {% block title %}Collective{% endblock %} – Collective Intranet
+    </title>
+
+    <!-- Google Fonts: Inter (headings) + Nunito (body) -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700&family=Nunito:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+
+    <style>
+      :root {
+        --brand-red: #e63946;
+        --brand-gold: #f4a261;
+        --brand-dark: #1d1e22;
+        --brand-light: #f8f9fa;
+        --brand-white: #ffffff;
+        --brand-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+        --nav-bg: rgba(255, 255, 255, 0.95);
+        --footer-bg: #1d1e22;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        /* Subtle diagonal gradient background */
+        background: linear-gradient(135deg, #f8f9fa 25%, #e9ecef 100%);
+        font-family: "Nunito", Arial, sans-serif;
+        color: var(--brand-dark);
+        line-height: 1.65;
+      }
+
+      /* Top Bar */
+      .top-bar {
+        background: var(--nav-bg);
+        border-bottom: 1px solid #e0e0e0;
+        box-shadow: var(--brand-shadow);
+        padding: 0.75rem 1.5rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .top-bar-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      /* Back Button */
+      .back-btn-top {
+        background: #e9ecef;
+        color: var(--brand-dark);
+        border-radius: 28px;
+        padding: 0.5rem 1.2rem;
+        font-weight: 600;
+        font-size: 1rem;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+      }
+
+      .back-btn-top:hover,
+      .back-btn-top:focus {
+        background: var(--brand-gold);
+        color: var(--brand-white);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+      }
+
+      /* Logo Section */
+      .logo-section {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+      }
+
+      .logo-section img {
+        height: 42px;
+        width: 42px;
+        border-radius: 50%;
+        background: var(--brand-white);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+      }
+
+      .logo-text {
+        font-family: "Inter", sans-serif;
+        font-size: 1.4rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+      }
+
+      .logo-text .black {
+        color: var(--brand-dark);
+      }
+
+      .logo-text .red {
+        color: var(--brand-red);
+      }
+
+      /* Navigation Buttons Center */
+      .main-nav-section {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .main-nav-section .btn {
+        background: #f0f2f5;
+        color: var(--brand-dark);
+        font-family: "Inter", sans-serif;
+        font-size: 1rem;
+        font-weight: 600;
+        padding: 0.55rem 1.2rem;
+        border-radius: 32px;
+        border: none;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        transition: transform 0.2s, box-shadow 0.2s, background 0.2s, color 0.2s;
+      }
+
+      .main-nav-section .btn i {
+        font-size: 1.1em;
+      }
+
+      .main-nav-section .btn.active,
+      .main-nav-section .btn:hover,
+      .main-nav-section .btn:focus {
+        background: linear-gradient(
+          90deg,
+          var(--brand-red) 20%,
+          var(--brand-gold) 100%
+        );
+        color: var(--brand-white) !important;
+        transform: translateY(-2px) scale(1.03);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+      }
+
+      .main-nav-section .btn:active {
+        transform: translateY(0) scale(0.98);
+      }
+
+      /* Content Wrapper */
+      .content-wrapper {
+        flex: 1;
+        padding: 3rem 1rem;
+        display: flex;
+        justify-content: center;
+      }
+
+      /* Page Box */
+      .page-box {
+        background: var(--brand-white);
+        border-radius: 16px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05),
+          0 2px 8px rgba(0, 0, 0, 0.02);
+        padding: 2.5rem 2rem;
+        max-width: 700px;
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* Animated Background Shape (subtle float) */
+      .page-box::before {
+        content: "";
+        position: absolute;
+        top: -120%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(
+          circle at center,
+          rgba(230, 57, 70, 0.08) 0%,
+          transparent 70%
+        );
+        transform: rotate(20deg);
+        animation: floatBg 12s ease-in-out infinite alternate;
+        z-index: 0;
+      }
+
+      @keyframes floatBg {
+        from {
+          transform: translate(-10%, -10%) rotate(20deg);
+        }
+        to {
+          transform: translate(10%, 10%) rotate(20deg);
+        }
+      }
+
+      /* Titles inside Page Box */
+      .page-box h1,
+      .page-box h2 {
+        font-family: "Inter", sans-serif;
+        margin-bottom: 1rem;
+        position: relative;
+        z-index: 1;
+      }
+
+      .page-box h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-align: center;
+        color: var(--brand-red);
+        /* Entrance animation */
+        animation: slideIn 1s ease-out both;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Pulsing glow effect on hover */
+      .page-box h1:hover {
+        animation: pulseGlow 1.5s ease-in-out infinite;
+      }
+
+      @keyframes pulseGlow {
+        0% {
+          text-shadow: 0 0 6px rgba(230, 57, 70, 0.6),
+            0 0 12px rgba(230, 57, 70, 0.4);
+        }
+        50% {
+          text-shadow: 0 0 12px rgba(230, 57, 70, 0.8),
+            0 0 20px rgba(230, 57, 70, 0.6);
+        }
+        100% {
+          text-shadow: 0 0 6px rgba(230, 57, 70, 0.6),
+            0 0 12px rgba(230, 57, 70, 0.4);
+        }
+      }
+
+      .page-box h2 {
+        font-size: 1.4rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        text-align: center;
+        color: var(--brand-dark);
+      }
+
+      /* Paragraphs and Lists */
+      .page-box p {
+        font-size: 1rem;
+        margin-bottom: 1.2rem;
+        color: #3a3a3a;
+        position: relative;
+        z-index: 1;
+      }
+
+      .page-box ul,
+      .page-box ol {
+        margin-bottom: 1.2rem;
+        margin-left: 1.4rem;
+        position: relative;
+        z-index: 1;
+      }
+
+      .page-box ul li,
+      .page-box ol li {
+        margin-bottom: 0.7rem;
+        color: #3a3a3a;
+      }
+
+      /* Footer */
+      footer {
+        background: var(--footer-bg);
+        color: var(--brand-white);
+        text-align: center;
+        padding: 1rem 0;
+        font-family: "Inter", sans-serif;
+        font-size: 0.95rem;
+        letter-spacing: 0.02em;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04);
+      }
+
+      /* Responsive Adjustments */
+      @media (max-width: 900px) {
+        .top-bar-content {
+          flex-direction: column;
+          gap: 0.75rem;
+          padding: 1rem 0.5rem;
+        }
+
+        .main-nav-section .btn {
+          padding: 0.5rem 1rem;
+          font-size: 0.95rem;
+        }
+
+        .page-box {
+          padding: 2rem 1rem;
+        }
+      }
+
+      @media (max-width: 600px) {
+        .back-btn-top {
+          font-size: 0.95rem;
+          padding: 0.4rem 1rem;
+        }
+
+        .logo-section img {
+          height: 36px;
+          width: 36px;
+        }
+
+        .logo-text {
+          font-size: 1.2rem;
+        }
+
+        .page-box h1 {
+          font-size: 1.6rem;
+        }
+
+        .page-box h2 {
+          font-size: 1.2rem;
+        }
+
+        .page-box {
+          padding: 1.8rem 0.8rem;
+        }
+      }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+  </head>
+
+  <body>
+    <!-- Top Bar -->
+    <nav class="top-bar">
+      <div class="top-bar-content">
+        <!-- Left: Back Button -->
+        <div>
+          <a
+            href="{{ url_for('general_routes.dashboard') }}"
+            class="back-btn-top"
+            title="Back to Dashboard"
+          >
+            <i class="fas fa-arrow-left"></i>
+            Back
+          </a>
+        </div>
+
+        <!-- Center: Main Navigation Buttons -->
+        <div>
+          <div class="main-nav-section">
+            <a
+              href="{{ url_for('general_routes.privacy_policy') }}"
+              class="btn{% if request.endpoint == 'general_routes.privacy_policy' %} active{% endif %}"
+              title="Privacy Policy"
+            >
+              <i class="fas fa-shield-halved"></i>
+              Privacy
+            </a>
+            <a
+              href="{{ url_for('general_routes.help_page') }}"
+              class="btn{% if request.endpoint == 'general_routes.help_page' %} active{% endif %}"
+              title="Help"
+            >
+              <i class="fas fa-circle-question"></i>
+              Help
+            </a>
+            <a
+              href="{{ url_for('general_routes.support') }}"
+              class="btn{% if request.endpoint == 'general_routes.support' %} active{% endif %}"
+              title="Support"
+            >
+              <i class="fas fa-headset"></i>
+              Support
+            </a>
+          </div>
+        </div>
+
+        <!-- Right: Logo -->
+        <div class="logo-section">
+          <img
+            src="{{ url_for('static', filename='images/logo.png') }}"
+            alt="Collective Logo"
+          />
+          <div class="logo-text">
+            <span class="black">Collect</span><span class="red">ive</span>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div class="content-wrapper">
+      <div class="page-box">{% block content %}{% endblock %}</div>
+    </div>
+
+    <!-- Footer -->
+    <footer>Collective Intranet &copy; 2024</footer>
+
+    {% block extra_scripts %}{% endblock %}
+  </body>
+</html>

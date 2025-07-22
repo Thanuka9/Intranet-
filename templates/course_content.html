@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{{ study_material.title }} – Content</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+    <style>
+      :root {
+        --bar-h: 44px;
+        /* Light theme colors */
+        --bg-main: #f5f6fa;
+        --bg-card: #fff;
+        --text-main: #181c22;
+        --nav-bg: #fff;
+        --nav-border: #dfe3ec;
+        --footer-bg: #23293a;
+        --footer-text: #fff;
+        --progress-bg: #e0e3ea;
+        --progress-inner: #377dff;
+        --canvas-bg: #fff;
+        --canvas-shadow: 0 2px 16px rgba(0, 0, 0, 0.17);
+        --modal-bg: rgba(16, 20, 27, 0.85);
+        --modal-card-bg: #f5f6fa;
+        --modal-card-text: #23293a;
+        --pdf-error-bg: #fff4f4;
+        --pdf-error-text: #ff5252;
+        --pill-btn-bg: #565d6a;
+        --pill-btn-color: #fff;
+        --nav-btn-bg: #fff;
+        --nav-btn-color: #377dff;
+        --collect-main: #181c22;
+        --ive-main: #dc3545;
+      }
+      body.dark-theme {
+        --bg-main: #10141b;
+        --bg-card: #171b22;
+        --text-main: #f7f7fa;
+        --nav-bg: #191e28;
+        --nav-border: #2c3140;
+        --footer-bg: #191e28;
+        --footer-text: #e0e0f0;
+        --progress-bg: #23293a;
+        --progress-inner: #377dff;
+        --canvas-bg: #232537;
+        --canvas-shadow: 0 2px 24px #000b;
+        --modal-bg: rgba(16, 20, 27, 0.85);
+        --modal-card-bg: #21273b;
+        --modal-card-text: #fff;
+        --pdf-error-bg: #231a1a;
+        --pdf-error-text: #ff5252;
+        --pill-btn-bg: #434654;
+        --pill-btn-color: #fff;
+        --nav-btn-bg: #24293a;
+        --nav-btn-color: #e0e0f0;
+        --collect-main: #ffd700; /* Bright yellow for Collect in dark mode */
+        --ive-main: #ff5252; /* A red visible on dark bg */
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: var(--bg-main);
+        font-family: "Segoe UI", sans-serif;
+        color: var(--text-main);
+        overflow-x: hidden;
+        transition: background 0.2s;
+      }
+      .top-bar {
+        height: var(--bar-h);
+        background: var(--nav-bg);
+        border-bottom: 1px solid var(--nav-border);
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        padding: 0 0.5rem;
+        gap: 0.5rem;
+        position: sticky;
+        top: 0;
+        z-index: 1020;
+      }
+      .center-slot {
+        justify-self: center;
+      }
+      .pill-btn {
+        background: var(--pill-btn-bg);
+        color: var(--pill-btn-color);
+        border: 0;
+        border-radius: 6px;
+        padding: 4px 14px;
+        font-size: 0.95rem;
+        font-weight: 500;
+      }
+      .nav-btn {
+        min-width: 70px;
+        background: var(--nav-btn-bg);
+        color: var(--nav-btn-color);
+        border: 1px solid #363b4a;
+      }
+      .nav-btn:disabled {
+        color: #888;
+        border-color: #444;
+        background: #d7d7e2;
+      }
+      body.dark-theme .nav-btn:disabled {
+        background: #23253a;
+      }
+      #fullscreen-btn {
+        min-width: 70px;
+        background: #377dff;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        font-size: 0.98rem;
+        padding: 4px 16px;
+        margin-left: 18px;
+        margin-right: 8px;
+        transition: background 0.2s;
+      }
+      #fullscreen-btn:hover {
+        background: #255fcc;
+      }
+      #theme-toggle {
+        min-width: 70px;
+        background: transparent;
+        color: var(--text-main);
+        border: 1px solid #aaa;
+        border-radius: 5px;
+        font-size: 0.98rem;
+        padding: 4px 16px;
+        margin-left: 6px;
+        transition: background 0.2s, color 0.2s;
+      }
+      body.dark-theme #theme-toggle {
+        color: #ffd700;
+        border-color: #555;
+        background: #23253a;
+      }
+      #counter {
+        font-weight: 600;
+        font-size: 1.08rem;
+        margin-top: 0.2rem;
+        text-align: right;
+        color: var(--text-main);
+      }
+      #progress-bar {
+        width: 100%;
+        height: 7px;
+        background: var(--progress-bg);
+        border-radius: 4px;
+        margin: 10px 0 25px 0;
+        overflow: hidden;
+      }
+      #progress-inner {
+        height: 100%;
+        background: var(--progress-inner);
+        width: 0;
+        transition: width 0.2s;
+      }
+      .content-wrap {
+        margin: 0 auto;
+        padding: 0;
+        width: 100vw;
+        max-width: 100vw;
+        display: flex;
+        justify-content: center;
+        align-items: stretch;
+        min-height: calc(100vh - var(--bar-h) - 65px);
+      }
+      #slideCard {
+        background: var(--bg-card);
+        border-radius: 0;
+        box-shadow: none;
+        width: 100vw;
+        min-width: 340px;
+        min-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+      }
+      #slideCard.fullscreen {
+        position: fixed;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 9999;
+        background: var(--bg-card) !important;
+        border-radius: 0;
+        width: 100vw;
+        height: 100vh;
+        min-height: 100vh;
+        max-width: 100vw;
+        padding: 0;
+        margin: 0;
+      }
+      canvas {
+        display: block;
+        background: var(--canvas-bg);
+        border-radius: 8px;
+        box-shadow: var(--canvas-shadow);
+        max-width: 96vw;
+        max-height: 85vh;
+        width: auto !important;
+        height: auto !important;
+        margin: 0 auto;
+        user-select: none;
+        -webkit-user-select: none;
+        pointer-events: none;
+      }
+      #slideCard.fullscreen canvas {
+        max-width: 99vw;
+        max-height: 97vh;
+      }
+      .pdf-error {
+        color: var(--pdf-error-text);
+        background: var(--pdf-error-bg);
+        padding: 20px 30px;
+        border-radius: 8px;
+        font-size: 1.2rem;
+        margin-top: 30px;
+        text-align: center;
+      }
+      .afk-modal-bg {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        background: var(--modal-bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .afk-modal {
+        background: var(--modal-card-bg);
+        color: var(--modal-card-text);
+        padding: 2rem 2.5rem;
+        border-radius: 12px;
+        box-shadow: 0 8px 40px #000b;
+        font-size: 1.25rem;
+        max-width: 90vw;
+        text-align: center;
+      }
+      @media (max-width: 900px) {
+        #slideCard {
+          padding: 0.5vh 0.5vw;
+        }
+      }
+      @media (max-width: 700px) {
+        #slideCard {
+          padding: 0.2vh 0.1vw;
+        }
+      }
+      footer {
+        font-size: 1rem;
+        letter-spacing: 1px;
+        background: var(--footer-bg);
+        color: var(--footer-text);
+      }
+      body,
+      #slideCard,
+      canvas {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+      a,
+      a:visited {
+        color: #377dff;
+      }
+      body.dark-theme a,
+      body.dark-theme a:visited {
+        color: #ffd700;
+      }
+      /* Fix for the logo text colors in both light and dark mode */
+      .logo-text {
+        font-weight: 600;
+        font-size: 1.25rem;
+        letter-spacing: 0.5px;
+        display: inline-block;
+        vertical-align: middle;
+      }
+      .logo-collect {
+        color: var(--collect-main);
+        transition: color 0.2s;
+      }
+      .logo-ive {
+        color: var(--ive-main);
+        transition: color 0.2s;
+      }
+      /* Optionally, ensure high contrast for the logo in all themes */
+      @media (forced-colors: active) {
+        .logo-collect,
+        .logo-ive {
+          color: CanvasText !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Top navigation bar -->
+    <header class="top-bar">
+      <div>
+        <a
+          href="{{ url_for('study_material_routes.view_course', course_id=study_material.id) }}"
+          class="pill-btn text-decoration-none"
+          >&larr; Course Details</a
+        >
+      </div>
+      <div class="center-slot d-flex gap-2">
+        <button id="prev" class="btn nav-btn btn-sm">&larr; Prev</button>
+        <button id="next" class="btn nav-btn btn-sm">Next &rarr;</button>
+        <button id="fullscreen-btn" title="Full Screen (F)">
+          ⛶ Full Screen
+        </button>
+        <button
+          id="theme-toggle"
+          class="btn btn-sm btn-outline-secondary ms-2"
+          title="Toggle theme"
+        >
+          🌙 Dark Mode
+        </button>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <img src="/static/images/logo.png" alt="Logo" style="height: 28px" />
+        <span class="logo-text"
+          ><span class="logo-collect">Collect</span
+          ><span class="logo-ive">ive</span></span
+        >
+      </div>
+    </header>
+
+    <div id="counter" class="pe-3 mt-2 mb-1">
+      Page <span id="pageNum">1</span> / <span id="totalPages">?</span>
+      <span
+        id="percent"
+        class="ms-2 text-secondary"
+        style="font-size: 0.98em"
+      ></span>
+    </div>
+    <div class="px-3">
+      <div id="progress-bar"><div id="progress-inner"></div></div>
+    </div>
+    <div class="content-wrap">
+      <div id="slideCard">
+        <canvas id="pdfCanvas"></canvas>
+      </div>
+    </div>
+    <footer class="text-center py-3">Collective Intranet© 2024</footer>
+
+    <div id="afk-modal" style="display: none"></div>
+
+    <script>
+      // Theme toggle logic
+      const themeToggleBtn = document.getElementById("theme-toggle");
+      function setThemeFromStorage() {
+        if (localStorage.getItem("theme") === "dark") {
+          document.body.classList.add("dark-theme");
+          themeToggleBtn.textContent = "☀️ Light Mode";
+        } else {
+          document.body.classList.remove("dark-theme");
+          themeToggleBtn.textContent = "🌙 Dark Mode";
+        }
+      }
+      setThemeFromStorage();
+      themeToggleBtn.onclick = () => {
+        if (!document.body.classList.contains("dark-theme")) {
+          document.body.classList.add("dark-theme");
+          themeToggleBtn.textContent = "☀️ Light Mode";
+          localStorage.setItem("theme", "dark");
+        } else {
+          document.body.classList.remove("dark-theme");
+          themeToggleBtn.textContent = "🌙 Dark Mode";
+          localStorage.setItem("theme", "light");
+        }
+      };
+
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js";
+
+      const url =
+          "{{ url_for('study_material_routes.stream_file', file_id=documents[0].id) }}",
+        cvs = document.getElementById("pdfCanvas"),
+        ctx = cvs.getContext("2d"),
+        numEl = document.getElementById("pageNum"),
+        totEl = document.getElementById("totalPages"),
+        btnP = document.getElementById("prev"),
+        btnN = document.getElementById("next"),
+        percentEl = document.getElementById("percent"),
+        progressBar = document.getElementById("progress-inner"),
+        fullscreenBtn = document.getElementById("fullscreen-btn"),
+        slideCard = document.getElementById("slideCard"),
+        afkModal = document.getElementById("afk-modal");
+
+      let pdfDoc,
+        current = 1,
+        isFullscreen = false,
+        pdfOriginalWidth = null,
+        pdfOriginalHeight = null,
+        isRendering = false;
+
+      // Render with fixed zoom (scale=1), never upscale
+      function render(n, retry = 0) {
+        if (isRendering) return;
+        isRendering = true;
+        clearError();
+        pdfDoc
+          .getPage(n)
+          .then((page) => {
+            const viewport = page.getViewport({ scale: 1 }); // always native size
+            if (!pdfOriginalWidth || !pdfOriginalHeight) {
+              pdfOriginalWidth = viewport.width;
+              pdfOriginalHeight = viewport.height;
+            }
+            // available space
+            let availW = isFullscreen
+              ? window.innerWidth - 24
+              : slideCard.clientWidth - 24;
+            let availH = isFullscreen
+              ? window.innerHeight - 24
+              : Math.min(slideCard.clientHeight, window.innerHeight - 120);
+
+            let scale = 1;
+            if (pdfOriginalWidth > availW || pdfOriginalHeight > availH) {
+              scale = Math.min(
+                availW / pdfOriginalWidth,
+                availH / pdfOriginalHeight,
+                1
+              );
+            }
+            const vp = page.getViewport({ scale });
+
+            cvs.width = vp.width;
+            cvs.height = vp.height;
+            cvs.style.width = vp.width + "px";
+            cvs.style.height = vp.height + "px";
+
+            page
+              .render({ canvasContext: ctx, viewport: vp })
+              .promise.then(() => {
+                isRendering = false;
+              })
+              .catch((err) => {
+                isRendering = false;
+                showError(
+                  "Failed to render this page. Try navigating or reloading."
+                );
+              });
+
+            current = n;
+            numEl.textContent = n;
+            updateProgress(n);
+            pushProgress(n);
+
+            btnP.disabled = current === 1;
+            btnN.disabled = current === pdfDoc.numPages;
+          })
+          .catch((err) => {
+            isRendering = false;
+            if (retry < 2) {
+              loadDocAndRender(n, retry + 1);
+            } else {
+              showError(
+                "Failed to load this page. Please reload the document."
+              );
+            }
+          });
+      }
+
+      function showError(msg) {
+        clearError();
+        let errDiv = document.createElement("div");
+        errDiv.className = "pdf-error";
+        errDiv.textContent = msg;
+        slideCard.appendChild(errDiv);
+      }
+      function clearError() {
+        let errDiv = slideCard.querySelector(".pdf-error");
+        if (errDiv) errDiv.remove();
+      }
+
+      function updateProgress(pg) {
+        if (!pdfDoc) return;
+        const total = pdfDoc.numPages;
+        totEl.textContent = total;
+        const percent = Math.round((pg / total) * 100);
+        percentEl.textContent = `(${percent}%)`;
+        progressBar.style.width = percent + "%";
+      }
+
+      function pushProgress(pg) {
+        fetch("{{ url_for('study_material_routes.update_progress') }}", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token() }}",
+          },
+          body: JSON.stringify({
+            study_material_id: "{{ study_material.id }}",
+            current_page: pg,
+            total_pages: pdfDoc.numPages,
+          }),
+        });
+      }
+
+      // Session time tracking (unchanged)
+      let elapsed = 0; // seconds sent so far
+      const chunk = 30; // send every 30 s
+      let active = true; // toggled by visibility
+      let timerID = null;
+
+      function sendTime(delta) {
+        fetch("{{ url_for('study_material_routes.update_time') }}", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token() }}",
+          },
+          body: JSON.stringify({
+            study_material_id: "{{ study_material.id }}",
+            elapsed_time: delta,
+          }),
+        });
+      }
+      function startTimer() {
+        if (timerID) return;
+        timerID = setInterval(() => {
+          if (active) {
+            elapsed += chunk;
+            sendTime(chunk);
+          }
+        }, chunk * 1000);
+      }
+      document.addEventListener("visibilitychange", () => {
+        active = !document.hidden;
+      });
+      window.addEventListener("beforeunload", () => {
+        if (elapsed % chunk) {
+          const leftover = elapsed % chunk;
+          sendTime(leftover);
+        }
+      });
+
+      // Fullscreen logic
+      function enterFullscreen() {
+        if (slideCard.requestFullscreen) {
+          slideCard.requestFullscreen();
+        } else if (slideCard.webkitRequestFullscreen) {
+          slideCard.webkitRequestFullscreen();
+        } else if (slideCard.msRequestFullscreen) {
+          slideCard.msRequestFullscreen();
+        }
+        slideCard.classList.add("fullscreen");
+        isFullscreen = true;
+        render(current);
+        fullscreenBtn.textContent = "⛶ Exit Full Screen";
+      }
+      function exitFullscreen() {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+          document.msExitFullscreen();
+        }
+        slideCard.classList.remove("fullscreen");
+        isFullscreen = false;
+        render(current);
+        fullscreenBtn.textContent = "⛶ Full Screen";
+      }
+      fullscreenBtn.onclick = () => {
+        if (!isFullscreen) {
+          enterFullscreen();
+        } else {
+          exitFullscreen();
+        }
+      };
+      document.addEventListener("fullscreenchange", () => {
+        if (!document.fullscreenElement) {
+          slideCard.classList.remove("fullscreen");
+          isFullscreen = false;
+          render(current);
+          fullscreenBtn.textContent = "⛶ Full Screen";
+        }
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "F" || e.key === "f") {
+          fullscreenBtn.click();
+          e.preventDefault();
+        } else if (
+          (e.key === "ArrowLeft" || e.key === "a") &&
+          current > 1 &&
+          !isRendering
+        ) {
+          render(current - 1);
+        } else if (
+          (e.key === "ArrowRight" || e.key === "d") &&
+          pdfDoc &&
+          current < pdfDoc.numPages &&
+          !isRendering
+        ) {
+          render(current + 1);
+        }
+      });
+
+      // Prevent context menu for anti-screenshot UX
+      window.addEventListener("contextmenu", function (e) {
+        if (e.target === cvs || slideCard.contains(e.target)) {
+          e.preventDefault();
+        }
+      });
+
+      function loadDocAndRender(pageToShow = 1, retry = 0) {
+        pdfjsLib
+          .getDocument(url)
+          .promise.then((pdf) => {
+            pdfDoc = pdf;
+            totEl.textContent = pdf.numPages;
+            pdfOriginalWidth = null;
+            pdfOriginalHeight = null;
+            render(pageToShow, retry);
+            startTimer();
+          })
+          .catch(() => {
+            showError("Failed to load PDF document. Please reload.");
+          });
+      }
+
+      // AFK logic
+      let afkTimer = null;
+      let afkModalTimeout = null;
+      function showAfkModal() {
+        afkModal.innerHTML = `<div class="afk-modal-bg">
+          <div class="afk-modal">
+            <div><b>You have been inactive for 15 minutes.</b></div>
+            <div class="mt-2">For your security, you have been logged out.<br>
+            Please <a href="/login">login again</a> to continue.</div>
+          </div>
+        </div>`;
+        afkModal.style.display = "block";
+        afkModal.focus();
+        afkModalTimeout = setTimeout(() => {
+          window.location.href = "/login";
+        }, 6000);
+      }
+      function resetAfkTimer() {
+        if (afkTimer) clearTimeout(afkTimer);
+        if (afkModalTimeout) clearTimeout(afkModalTimeout);
+        afkModal.style.display = "none";
+        afkModal.innerHTML = "";
+        afkTimer = setTimeout(showAfkModal, 15 * 60 * 1000); // 15 min
+      }
+      ["mousemove", "keydown", "mousedown", "touchstart", "scroll"].forEach(
+        (evt) => window.addEventListener(evt, resetAfkTimer, true)
+      );
+      resetAfkTimer();
+
+      // Load PDF and setup
+      loadDocAndRender(1);
+
+      btnP.onclick = () => {
+        if (current > 1 && !isRendering) render(current - 1);
+      };
+      btnN.onclick = () => {
+        if (pdfDoc && current < pdfDoc.numPages && !isRendering)
+          render(current + 1);
+      };
+      window.addEventListener("resize", () => render(current));
+    </script>
+  </body>
+</html>

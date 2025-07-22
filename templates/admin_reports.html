@@ -1,0 +1,92 @@
+{% extends 'admin_base.html' %} {% block title %}Reports{% endblock %} {% block
+content %}
+
+<div class="container mt-4">
+  <h1 class="text-center mb-4">User & Organization Reports</h1>
+
+  <!-- Search Form -->
+  <form method="get" class="row g-2 align-items-center mb-4">
+    <div class="col-auto">
+      <input
+        type="text"
+        name="search"
+        class="form-control"
+        placeholder="Search users, departments…"
+        value="{{ search }}"
+      />
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary">Filter</button>
+    </div>
+  </form>
+
+  <!-- Download Section (updated) -->
+  <h3>Download Reports</h3>
+  <div class="list-group mb-4">
+    <a
+      href="{{ url_for('admin_routes.download_report', type='course_progress', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-chart-line me-2"></i> Course Progress</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='exam_performance', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-trophy me-2"></i> Exam Performance</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='special_exams', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-star-half-alt me-2"></i> Special Exams</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='users', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-user me-2"></i> Users</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='departments', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-building me-2"></i> Departments</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='courses', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-book me-2"></i> Courses</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='exams', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-clipboard-check me-2"></i> Exams</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='leaderboard', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-medal me-2"></i> Leaderboard</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='inactive_users', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-user-slash me-2"></i> Inactive Users</a
+    >
+
+    <!-- Newly added links for Incorrect Answers and Top 10 Missed Questions -->
+    <a
+      href="{{ url_for('admin_routes.download_report', type='incorrect_answers', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-times-circle me-2"></i> Incorrect Answers</a
+    >
+    <a
+      href="{{ url_for('admin_routes.download_report', type='incorrect_top10', search=search) }}"
+      class="list-group-item list-group-item-action"
+      ><i class="fas fa-list-ol me-2"></i> Top 10 Missed Questions</a
+    >
+  </div>
+
+  <a
+    href="{{ url_for('admin_routes.custom_report', search=search) }}"
+    class="btn btn-outline-info"
+  >
+    <i class="fas fa-sliders-h"></i> Custom Report Builder
+  </a>
+</div>
+{% endblock %}

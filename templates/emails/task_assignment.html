@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🆕 New Task Assigned</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f7f9;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 600px;
+        margin: 40px auto;
+        background-color: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background-color: #007bff;
+        color: #fff;
+        text-align: center;
+        padding: 20px;
+      }
+      .header h2 {
+        margin: 0;
+        font-size: 24px;
+      }
+      .content {
+        padding: 20px 30px;
+      }
+      .content p {
+        font-size: 14px;
+        line-height: 1.6;
+        color: #333;
+        margin: 10px 0;
+      }
+      .details-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+      }
+      .details-table th,
+      .details-table td {
+        border: 1px solid #ddd;
+        padding: 10px;
+        text-align: left;
+        font-size: 14px;
+      }
+      .details-table th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+      }
+      .button-container {
+        text-align: center;
+        margin: 30px 0;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 24px;
+        font-size: 14px;
+        color: #fff;
+        background-color: #28a745;
+        text-decoration: none;
+        border-radius: 4px;
+      }
+      .button:hover {
+        background-color: #218838;
+      }
+      .footer {
+        background-color: #f8f9fa;
+        text-align: center;
+        padding: 15px;
+        font-size: 12px;
+        color: #777;
+        border-top: 1px solid #ddd;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <div class="header">
+        <h2>🆕 New Task Assigned</h2>
+      </div>
+
+      <!-- Body -->
+      <div class="content">
+        <p>Hello {{ user.first_name }},</p>
+        <p>You have a new task. Please see the details below:</p>
+
+        <!-- Task Details Table -->
+        <table class="details-table">
+          <tr>
+            <th>📋 Title</th>
+            <td>{{ task.title }}</td>
+          </tr>
+          <tr>
+            <th>📝 Description</th>
+            <td>{{ task.description }}</td>
+          </tr>
+          <tr>
+            <th>📅 Due Date</th>
+            <td>{{ task.due_date.strftime('%Y-%m-%d') }}</td>
+          </tr>
+          <tr>
+            <th>⚡ Priority</th>
+            <td>{{ task.priority }}</td>
+          </tr>
+          <tr>
+            <th>👤 Assigned By</th>
+            <td>
+              {{ task.assigned_by_user.first_name }} {{
+              task.assigned_by_user.last_name }}
+            </td>
+          </tr>
+          {% if task.documents %}
+          <tr>
+            <th>📎 Attachments</th>
+            <td>
+              <ul style="margin: 0; padding-left: 20px; font-size: 14px">
+                {% for doc in task.documents %}
+                <li>{{ doc.filename }}</li>
+                {% endfor %}
+              </ul>
+            </td>
+          </tr>
+          {% endif %}
+        </table>
+
+        <!-- Call to Action -->
+        <div class="button-container">
+          <a
+            href="{{ url_for('task_routes.view_task', task_id=task.id, _external=True) }}"
+            class="button"
+          >
+            View &amp; Update Task
+          </a>
+        </div>
+
+        <p>Best regards,<br />Collective Intranet Team</p>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <p>This is an automated message. Please do not reply.</p>
+        <p>© 2025 Collective Intranet System</p>
+      </div>
+    </div>
+  </body>
+</html>

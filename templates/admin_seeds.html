@@ -1,0 +1,816 @@
+{% extends 'admin_base.html' %} {% block title %}Manage All Seeds{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h1 class="mb-4">🛠️ Manage Seed Data</h1>
+
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %} {% if
+  messages %}
+  <div class="mt-3">
+    {% for category, msg in messages %}
+    <div
+      class="alert alert-{{ 'danger' if category == 'error' else ('warning' if category == 'warning' else 'success') }} alert-sm"
+    >
+      {{ msg }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %} {% endwith %}
+
+  <!-- Dropdown to pick which seed‐section to show -->
+  <div class="mb-4">
+    <label for="seedSelect" class="form-label fw-bold">Choose Seed Type:</label>
+    <select id="seedSelect" class="form-select w-auto d-inline-block mb-2">
+      <option value="roles">Roles</option>
+      <option value="designations">Designations</option>
+      <option value="departments">Departments</option>
+      <option value="clients">Clients</option>
+      <option value="levels">Levels</option>
+      <option value="areas">Areas</option>
+      <option value="categories">Categories</option>
+    </select>
+  </div>
+
+  <!-- ROLES Section -->
+  <div id="seed-roles" class="seed-section">
+    <div class="card mb-4">
+      <div class="card-header"><h2 class="h5 mb-0">Roles</h2></div>
+      <div class="card-body">
+        <!-- Add New Role -->
+        <form
+          class="row gx-2 mb-3"
+          method="POST"
+          action="{{ url_for('admin_routes.add_role') }}"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="col-auto">
+            <input
+              type="text"
+              class="form-control form-control-sm"
+              name="role_name"
+              placeholder="New role name"
+              required
+            />
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-primary btn-sm">
+              Add Role
+            </button>
+          </div>
+        </form>
+
+        <!-- Existing Roles Table -->
+        <table
+          class="table table-bordered table-striped table-hover table-sm mb-0"
+        >
+          <thead class="table-light">
+            <tr>
+              <th style="width: 50px">#</th>
+              <th>Name</th>
+              <th style="width: 120px">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for role in roles %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <!-- Edit Role: single field in a single cell -->
+              <td>
+                <form
+                  method="POST"
+                  action="{{ url_for('admin_routes.edit_role', id=role.id) }}"
+                  class="d-flex gap-2"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
+                  <input
+                    type="text"
+                    name="role_name"
+                    class="form-control form-control-sm"
+                    value="{{ role.name }}"
+                    required
+                  />
+                  <button
+                    class="btn btn-success btn-sm"
+                    type="submit"
+                    title="Save"
+                  >
+                    <i class="fas fa-save"></i>
+                  </button>
+                </form>
+              </td>
+              <!-- Delete Role -->
+              <td class="text-center">
+                <form
+                  method="POST"
+                  action="{{ url_for('admin_routes.delete_role', id=role.id) }}"
+                  onsubmit="return confirm('Delete this role?');"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
+                  <button
+                    type="submit"
+                    class="btn btn-danger btn-sm"
+                    title="Delete"
+                  >
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center">No roles defined.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- DESIGNATIONS Section -->
+  <div id="seed-designations" class="seed-section" style="display: none">
+    <div class="card mb-4">
+      <div class="card-header"><h2 class="h5 mb-0">Designations</h2></div>
+      <div class="card-body">
+        <!-- Add New Designation -->
+        <form
+          class="row gx-2 mb-3"
+          method="POST"
+          action="{{ url_for('admin_routes.add_designation') }}"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="col">
+            <input
+              type="text"
+              class="form-control form-control-sm"
+              name="desig_title"
+              placeholder="Title"
+              required
+            />
+          </div>
+          <div class="col">
+            <input
+              type="number"
+              class="form-control form-control-sm"
+              name="desig_starting_level"
+              placeholder="Starting Level"
+              min="1"
+              required
+            />
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-primary btn-sm">
+              Add Designation
+            </button>
+          </div>
+        </form>
+
+        <!-- Existing Designations Table -->
+        <table
+          class="table table-bordered table-striped table-hover table-sm mb-0"
+        >
+          <thead class="table-light">
+            <tr>
+              <th style="width: 50px">#</th>
+              <th>Title &amp; Starting Level</th>
+              <th style="width: 120px">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for desig in designations %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <!-- Edit both fields (title + starting_level) inside one cell -->
+              <td>
+                <form
+                  method="POST"
+                  action="{{ url_for('admin_routes.edit_designation', id=desig.id) }}"
+                  class="d-flex gap-2"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
+                  <input
+                    type="text"
+                    name="desig_title"
+                    class="form-control form-control-sm"
+                    value="{{ desig.title }}"
+                    required
+                  />
+                  <input
+                    type="number"
+                    name="desig_starting_level"
+                    class="form-control form-control-sm"
+                    value="{{ desig.starting_level }}"
+                    min="1"
+                    required
+                  />
+                  <button
+                    class="btn btn-success btn-sm"
+                    type="submit"
+                    title="Save"
+                  >
+                    <i class="fas fa-save"></i>
+                  </button>
+                </form>
+              </td>
+              <!-- Delete Designation -->
+              <td class="text-center">
+                <form
+                  method="POST"
+                  action="{{ url_for('admin_routes.delete_designation', id=desig.id) }}"
+                  onsubmit="return confirm('Delete this designation?');"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
+                  <button
+                    type="submit"
+                    class="btn btn-danger btn-sm"
+                    title="Delete"
+                  >
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center">No designations defined.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEPARTMENTS Section -->
+  <div id="seed-departments" class="seed-section" style="display: none">
+    <div class="card mb-4">
+      <div class="card-header"><h2 class="h5 mb-0">Departments</h2></div>
+      <div class="card-body">
+        <!-- Add New Department -->
+        <form
+          class="row gx-2 mb-3"
+          method="POST"
+          action="{{ url_for('admin_routes.add_department') }}"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="col">
+            <input
+              type="text"
+              name="dept_name"
+              class="form-control form-control-sm"
+              placeholder="New department"
+              required
+            />
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-primary btn-sm">
+              Add Department
+            </button>
+          </div>
+        </form>
+
+        <!-- Existing Departments Table -->
+        <table
+          class="table table-bordered table-striped table-hover table-sm mb-0"
+        >
+          <thead class="table-light">
+            <tr>
+              <th style="width: 50px">#</th>
+              <th>Name</th>
+              <th style="width: 120px">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for dept in departments %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <!-- Edit Department Name -->
+              <td>
+                <form
+                  method="POST"
+                  action="{{ url_for('admin_routes.edit_department', id=dept.id) }}"
+                  class="d-flex gap-2"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
+                  <input
+                    type="text"
+                    name="dept_name"
+                    class="form-control form-control-sm"
+                    value="{{ dept.name }}"
+                    required
+                  />
+                  <button
+                    class="btn btn-success btn-sm"
+                    type="submit"
+                    title="Save"
+                  >
+                    <i class="fas fa-save"></i>
+                  </button>
+                </form>
+              </td>
+              <!-- Delete Department -->
+              <td class="text-center">
+                <form
+                  method="POST"
+                  action="{{ url_for('admin_routes.delete_department', id=dept.id) }}"
+                  onsubmit="return confirm('Delete this department?');"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
+                  <button
+                    type="submit"
+                    class="btn btn-danger btn-sm"
+                    title="Delete"
+                  >
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center">No departments defined.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLIENTS Section -->
+  <div id="seed-clients" class="seed-section" style="display: none">
+    <div class="card mb-4">
+      <div class="card-header"><h2 class="h5 mb-0">Clients</h2></div>
+      <div class="card-body">
+        <!-- Add New Client -->
+        <form
+          class="row gx-2 mb-3"
+          method="POST"
+          action="{{ url_for('admin_routes.add_client') }}"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="col">
+            <input
+              type="text"
+              name="client_name"
+              class="form-control form-control-sm"
+              placeholder="New client name"
+              required
+            />
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-primary btn-sm">
+              Add Client
+            </button>
+          </div>
+        </form>
+
+        <!-- Existing Clients Table -->
+        <table
+          class="table table-bordered table-striped table-hover table-sm mb-0"
+        >
+          <thead class="table-light">
+            <tr>
+              <th style="width: 50px">#</th>
+              <th>Name</th>
+              <th style="width: 120px">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for client in clients %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <!-- Edit Client Name -->
+              <td>
+                <form
+                  method="POST"
+                  action="{{ url_for('admin_routes.edit_client', id=client.id) }}"
+                  class="d-flex gap-2"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
+                  <input
+                    type="text"
+                    name="client_name"
+                    class="form-control form-control-sm"
+                    value="{{ client.name }}"
+                    required
+                  />
+                  <button
+                    class="btn btn-success btn-sm"
+                    type="submit"
+                    title="Save"
+                  >
+                    <i class="fas fa-save"></i>
+                  </button>
+                </form>
+              </td>
+              <!-- Delete Client -->
+              <td class="text-center">
+                <form
+                  method="POST"
+                  action="{{ url_for('admin_routes.delete_client', id=client.id) }}"
+                  onsubmit="return confirm('Delete this client?');"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
+                  <button
+                    type="submit"
+                    class="btn btn-danger btn-sm"
+                    title="Delete"
+                  >
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center">No clients defined.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEVELS Section -->
+  <div id="seed-levels" class="seed-section" style="display: none">
+    <div class="card mb-4">
+      <div class="card-header"><h2 class="h5 mb-0">Levels</h2></div>
+      <div class="card-body">
+        <!-- Add New Level -->
+        <form
+          class="row gx-2 mb-3"
+          method="POST"
+          action="{{ url_for('admin_routes.add_level') }}"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="col">
+            <input
+              type="number"
+              name="level_number"
+              class="form-control form-control-sm"
+              placeholder="# (e.g. 1)"
+              min="1"
+              required
+            />
+          </div>
+          <div class="col">
+            <input
+              type="text"
+              name="level_title"
+              class="form-control form-control-sm"
+              placeholder="Title (e.g. Beginner)"
+              required
+            />
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-primary btn-sm">
+              Add Level
+            </button>
+          </div>
+        </form>
+
+        <!-- Existing Levels Table -->
+        <table
+          class="table table-bordered table-striped table-hover table-sm mb-0"
+        >
+          <thead class="table-light">
+            <tr>
+              <th style="width: 50px">#</th>
+              <th>Level Number &amp; Title</th>
+              <th style="width: 120px">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lvl in levels %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <!-- Edit both fields (level_number + title) in one cell -->
+              <td>
+                <form
+                  method="POST"
+                  action="{{ url_for('admin_routes.edit_level', id=lvl.id) }}"
+                  class="d-flex gap-2"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
+                  <input
+                    type="number"
+                    name="level_number"
+                    class="form-control form-control-sm"
+                    value="{{ lvl.level_number }}"
+                    min="1"
+                    required
+                  />
+                  <input
+                    type="text"
+                    name="level_title"
+                    class="form-control form-control-sm"
+                    value="{{ lvl.title }}"
+                    required
+                  />
+                  <button
+                    class="btn btn-success btn-sm"
+                    type="submit"
+                    title="Save"
+                  >
+                    <i class="fas fa-save"></i>
+                  </button>
+                </form>
+              </td>
+              <!-- Delete Level -->
+              <td class="text-center">
+                <form
+                  method="POST"
+                  action="{{ url_for('admin_routes.delete_level', id=lvl.id) }}"
+                  onsubmit="return confirm('Delete this level?');"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
+                  <button
+                    type="submit"
+                    class="btn btn-danger btn-sm"
+                    title="Delete"
+                  >
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center">No levels defined.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- AREAS Section -->
+  <div id="seed-areas" class="seed-section" style="display: none">
+    <div class="card mb-4">
+      <div class="card-header"><h2 class="h5 mb-0">Areas</h2></div>
+      <div class="card-body">
+        <!-- Add New Area -->
+        <form
+          class="row gx-2 mb-3"
+          method="POST"
+          action="{{ url_for('admin_routes.add_area') }}"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="col">
+            <input
+              type="text"
+              name="area_name"
+              class="form-control form-control-sm"
+              placeholder="New area name"
+              required
+            />
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-primary btn-sm">
+              Add Area
+            </button>
+          </div>
+        </form>
+
+        <!-- Existing Areas Table -->
+        <table
+          class="table table-bordered table-striped table-hover table-sm mb-0"
+        >
+          <thead class="table-light">
+            <tr>
+              <th style="width: 50px">#</th>
+              <th>Name</th>
+              <th style="width: 120px">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for area in areas %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <!-- Edit Area Name -->
+              <td>
+                <form
+                  method="POST"
+                  action="{{ url_for('admin_routes.edit_area', id=area.id) }}"
+                  class="d-flex gap-2"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
+                  <input
+                    type="text"
+                    name="area_name"
+                    class="form-control form-control-sm"
+                    value="{{ area.name }}"
+                    required
+                  />
+                  <button
+                    class="btn btn-success btn-sm"
+                    type="submit"
+                    title="Save"
+                  >
+                    <i class="fas fa-save"></i>
+                  </button>
+                </form>
+              </td>
+              <!-- Delete Area -->
+              <td class="text-center">
+                <form
+                  method="POST"
+                  action="{{ url_for('admin_routes.delete_area', id=area.id) }}"
+                  onsubmit="return confirm('Delete this area?');"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
+                  <button
+                    type="submit"
+                    class="btn btn-danger btn-sm"
+                    title="Delete"
+                  >
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center">No areas defined.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CATEGORIES Section -->
+  <div id="seed-categories" class="seed-section" style="display: none">
+    <div class="card mb-4">
+      <div class="card-header"><h2 class="h5 mb-0">Categories</h2></div>
+      <div class="card-body">
+        <!-- Add New Category -->
+        <form
+          class="row gx-2 mb-3"
+          method="POST"
+          action="{{ url_for('admin_routes.add_category') }}"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="col">
+            <input
+              type="text"
+              name="category_name"
+              class="form-control form-control-sm"
+              placeholder="New category name"
+              required
+            />
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-primary btn-sm">
+              Add Category
+            </button>
+          </div>
+        </form>
+
+        <!-- Existing Categories Table -->
+        <table
+          class="table table-bordered table-striped table-hover table-sm mb-0"
+        >
+          <thead class="table-light">
+            <tr>
+              <th style="width: 50px">#</th>
+              <th>Name</th>
+              <th style="width: 120px">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cat in categories %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <!-- Edit Category Name -->
+              <td>
+                <form
+                  method="POST"
+                  action="{{ url_for('admin_routes.edit_category', id=cat.id) }}"
+                  class="d-flex gap-2"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
+                  <input
+                    type="text"
+                    name="category_name"
+                    class="form-control form-control-sm"
+                    value="{{ cat.name }}"
+                    required
+                  />
+                  <button
+                    class="btn btn-success btn-sm"
+                    type="submit"
+                    title="Save"
+                  >
+                    <i class="fas fa-save"></i>
+                  </button>
+                </form>
+              </td>
+              <!-- Delete Category -->
+              <td class="text-center">
+                <form
+                  method="POST"
+                  action="{{ url_for('admin_routes.delete_category', id=cat.id) }}"
+                  onsubmit="return confirm('Delete this category?');"
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                  />
+                  <button
+                    type="submit"
+                    class="btn btn-danger btn-sm"
+                    title="Delete"
+                  >
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center">No categories defined.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Show/hide seed sections based on dropdown selection
+  document.addEventListener("DOMContentLoaded", function () {
+    const select = document.getElementById("seedSelect");
+    const sections = document.querySelectorAll(".seed-section");
+
+    function showSection(val) {
+      sections.forEach((sec) => (sec.style.display = "none"));
+      const active = document.getElementById("seed-" + val);
+      if (active) active.style.display = "";
+    }
+
+    select.addEventListener("change", (e) => showSection(e.target.value));
+    // Initial show (on page load)
+    showSection(select.value);
+  });
+</script>
+{% endblock %}

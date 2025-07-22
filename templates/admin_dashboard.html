@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard – Collective Intranet</title>
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --brand-red: #ba1e24;
+        --brand-dark: #23272f;
+        --brand-blue: #2563eb;
+        --brand-green: #22c55e;
+        --brand-yellow: #ffbe0b;
+        --brand-purple: #6f42c1;
+        --brand-orange: #fd7e14;
+        --brand-teal: #20c997;
+        --brand-pink: #e83e8c;
+        --brand-brown: #634242;
+        --brand-cyan: #0dcaf0;
+        --brand-gray: #adb5bd;
+        --brand-bg: linear-gradient(135deg, #f7faff 65%, #e3eeff 100%);
+        --brand-light: #fff;
+        --brand-shadow: 0 6px 24px rgba(44, 62, 80, 0.1);
+        --card-radius: 1.1rem;
+        --transition: 0.22s cubic-bezier(0.26, 1, 0.48, 1);
+        --main-text: #23272f;
+        --card-text: #23272f;
+        --logo-black: #23272f;
+        --nav-bg: #fff;
+        --footer-bg: #23272f;
+      }
+      .dark-theme {
+        --brand-bg: linear-gradient(135deg, #191c22 60%, #23252b 100%);
+        --brand-light: #23252b;
+        --brand-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
+        --main-text: #f2f2f2;
+        --card-text: #f2f2f2;
+        --logo-black: #fff;
+        --nav-bg: #181b20;
+        --footer-bg: #181b20;
+      }
+      html,
+      body {
+        min-height: 100vh;
+        background: var(--brand-bg);
+        color: var(--main-text);
+        font-family: "Inter", Arial, sans-serif;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        transition: background 0.5s;
+        background-attachment: fixed;
+      }
+      /* Animated background dots */
+      .animated-bg {
+        position: fixed;
+        z-index: 0;
+        width: 100vw;
+        height: 100vh;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .dot {
+        position: absolute;
+        border-radius: 50%;
+        opacity: 0.07;
+        animation: floatDot 14s linear infinite alternate;
+        filter: blur(1.2px);
+      }
+      @keyframes floatDot {
+        to {
+          transform: translateY(-60px) scale(1.2) rotate(15deg);
+          opacity: 0.13;
+        }
+      }
+      /* Top Bar */
+      .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background: var(--nav-bg);
+        border-bottom: 1px solid #eee;
+        box-shadow: 0 2px 8px rgba(44, 62, 80, 0.04);
+        z-index: 10;
+        position: relative;
+      }
+      .logo-section {
+        display: flex;
+        align-items: center;
+      }
+      .logo-section img {
+        height: 44px;
+        margin-right: 0.95rem;
+        filter: drop-shadow(0 2px 8px rgba(44, 62, 80, 0.07));
+        transition: filter 0.2s;
+      }
+      .logo {
+        font-size: 1.6rem;
+        font-weight: bold;
+        letter-spacing: 0.04em;
+        display: flex;
+        align-items: center;
+        user-select: none;
+      }
+      .logo .black {
+        color: var(--logo-black);
+        transition: color 0.2s;
+      }
+      .logo .red {
+        color: var(--brand-red);
+      }
+      .btn-logout {
+        background: var(--brand-red);
+        color: #fff;
+        padding: 0.38rem 0.85rem;
+        border-radius: 0.42rem;
+        font-weight: 600;
+        text-decoration: none;
+        border: none;
+        transition: background var(--transition), color var(--transition);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 1.05rem;
+      }
+      .btn-logout:hover {
+        background: #a2181a;
+        color: #fff;
+        transform: scale(1.04);
+      }
+      .btn.btn-dark {
+        background-color: var(--brand-dark);
+        border: none;
+      }
+      .btn.btn-dark:hover {
+        background-color: #12141a;
+      }
+
+      /* Floating Dark Mode Toggle */
+      .theme-toggle-fab {
+        position: fixed;
+        right: 32px;
+        bottom: 65px;
+        z-index: 1200;
+        background: var(--nav-bg);
+        color: #ffe66d;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.09);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.26rem;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
+        opacity: 0.93;
+      }
+      .theme-toggle-fab:hover,
+      .theme-toggle-fab:focus-visible {
+        background: #24262e;
+        color: #fffbe6;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.16);
+        transform: scale(1.13) rotate(-10deg);
+      }
+      @media (max-width: 650px) {
+        .theme-toggle-fab {
+          right: 10px;
+          bottom: 67px;
+          width: 32px;
+          height: 32px;
+          font-size: 1.06rem;
+        }
+      }
+      /* Main Container */
+      .container {
+        flex: 1;
+        margin: 2.4rem auto 1.2rem auto;
+        max-width: 1240px;
+        background: rgba(255, 255, 255, 0.93);
+        color: var(--main-text);
+        padding: 2.2rem 1.2rem 1.5rem 1.2rem;
+        border-radius: 1.5rem;
+        box-shadow: var(--brand-shadow);
+        transition: background 0.3s, color 0.3s;
+        position: relative;
+        z-index: 1;
+        backdrop-filter: blur(2.5px);
+        margin-bottom: 2.5rem !important; /* for footer */
+      }
+      .dark-theme .container {
+        background: rgba(35, 39, 47, 0.91);
+      }
+
+      /* Dashboard Cards */
+      .row.g-3 {
+        --bs-gutter-x: 1.2rem;
+        --bs-gutter-y: 1.2rem;
+      }
+      .row.g-3 .card {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 155px;
+        max-width: 235px;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 1.1rem 0.2rem 0.6rem 0.2rem;
+        transition: transform var(--transition), box-shadow var(--transition),
+          background 0.3s, color 0.3s;
+        border-radius: 1.1rem;
+        box-shadow: 0 6px 24px rgba(44, 62, 80, 0.11);
+        font-weight: 500;
+        color: var(--card-text);
+        border: none;
+        overflow: hidden;
+        position: relative;
+        background-size: 180% 180%;
+        background-position: top left;
+        animation: cardGradientMove 8s linear infinite alternate;
+        text-align: center;
+      }
+      @keyframes cardGradientMove {
+        0% {
+          background-position: 0 0;
+        }
+        100% {
+          background-position: 100% 100%;
+        }
+      }
+      .row.g-3 .card .fa,
+      .row.g-3 .card .fas {
+        font-size: 2.1rem;
+        margin-bottom: 0.53rem;
+        margin-top: 0.1rem;
+        display: inline-block;
+        animation: bounceIcon 2.5s infinite;
+      }
+      @keyframes bounceIcon {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-8px);
+        }
+      }
+      .row.g-3 .card:hover {
+        transform: translateY(-8px) scale(1.04) rotate(-1deg);
+        box-shadow: 0 14px 36px rgba(44, 62, 80, 0.15);
+        z-index: 2;
+      }
+      .card-title {
+        font-size: 1.12rem;
+        margin-bottom: 0.5rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        color: var(--card-text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      .card .card-body {
+        width: 100%;
+        padding: 0.21rem 0.1rem 0 0.1rem;
+        z-index: 1;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .card .card-body p,
+      .card .card-body small {
+        margin: 0.12rem 0;
+        width: 100%;
+      }
+      .card .card-body p {
+        font-size: 1rem;
+        font-weight: 600;
+      }
+      .card .card-body a {
+        font-weight: 700;
+        font-size: 1.01rem;
+      }
+      .card .card-body small {
+        margin-top: 0.12rem;
+        font-size: 0.93rem;
+      }
+      /* Card colors for clarity & modern effect */
+      .card.bg-primary {
+        background: linear-gradient(
+          135deg,
+          var(--brand-blue) 85%,
+          #7ea3f7 100%
+        ) !important;
+        color: #fff !important;
+      }
+      .card.bg-success {
+        background: linear-gradient(
+          140deg,
+          var(--brand-green) 75%,
+          #7af5c9 100%
+        ) !important;
+        color: #fff !important;
+      }
+      .card.bg-info {
+        background: linear-gradient(
+          135deg,
+          var(--brand-cyan) 75%,
+          #b9e8ff 100%
+        ) !important;
+        color: #23272f !important;
+      }
+      .card.bg-warning {
+        background: linear-gradient(
+          135deg,
+          var(--brand-yellow) 85%,
+          #ffedc2 100%
+        ) !important;
+        color: #23272f !important;
+      }
+      .card.bg-purple {
+        background: linear-gradient(
+          135deg,
+          var(--brand-purple) 80%,
+          #c5a5f7 100%
+        ) !important;
+        color: #fff !important;
+      }
+      .card.bg-teal {
+        background: linear-gradient(
+          135deg,
+          var(--brand-teal) 80%,
+          #b8fff6 100%
+        ) !important;
+        color: #fff !important;
+      }
+      .card.bg-pink {
+        background: linear-gradient(
+          135deg,
+          var(--brand-pink) 90%,
+          #ffd6ef 100%
+        ) !important;
+        color: #fff !important;
+      }
+      .card.bg-brown {
+        background: linear-gradient(
+          135deg,
+          var(--brand-brown) 80%,
+          #bba4a4 100%
+        ) !important;
+        color: #fff !important;
+      }
+      /* Admin Tools Nav */
+      .nav-section {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        justify-content: center;
+        margin: 2rem 0 1.1rem 0;
+        z-index: 1;
+        position: relative;
+      }
+      .nav-section .btn {
+        min-width: 140px;
+        font-weight: 600;
+        border: none;
+        border-radius: 0.55rem;
+        box-shadow: 0 3px 11px rgba(44, 62, 80, 0.08);
+        transition: transform var(--transition), box-shadow var(--transition),
+          background var(--transition), color var(--transition), filter 0.22s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1.01rem;
+        background-size: 160%;
+        background-position: right;
+        position: relative;
+        padding: 0.65rem 0.25rem;
+      }
+      .nav-section .btn:focus-visible {
+        outline: 2px solid #ffdd57;
+      }
+      .nav-section .btn:hover {
+        transform: translateY(-3px) scale(1.05) rotate(-1deg);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+        filter: brightness(1.08);
+        z-index: 2;
+      }
+      .nav-section .btn .fa,
+      .nav-section .btn .fas {
+        font-size: 1.13rem;
+        margin-right: 0.25em;
+        animation: pulseGlow 2.7s infinite;
+      }
+      @keyframes pulseGlow {
+        0%,
+        100% {
+          filter: drop-shadow(0 0 0px #fff4);
+        }
+        50% {
+          filter: drop-shadow(0 0 7px #ffed99);
+        }
+      }
+      .nav-section .btn-info {
+        background: linear-gradient(90deg, var(--brand-cyan) 80%, #e7faff 100%);
+        color: #23272f;
+      }
+      .nav-section .btn-dark {
+        background: linear-gradient(90deg, var(--brand-dark) 80%, #3b3c4a 100%);
+        color: #fff;
+      }
+      .nav-section .btn-primary {
+        background: linear-gradient(90deg, var(--brand-blue) 78%, #a5c9fa 100%);
+        color: #fff;
+      }
+      .nav-section .btn-success {
+        background: linear-gradient(
+          90deg,
+          var(--brand-green) 78%,
+          #b4ffd2 100%
+        );
+        color: #fff;
+      }
+      .nav-section .btn-warning {
+        background: linear-gradient(
+          90deg,
+          var(--brand-yellow) 78%,
+          #fff9d1 100%
+        );
+        color: #23272f;
+      }
+      .nav-section .btn-danger {
+        background: linear-gradient(90deg, var(--brand-red) 81%, #ffe7e7 100%);
+        color: #fff;
+      }
+      .nav-section .btn-secondary {
+        background: linear-gradient(90deg, var(--brand-gray) 80%, #e5e5e5 100%);
+        color: #23272f;
+      }
+      .nav-section .btn-purple {
+        background: linear-gradient(
+          90deg,
+          var(--brand-purple) 80%,
+          #e8d8ff 100%
+        );
+        color: #fff;
+      }
+      .nav-section .btn-teal {
+        background: linear-gradient(90deg, var(--brand-teal) 80%, #c4fff6 100%);
+        color: #fff;
+      }
+      .nav-section .btn-orange {
+        background: linear-gradient(
+          90deg,
+          var(--brand-orange) 80%,
+          #ffe5d1 100%
+        );
+        color: #fff;
+      }
+      .nav-section .btn-pink {
+        background: linear-gradient(90deg, var(--brand-pink) 80%, #ffdbe9 100%);
+        color: #fff;
+      }
+      .nav-section .btn-brown {
+        background: linear-gradient(
+          90deg,
+          var(--brand-brown) 80%,
+          #e5dede 100%
+        );
+        color: #fff;
+      }
+      .nav-section .btn-outline {
+        background: #fff;
+        color: #23272f;
+        border: 1px solid #dee2e6;
+      }
+      @media (max-width: 900px) {
+        .container {
+          padding: 1.1rem;
+        }
+        .row.g-3 {
+          --bs-gutter-x: 0.5rem;
+        }
+      }
+      @media (max-width: 600px) {
+        .container {
+          padding: 0.6rem;
+        }
+        .row.g-3 .card {
+          font-size: 0.95rem;
+          min-height: 120px;
+          max-width: 98vw;
+        }
+        .nav-section .btn {
+          min-width: 100%;
+        }
+      }
+      /* Heading Animations */
+      .dashboard-heading {
+        text-align: center;
+        margin-bottom: 2.2rem;
+        margin-top: 0.7rem;
+        font-size: 2.25rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        background: linear-gradient(
+          90deg,
+          #2563eb 20%,
+          #ffbe0b 60%,
+          #ba1e24 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: gradientMove 7s linear infinite alternate;
+      }
+      @keyframes gradientMove {
+        0% {
+          background-position: 0 50%;
+        }
+        100% {
+          background-position: 100% 50%;
+        }
+      }
+      /* Footer - black, small, not fixed */
+      footer {
+        background: #23272f;
+        color: #fff;
+        text-align: center;
+        padding: 0.55rem 0 0.55rem 0;
+        letter-spacing: 0.01em;
+        font-size: 0.98rem;
+        font-weight: 500;
+        z-index: 2;
+        box-shadow: 0 -2px 10px #23272f09;
+        border-top-left-radius: 0.7rem;
+        border-top-right-radius: 0.7rem;
+        margin-top: 0.7rem;
+      }
+      @media (max-width: 650px) {
+        footer {
+          font-size: 0.93rem;
+          padding: 0.45rem 0 0.45rem 0;
+          border-top-left-radius: 0.35rem;
+          border-top-right-radius: 0.35rem;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Animated Background Dots -->
+    <div class="animated-bg" aria-hidden="true"></div>
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <a
+        href="{{ url_for('general_routes.hr_management') }}"
+        class="btn btn-sm btn-dark"
+      >
+        <i class="fas fa-arrow-left" aria-hidden="true"></i> Back to Management
+      </a>
+      <div class="logo-section">
+        <img
+          src="{{ url_for('static', filename='images/logo.png') }}"
+          alt="Logo"
+        />
+        <div class="logo">
+          <span class="black">Collect</span><span class="red">ive</span>
+        </div>
+      </div>
+      <a href="{{ url_for('auth_routes.logout') }}" class="btn-logout">
+        <i class="fas fa-sign-out-alt" aria-hidden="true"></i> Logout
+      </a>
+    </div>
+
+    <!-- Floating Dark Mode Toggle -->
+    <button
+      class="theme-toggle-fab"
+      id="themeToggle"
+      aria-label="Toggle dark mode"
+    >
+      <i class="fas fa-moon"></i>
+    </button>
+
+    <!-- Page Content -->
+    <div class="container">
+      <h1 class="dashboard-heading">Admin Dashboard</h1>
+
+      <!-- Metrics Row 1 -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-3">
+          <div class="card bg-primary text-white h-100 shadow">
+            <div class="card-body">
+              <i class="fas fa-users" aria-hidden="true"></i>
+              <div class="card-title mt-1">Users</div>
+              <p><strong>{{ total_users }}</strong> Total</p>
+              <p>
+                <a
+                  href="{{ url_for('admin_routes.view_users', status='verified') }}"
+                  class="text-light text-decoration-underline"
+                >
+                  <strong>{{ active_users }}</strong> Active
+                </a>
+              </p>
+              <small class="opacity-75">Based on user activity</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-success text-white h-100 shadow">
+            <div class="card-body">
+              <i class="fas fa-graduation-cap" aria-hidden="true"></i>
+              <div class="card-title mt-1">Exams</div>
+              <p><strong>{{ total_exams }}</strong> Total</p>
+              <p>Avg Score: <strong>{{ average_exam_score }}%</strong></p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-info text-dark h-100 shadow">
+            <div class="card-body">
+              <i class="fas fa-book" aria-hidden="true"></i>
+              <div class="card-title mt-1">Courses</div>
+              <p><strong>{{ total_study_materials }}</strong> Total</p>
+              <p><strong>{{ restricted_courses }}</strong> Restricted</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-warning text-dark h-100 shadow">
+            <div class="card-body">
+              <i class="fas fa-award" aria-hidden="true"></i>
+              <div class="card-title mt-1">Special Exams</div>
+              <p><strong>{{ special_exam_count }}</strong> Records</p>
+              <p>
+                Pass 1: <strong>{{ special_exam_passed_1 }}</strong> │ Pass 2:
+                <strong>{{ special_exam_passed_2 }}</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metrics Row 2 -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-3">
+          <div class="card bg-purple text-white h-100 shadow">
+            <div class="card-body">
+              <i class="fas fa-id-badge" aria-hidden="true"></i>
+              <div class="card-title mt-1">Designations</div>
+              <p><strong>{{ total_designations }}</strong></p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-teal text-white h-100 shadow">
+            <div class="card-body">
+              <i class="fas fa-handshake" aria-hidden="true"></i>
+              <div class="card-title mt-1">Clients</div>
+              <p><strong>{{ total_clients }}</strong></p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-pink text-white h-100 shadow">
+            <div class="card-body">
+              <i class="fas fa-question-circle" aria-hidden="true"></i>
+              <div class="card-title mt-1">Questions</div>
+              <p><strong>{{ total_questions }}</strong></p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-brown text-white h-100 shadow">
+            <div class="card-body">
+              <i class="fas fa-layer-group" aria-hidden="true"></i>
+              <div class="card-title mt-1">Level Areas</div>
+              <p><strong>{{ total_level_areas or 0 }}</strong></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Tools Nav -->
+      <div class="nav-section">
+        <a
+          href="{{ url_for('admin_routes.view_users') }}"
+          class="btn btn-info"
+          title="Manage users"
+        >
+          <i class="fas fa-users" aria-hidden="true"></i> Manage Users
+        </a>
+        <a
+          href="{{ url_for('admin_routes.view_roles') }}"
+          class="btn btn-dark"
+          title="Manage roles"
+        >
+          <i class="fas fa-user-shield" aria-hidden="true"></i> Manage Roles
+        </a>
+        <a
+          href="{{ url_for('admin_routes.view_courses') }}"
+          class="btn btn-primary"
+          title="Manage courses"
+        >
+          <i class="fas fa-book-open" aria-hidden="true"></i> Manage Courses
+        </a>
+        <a
+          href="{{ url_for('admin_routes.view_exams') }}"
+          class="btn btn-success"
+          title="Manage exams"
+        >
+          <i class="fas fa-file-alt" aria-hidden="true"></i> Manage Exams
+        </a>
+        <a
+          href="{{ url_for('admin_routes.view_analytics') }}"
+          class="btn btn-warning"
+          title="Analytics"
+        >
+          <i class="fas fa-chart-line" aria-hidden="true"></i> Analytics
+        </a>
+        <a
+          href="{{ url_for('admin_routes.generate_reports') }}"
+          class="btn btn-danger"
+          title="View reports"
+        >
+          <i class="fas fa-chart-bar" aria-hidden="true"></i> View Reports
+        </a>
+        <a
+          href="{{ url_for('admin_routes.view_audit_logs') }}"
+          class="btn btn-secondary"
+          title="Audit logs"
+        >
+          <i class="fas fa-history" aria-hidden="true"></i> Audit Logs
+        </a>
+        <a
+          href="{{ url_for('admin_routes.manage_exam_requests') }}"
+          class="btn btn-purple"
+          title="Exam requests"
+        >
+          <i class="fas fa-envelope-open-text" aria-hidden="true"></i> Exam
+          Requests
+        </a>
+        <a
+          href="{{ url_for('admin_routes.incorrect_summary') }}"
+          class="btn btn-teal"
+          title="Incorrect answers summary"
+        >
+          <i class="fas fa-exclamation-circle" aria-hidden="true"></i> Incorrect
+          Answers
+        </a>
+        <a
+          href="{{ url_for('admin_routes.manage_level_areas') }}"
+          class="btn btn-brown"
+          title="Manage level areas"
+        >
+          <i class="fas fa-layer-group" aria-hidden="true"></i> Manage Level
+          Areas
+        </a>
+        <a
+          href="{{ url_for('admin_routes.manage_user_clients') }}"
+          class="btn btn-orange"
+          title="Manage user-clients"
+        >
+          <i class="fas fa-user-friends" aria-hidden="true"></i> Manage
+          User–Clients
+        </a>
+        <a
+          href="{{ url_for('admin_routes.manage_seeds') }}"
+          class="btn btn-success mr-2"
+          title="Manage Seed Data"
+        >
+          <i class="fas fa-database" aria-hidden="true"></i> Manage Seeds
+        </a>
+        <a
+          href="{{ url_for('admin_routes.admin_list_tickets') }}"
+          class="btn btn-info {% if request.endpoint=='admin_routes.admin_list_tickets' %}active{% endif %}"
+          title="Manage Support Tickets"
+        >
+          <i class="fas fa-headset"></i> Support
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>Collective Intranet© 2024</footer>
+
+    <!-- Access Denied Modal -->
+    <div
+      class="modal fade"
+      id="accessDeniedModal"
+      tabindex="-1"
+      aria-labelledby="accessDeniedTitle"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="accessDeniedTitle">Access Denied</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body text-center">
+            <i class="fas fa-ban display-1 text-danger" aria-hidden="true"></i>
+            <p class="mt-3">
+              You don’t have permission to perform that action.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" data-bs-dismiss="modal">
+              Okay
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Dark mode toggle
+      const themeToggle = document.getElementById('themeToggle');
+      const body = document.body;
+      function setTheme(theme) {
+        if (theme === 'dark') {
+          body.classList.add('dark-theme');
+          themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        } else {
+          body.classList.remove('dark-theme');
+          themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+        }
+        localStorage.setItem('theme', theme);
+      }
+      themeToggle?.addEventListener('click', () => {
+        setTheme(body.classList.contains('dark-theme') ? 'light' : 'dark');
+      });
+      (() => {
+        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        setTheme(savedTheme);
+      })();
+
+      {% with msgs = get_flashed_messages(category_filter=['access_denied']) %}
+        {% if msgs %}
+          window.addEventListener('load', () => {
+            const modal = document.getElementById('accessDeniedModal');
+            if (modal) {
+              new bootstrap.Modal(modal).show();
+            }
+          });
+        {% endif %}
+      {% endwith %}
+
+      // Keep session alive by pinging the backend every 5 minutes
+      setInterval(() => {
+        fetch('/ping', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+      }, 300000); // 5 minutes
+
+      // Animated background dots (modern aesthetic)
+      const dotColors = [
+        "var(--brand-blue)", "var(--brand-yellow)", "var(--brand-red)", "var(--brand-green)",
+        "var(--brand-purple)", "var(--brand-cyan)", "var(--brand-teal)",
+        "#fff", "var(--brand-orange)", "var(--brand-pink)"
+      ];
+      function createDots(num) {
+        const bg = document.querySelector('.animated-bg');
+        for (let i = 0; i < num; ++i) {
+          let dot = document.createElement('div');
+          dot.className = 'dot';
+          const size = Math.random() * 42 + 34;
+          dot.style.width = `${size}px`;
+          dot.style.height = `${size}px`;
+          dot.style.left = `${Math.random() * 100}vw`;
+          dot.style.top = `${Math.random() * 100}vh`;
+          dot.style.background = dotColors[Math.floor(Math.random()*dotColors.length)];
+          dot.style.opacity = (Math.random() * 0.06 + 0.04).toFixed(2);
+          dot.style.animationDuration = `${13 + Math.random() * 7}s`;
+          bg.appendChild(dot);
+        }
+      }
+      createDots(11);
+    </script>
+  </body>
+</html>

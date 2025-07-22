@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Collective - Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --brand-red: #ff4d4d;
+        --brand-gold: #ffdd57;
+        --brand-dark: #010305;
+        --brand-light: #f6f8fb;
+        --brand-light2: #fff;
+        --brand-shadow: 0 4px 24px rgba(44, 62, 80, 0.1);
+        --brand-shadow-nav: 0 4px 24px rgba(44, 62, 80, 0.12);
+        --nav-height: 60px;
+        --progress-bg: #e9ecef;
+        --progress-gradient: linear-gradient(90deg, #28a745 0%, #60e860 100%);
+        --card-bg: #fff;
+        --card-text: #23272f;
+        --main-text: #23272f;
+        --nav-bg: rgba(255, 255, 255, 0.85);
+        --footer-bg: #010305;
+        --green: #28a745;
+        --danger: #ff4d4d;
+        --warning: #ffa534;
+        --accent-gradient: linear-gradient(90deg, #ff4d4d 30%, #ffa534 100%);
+      }
+      .dark-theme {
+        --brand-dark: #181b20;
+        --brand-light: #181b20;
+        --brand-light2: #23252b;
+        --brand-shadow: 0 4px 24px rgba(20, 22, 27, 0.21);
+        --brand-shadow-nav: 0 4px 24px rgba(20, 22, 27, 0.21);
+        --progress-bg: #292b36;
+        --progress-gradient: linear-gradient(90deg, #38d67a 0%, #9ff4c1 100%);
+        --card-bg: #24252c;
+        --card-text: #f2f3fa;
+        --main-text: #f2f2f2;
+        --nav-bg: rgba(30, 32, 36, 0.95);
+        --footer-bg: #181b20;
+        --green: #38d67a;
+        --danger: #ff7f7f;
+        --warning: #ffdd57;
+        --accent-gradient: linear-gradient(90deg, #ff7f7f 30%, #ffdd57 100%);
+      }
+      html,
+      body {
+        min-height: 100vh;
+        background: var(--brand-light);
+        color: var(--main-text);
+        font-family: "Inter", Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        padding: 0;
+        transition: background 0.3s, color 0.3s;
+      }
+      body {
+        flex: 1 0 auto;
+        background: var(--brand-light);
+      }
+      .logo-title {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--brand-light2);
+        padding: 18px 0 10px 0;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+        letter-spacing: 1px;
+      }
+      .logo-title img {
+        height: 48px;
+        width: 48px;
+        margin-right: 15px;
+        border-radius: 50%;
+        background: #f7f7f7;
+        box-shadow: 0 2px 10px rgba(44, 62, 80, 0.1);
+      }
+      .logo-title h1 {
+        font-size: 1.7rem;
+        font-weight: 700;
+        margin: 0;
+        color: var(--main-text);
+        letter-spacing: 2px;
+      }
+      .logo-title .red {
+        color: var(--brand-red);
+      }
+      nav {
+        background: var(--nav-bg);
+        min-height: var(--nav-height);
+        box-shadow: var(--brand-shadow-nav);
+        position: sticky;
+        top: 0;
+        z-index: 1020;
+        backdrop-filter: blur(12px);
+        border-radius: 0 0 20px 20px;
+        margin-bottom: 8px;
+        transition: background 0.3s, box-shadow 0.3s;
+      }
+      .navbar-collective {
+        max-width: 1280px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: var(--nav-height);
+        padding: 0 24px;
+        position: relative;
+      }
+      .navbar-logo {
+        font-weight: 700;
+        font-size: 1.25rem;
+        color: var(--brand-red);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .navbar-links {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+      }
+      .navbar-link {
+        color: var(--brand-dark);
+        font-size: 1.08rem;
+        font-weight: 500;
+        padding: 7px 16px;
+        border-radius: 28px;
+        text-decoration: none;
+        transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        position: relative;
+        background: none;
+      }
+      .navbar-link.active,
+      .navbar-link:hover {
+        background: var(--brand-gold);
+        color: var(--brand-red);
+        box-shadow: 0 2px 12px rgba(255, 221, 87, 0.16);
+      }
+      .navbar-link:focus-visible {
+        outline: 2px solid var(--brand-gold);
+        outline-offset: 2px;
+      }
+      .dark-theme .navbar-link {
+        color: #ffe66d;
+      }
+      .dark-theme .navbar-link.active,
+      .dark-theme .navbar-link:hover {
+        color: var(--brand-red);
+        background: rgba(255, 221, 87, 0.18);
+      }
+      .navbar-hamburger {
+        display: none;
+        background: none;
+        border: none;
+        font-size: 1.6rem;
+        color: var(--brand-dark);
+        margin-left: 18px;
+        cursor: pointer;
+      }
+      .dark-theme .navbar-hamburger {
+        color: #ffe66d;
+      }
+      .navbar-profile {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        position: relative;
+      }
+      .profile-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        border: 2.5px solid var(--brand-gold);
+        object-fit: cover;
+        cursor: pointer;
+        transition: box-shadow 0.18s;
+        background: var(--brand-light2);
+      }
+      .profile-avatar:hover,
+      .profile-avatar:focus-visible {
+        box-shadow: 0 0 0 4px #ffe66d77;
+      }
+      .profile-dropdown {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 56px;
+        background: var(--card-bg);
+        color: var(--main-text);
+        border-radius: 16px;
+        box-shadow: var(--brand-shadow-nav);
+        min-width: 195px;
+        z-index: 1050;
+        padding: 7px 0;
+        animation: fadeIn 0.18s;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+      }
+      .profile-dropdown.show {
+        display: block;
+      }
+      .profile-dropdown a {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 24px;
+        color: var(--main-text);
+        text-decoration: none;
+        transition: background 0.15s, color 0.12s;
+        font-size: 1.06rem;
+        border-radius: 8px;
+      }
+      .profile-dropdown a:hover {
+        background: var(--brand-light);
+        color: var(--brand-red);
+      }
+      .dark-theme .profile-dropdown a:hover {
+        background: #282b35;
+      }
+      .btn-logout {
+        background: var(--brand-red);
+        color: #fff !important;
+        border: none;
+        padding: 8px 22px;
+        font-size: 1.09rem;
+        border-radius: 28px;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+        transition: background 0.18s, color 0.18s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 10px 24px 8px 24px;
+      }
+      .btn-logout:hover,
+      .btn-logout:focus-visible {
+        background: #ff1a1a;
+        color: #fff !important;
+      }
+      @media (max-width: 900px) {
+        .navbar-collective {
+          padding: 0 6px;
+        }
+        .navbar-links {
+          gap: 8px;
+        }
+      }
+      @media (max-width: 700px) {
+        .navbar-links {
+          display: none;
+          position: absolute;
+          top: var(--nav-height);
+          left: 0;
+          right: 0;
+          background: var(--nav-bg);
+          flex-direction: column;
+          gap: 0;
+          border-radius: 0 0 20px 20px;
+          box-shadow: var(--brand-shadow-nav);
+          z-index: 1050;
+          animation: fadeIn 0.22s;
+        }
+        .navbar-links.show {
+          display: flex;
+        }
+        .navbar-hamburger {
+          display: block;
+        }
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .dashboard-header {
+        background: var(--card-bg);
+        border-radius: 20px;
+        margin-bottom: 34px;
+        box-shadow: 0 2px 12px rgba(44, 62, 80, 0.08);
+        padding: 2.7rem 2.3rem 2.1rem 2.3rem;
+        text-align: center;
+        position: relative;
+      }
+      .dashboard-header h2 {
+        font-weight: 700;
+        font-size: 2.3rem;
+        margin-bottom: 1rem;
+        letter-spacing: 0.02em;
+      }
+      .dashboard-header p {
+        font-size: 1.14rem;
+        margin-bottom: 0.5rem;
+        color: #555;
+      }
+      .dark-theme .dashboard-header p {
+        color: #b1b1b1;
+      }
+      .dashboard-header strong {
+        font-size: 1.08rem;
+        color: var(--brand-red);
+      }
+      .dashboard-header .dashboard-avatar {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        border: 3px solid var(--brand-gold);
+        object-fit: cover;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 10px rgba(255, 221, 87, 0.1);
+        background: var(--brand-light2);
+      }
+      .container-fluid {
+        flex: 1 0 auto;
+        padding-bottom: 30px;
+      }
+      .card {
+        background: var(--card-bg) !important;
+        color: var(--card-text) !important;
+        border-radius: 18px;
+        box-shadow: var(--brand-shadow);
+        border: none;
+        min-height: 180px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: background 0.25s, color 0.25s, box-shadow 0.22s,
+          transform 0.21s;
+      }
+      .card:hover {
+        transform: scale(1.027) translateY(-4px);
+        box-shadow: 0 8px 32px 0 rgba(44, 62, 80, 0.15);
+      }
+      .card h5 {
+        font-weight: 700;
+        font-size: 1.13rem;
+        margin-bottom: 0.9rem;
+        letter-spacing: 0.01em;
+        display: flex;
+        align-items: center;
+        gap: 11px;
+      }
+      .progress {
+        background: var(--progress-bg);
+        border-radius: 14px;
+        height: 26px;
+        margin-bottom: 0.6rem;
+        margin-top: 0.2rem;
+        overflow: hidden;
+        box-shadow: 0 1px 6px 0 rgba(44, 62, 80, 0.09);
+        position: relative;
+      }
+      .progress-bar {
+        background: var(--progress-gradient);
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.07rem;
+        transition: width 0.7s cubic-bezier(0.33, 1, 0.68, 1);
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        letter-spacing: 0.5px;
+        animation: slideIn 1.1s cubic-bezier(0.33, 1, 0.68, 1);
+        box-shadow: 0 2px 8px rgba(44, 200, 80, 0.07) inset;
+        padding-right: 16px;
+        min-width: 60px;
+      }
+      .progress-bar .fa-circle-check {
+        margin-right: 7px;
+      }
+      @keyframes slideIn {
+        from {
+          width: 0;
+        }
+      }
+      .announcements-list {
+        max-height: 120px;
+        overflow-y: auto;
+        padding-left: 4px;
+      }
+      .announcement-item {
+        margin-bottom: 8px;
+        color: inherit;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .announcement-item svg,
+      .announcement-item i {
+        color: var(--brand-gold);
+        fill: currentColor;
+        flex-shrink: 0;
+      }
+      .dark-theme .announcement-item svg,
+      .dark-theme .announcement-item i {
+        color: #ffe66d;
+        fill: #ffe66d;
+      }
+      .exam-score-green {
+        color: var(--green);
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .exam-badge {
+        background: var(--accent-gradient);
+        color: #fff;
+        border-radius: 14px;
+        font-size: 0.97rem;
+        font-weight: 600;
+        padding: 3px 11px;
+        margin-left: 6px;
+        display: inline-block;
+      }
+      .deadline-upcoming {
+        color: var(--warning);
+      }
+      .deadline-overdue {
+        color: var(--danger);
+      }
+      .deadline-clear {
+        color: var(--green);
+      }
+      .deadline-upcoming i,
+      .deadline-overdue i,
+      .deadline-clear i {
+        margin-left: 5px;
+      }
+      @media (max-width: 767px) {
+        .row > [class*="col-"] {
+          margin-bottom: 18px;
+        }
+        .container-fluid {
+          padding-left: 8px;
+          padding-right: 8px;
+        }
+      }
+      @media (max-width: 600px) {
+        .dashboard-header {
+          padding: 1.2rem;
+        }
+        .logo-title h1 {
+          font-size: 1.17rem;
+        }
+        .dashboard-header h2 {
+          font-size: 1.22rem;
+        }
+        .card {
+          min-height: 150px;
+        }
+      }
+      .theme-toggle-fab {
+        position: fixed;
+        right: 32px;
+        bottom: 65px;
+        z-index: 1200;
+        background: var(--nav-bg) !important;
+        color: #ffe66d !important;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.09);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.18rem;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+        opacity: 0.93;
+      }
+      .theme-toggle-fab:hover,
+      .theme-toggle-fab:focus-visible {
+        background: #24262e !important;
+        color: #fffbe6 !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.16);
+      }
+      @media (max-width: 600px) {
+        .theme-toggle-fab {
+          right: 12px;
+          bottom: 67px;
+          width: 33px;
+          height: 33px;
+          font-size: 1rem;
+        }
+      }
+      footer {
+        background: var(--footer-bg) !important;
+        color: #fff;
+        padding: 11px 0 11px 0;
+        font-size: 1.05rem;
+        text-align: center;
+        margin-top: auto;
+        letter-spacing: 0.01em;
+        width: 100%;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.07);
+        position: relative;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="logo-title">
+      <img
+        src="{{ user_avatar_url or url_for('static', filename='images/logo.png') }}"
+        alt="Profile Avatar"
+      />
+      <h1><span>COLLECT</span><span class="red">IVE</span></h1>
+    </div>
+    <!-- Modern Navbar -->
+    <nav>
+      <div class="navbar-collective">
+        <div class="navbar-logo d-none d-md-flex">
+          <i class="fa-solid fa-circle-nodes"></i>
+          <span>Intranet</span>
+        </div>
+        <button
+          class="navbar-hamburger"
+          id="navbarHamburger"
+          aria-label="Open navigation"
+        >
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="navbar-links" id="navbarLinks">
+          <a
+            href="{{ url_for('profile_routes.profile') }}"
+            class="navbar-link{% if active_page == 'profile' %} active{% endif %}"
+          >
+            <i class="fa-solid fa-user"></i>
+            <span>Profile</span>
+          </a>
+          <a
+            href="{{ url_for('task_routes.view_tasks') }}"
+            class="navbar-link{% if active_page == 'tasks' %} active{% endif %}"
+          >
+            <i class="fa-solid fa-list-check"></i>
+            <span>Tasks</span>
+          </a>
+          <a
+            href="{{ url_for('general_routes.study_materials') }}"
+            class="navbar-link{% if active_page == 'study' %} active{% endif %}"
+          >
+            <i class="fa-solid fa-book-open-reader"></i>
+            <span>Knowledge Base</span>
+          </a>
+          <a
+            href="{{ url_for('general_routes.hr_management') }}"
+            class="navbar-link{% if active_page == 'management' %} active{% endif %}"
+          >
+            <i class="fa-solid fa-briefcase"></i>
+            <span>Management Portal</span>
+          </a>
+        </div>
+        <div class="navbar-profile">
+          <img
+            src="{{ user_avatar_url or url_for('static', filename='images/logo.png') }}"
+            class="profile-avatar"
+            alt="User Avatar"
+            id="profileAvatar"
+            tabindex="0"
+          />
+          <div
+            class="profile-dropdown"
+            id="profileDropdown"
+            aria-label="Profile actions"
+          >
+            <a href="{{ url_for('general_routes.privacy_policy') }}">
+              <i class="fa-solid fa-shield-halved"></i> Privacy Policy
+            </a>
+            <a href="{{ url_for('general_routes.help_page') }}">
+              <i class="fa-solid fa-circle-question"></i> Help
+            </a>
+            <a href="{{ url_for('general_routes.support') }}">
+              <i class="fa-solid fa-headset"></i> Support
+            </a>
+            <a href="{{ url_for('auth_routes.logout') }}" class="btn-logout">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+          </div>
+        </div>
+      </div>
+    </nav>
+    <div class="container-fluid mt-4">
+      <div class="dashboard-header">
+        <img
+          src="{{ user_avatar_url or url_for('static', filename='images/logo.png') }}"
+          alt="User Avatar"
+          class="dashboard-avatar"
+        />
+        <h2>Welcome, {{ user_name }}!</h2>
+        <p>
+          Manage your profile, learning progress, deadlines, and tasks all in
+          one place.
+        </p>
+        <p><strong>Designation:</strong> {{ user_role }}</p>
+      </div>
+      <div class="row g-4">
+        <!-- Learning Progress -->
+        <div class="col-md-6 col-lg-3">
+          <div class="card h-100 p-4">
+            <h5>
+              <i class="fa-solid fa-graduation-cap"></i> Learning Progress
+            </h5>
+            {% if current_course and course_progress %}
+            <p class="mb-2">{{ current_course }}</p>
+            <div class="progress" style="height: 26px">
+              <div
+                class="progress-bar progress-bar-striped progress-bar-animated"
+                role="progressbar"
+                style="width: {{ course_progress or 0 }}%; min-width: 60px;"
+                aria-valuenow="{{ course_progress or 0 }}"
+                aria-valuemin="0"
+                aria-valuemax="100"
+              >
+                <i class="fa-solid fa-circle-check"></i> {{ course_progress or 0
+                }}%
+              </div>
+            </div>
+            {% else %}
+            <div class="announcement-item">
+              <i class="fa-solid fa-hourglass-half"></i> No course in progress.
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        <!-- Exam Results -->
+        <div class="col-md-6 col-lg-3">
+          <div class="card h-100 p-4">
+            <h5><i class="fa-solid fa-chart-line"></i> Exam Results</h5>
+            {% if last_exam_title and last_exam_title != "No exams completed
+            yet." %}
+            <p>
+              <span
+                ><i class="fa-solid fa-file-pen"></i> {{ last_exam_title
+                }}</span
+              >
+              <span class="exam-score-green">
+                <i class="fa-solid fa-trophy"></i>
+                Score: {{ last_exam_score }}% {% if last_exam_score|float >= 90
+                %}
+                <span class="exam-badge"
+                  ><i class="fa-solid fa-star"></i> Top!</span
+                >
+                {% endif %}
+              </span>
+            </p>
+            {% else %}
+            <div class="announcement-item">
+              <i class="fa-solid fa-book"></i> No exams completed yet.
+            </div>
+            {% endif %}
+            <p>
+              <strong>Next Exam:</strong>
+              <i class="fa-solid fa-calendar-day"></i> {{ next_exam_date or 'Not
+              Scheduled' }}
+            </p>
+          </div>
+        </div>
+        <!-- Upcoming Deadlines -->
+        <div class="col-md-6 col-lg-3">
+          <div class="card h-100 p-4">
+            <h5><i class="fa-solid fa-calendar-alt"></i> Upcoming Deadlines</h5>
+            {% if upcoming_tasks %}
+            <ul class="list-unstyled mb-0">
+              {% for task in upcoming_tasks %}
+              <li
+                class="mb-2 {% if task.is_overdue %}deadline-overdue {% elif task.is_upcoming %}deadline-upcoming {% else %}deadline-clear {% endif %}"
+              >
+                <strong
+                  ><i class="fa-solid fa-angles-right"></i> {{ task.title
+                  }}</strong
+                ><br />
+                <small>
+                  Due: {{ task.due_date.strftime('%b %d, %Y') }} {% if
+                  task.is_overdue %}
+                  <i class="fa-solid fa-circle-exclamation"></i>
+                  {% elif task.is_upcoming %}
+                  <i class="fa-solid fa-hourglass-half"></i>
+                  {% else %}
+                  <i class="fa-solid fa-circle-check"></i>
+                  {% endif %}
+                </small>
+              </li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            <div class="announcement-item">
+              <i class="fa-solid fa-calendar-check"></i> No upcoming deadlines.
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        <!-- Announcements -->
+        <div class="col-md-6 col-lg-3">
+          <div class="card h-100 p-4">
+            <h5><i class="fa-solid fa-bullhorn"></i> Announcements</h5>
+            <div class="announcements-list" id="announcementsList">
+              {% if announcements %} {% for note in announcements %}
+              <div class="announcement-item">
+                <i class="fa-solid fa-bell"></i>
+                {{ note.message }} – <strong>{{ note.date }}</strong>
+              </div>
+              {% endfor %} {% else %}
+              <div class="announcement-item">
+                <i class="fa-solid fa-face-smile"></i> No announcements
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Floating dark mode toggle (above footer, always visible) -->
+    <button
+      class="theme-toggle-fab"
+      id="themeToggle"
+      aria-label="Toggle dark mode"
+    >
+      <i class="fas fa-moon"></i>
+    </button>
+    <!-- Sticky Footer (no utility links!) -->
+    <footer>Collective Intranet© 2024</footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Modern Navbar Hamburger
+      const navbarHamburger = document.getElementById("navbarHamburger");
+      const navbarLinks = document.getElementById("navbarLinks");
+      navbarHamburger?.addEventListener("click", () => {
+        navbarLinks.classList.toggle("show");
+      });
+      // Profile dropdown
+      const profileAvatar = document.getElementById("profileAvatar");
+      const profileDropdown = document.getElementById("profileDropdown");
+      profileAvatar?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        profileDropdown.classList.toggle("show");
+      });
+      profileAvatar?.addEventListener("blur", () => {
+        setTimeout(() => profileDropdown.classList.remove("show"), 150);
+      });
+      document.addEventListener("click", (e) => {
+        if (!profileDropdown.contains(e.target) && e.target !== profileAvatar) {
+          profileDropdown.classList.remove("show");
+        }
+      });
+      // Floating dark mode toggle
+      const themeToggle = document.getElementById("themeToggle");
+      const body = document.body;
+      function setTheme(theme) {
+        if (theme === "dark") {
+          body.classList.add("dark-theme");
+          themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        } else {
+          body.classList.remove("dark-theme");
+          themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+        }
+        localStorage.setItem("theme", theme);
+      }
+      themeToggle?.addEventListener("click", () => {
+        setTheme(body.classList.contains("dark-theme") ? "light" : "dark");
+      });
+      (() => {
+        const savedTheme =
+          localStorage.getItem("theme") ||
+          (window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light");
+        setTheme(savedTheme);
+      })();
+      // Keep session alive by pinging the server every 5 minutes
+      setInterval(() => {
+        fetch("/ping", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        });
+      }, 300000); // 5 minutes
+      // Keyboard shortcut (Ctrl+B) for dark mode
+      document.addEventListener("keydown", function (e) {
+        if (e.ctrlKey && e.key.toLowerCase() === "b") {
+          setTheme(body.classList.contains("dark-theme") ? "light" : "dark");
+        }
+      });
+    </script>
+  </body>
+</html>

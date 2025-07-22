@@ -1,0 +1,193 @@
+{% extends "base.html" %} {% block content %}
+<div class="container mt-5 mb-5">
+  <h2 class="mb-4">Privacy Policy</h2>
+  <p><strong>Effective Date:</strong> January 1, 2025</p>
+
+  <p>
+    Welcome to the <strong>CollectiveRCM Intranet System</strong> (the
+    “System”). This Privacy Policy outlines how we collect, use, store, and
+    protect information pertaining to employees, administrators, and other
+    authorized users of this platform.
+  </p>
+
+  <hr class="my-4" />
+  <h4>1. Information We Collect</h4>
+  <ul>
+    <li>
+      <strong>Personal Data:</strong> Name, email address, employee ID,
+      department, designation, and user role.
+    </li>
+    <li>
+      <strong>Authentication Data:</strong> Password hashes (securely
+      encrypted), login logs, and optional 2FA keys.
+    </li>
+    <li>
+      <strong>Usage Data:</strong> Task interactions, exam scores, course
+      progress, and dashboard activity.
+    </li>
+    <li>
+      <strong>Files & Uploads:</strong> Documents and images submitted through
+      tasks or assignments (stored via GridFS).
+    </li>
+    <li>
+      <strong>Technical Metadata:</strong> IP address, device type, browser
+      details — used for audit and security logs only.
+    </li>
+  </ul>
+
+  <hr class="my-4" />
+  <h4>2. How We Use Your Data</h4>
+  <ul>
+    <li>To provide secure, role-specific access to system features.</li>
+    <li>To assign, track, and evaluate user tasks and learning outcomes.</li>
+    <li>To generate personal dashboards and institutional reports.</li>
+    <li>To detect and prevent unauthorized system access or misuse.</li>
+    <li>To deliver internal messages, announcements, and notifications.</li>
+  </ul>
+
+  <hr class="my-4" />
+  <h4>3. Legal Basis for Processing</h4>
+  <p>
+    We process your data on the basis of legitimate interest and operational
+    necessity within the scope of CollectiveRCM’s educational and administrative
+    mandate.
+  </p>
+
+  <hr class="my-4" />
+  <h4>4. Data Access & Sharing</h4>
+  <ul>
+    <li>
+      Your data is accessible only to authorized system administrators and
+      managers based on your role and designation.
+    </li>
+    <li>
+      We do not sell, trade, or disclose any personal data to third parties.
+    </li>
+    <li>Access audits and logs are periodically reviewed for compliance.</li>
+  </ul>
+
+  <hr class="my-4" />
+  <h4>5. Document & File Storage</h4>
+  <ul>
+    <li>All user-uploaded files are securely stored using MongoDB GridFS.</li>
+    <li>
+      Upload limits, file types, and permissions are enforced by backend
+      validation.
+    </li>
+    <li>
+      Document access is strictly role-restricted and encrypted in transit.
+    </li>
+  </ul>
+
+  <hr class="my-4" />
+  <h4>6. Data Retention & Removal</h4>
+  <p>
+    We retain user data only for as long as necessary to meet administrative and
+    operational needs. Upon resignation, role change, or account deactivation,
+    user data is archived or securely deleted following HR compliance protocols.
+  </p>
+
+  <hr class="my-4" />
+  <h4>7. Your Rights</h4>
+  <p>Users of the system may:</p>
+  <ul>
+    <li>Request a summary of data stored about them.</li>
+    <li>Request correction of profile data if inaccurate.</li>
+    <li>
+      Request deletion of their account (subject to management approval and
+      audit constraints).
+    </li>
+  </ul>
+  <p>
+    To initiate any data request, contact us at
+    <a href="mailto:support@collectivercm.local"> intranet@collectivercm.com</a
+    >.
+  </p>
+
+  <hr class="my-4" />
+  <h4>8. Cookies & Session Management</h4>
+  <p>
+    We use only essential session cookies to maintain secure login sessions. No
+    third-party analytics or tracking cookies are used.
+  </p>
+
+  <hr class="my-4" />
+  <h4>9. Security Measures</h4>
+  <ul>
+    <li>Passwords are encrypted using bcrypt.</li>
+    <li>All communication is secured over HTTPS (TLS 1.2+).</li>
+    <li>Cross-site request forgery (CSRF) protection is enforced.</li>
+    <li>
+      Access control is enforced through user role verification on all sensitive
+      routes.
+    </li>
+    <li>
+      All uploads and user inputs are sanitized against XSS and injection risks.
+    </li>
+  </ul>
+
+  <hr class="my-4" />
+  <h4>10. Updates to This Policy</h4>
+  <p>
+    This policy may be updated to reflect legal, technical, or operational
+    changes. Users will be notified via the dashboard upon any significant
+    updates.
+  </p>
+
+  <hr class="my-4" />
+  <h4>11. Contact Us</h4>
+  <p>
+    For questions or concerns about your privacy, please contact our system
+    administrator at
+    <a href="mailto:support@collectivercm.local"> intranet@collectivercm.com</a
+    >.
+  </p>
+  <hr class="my-4" />
+  <h4>12. Exam Rules & Conditions</h4>
+  <p>
+    By participating in any assessments or evaluations hosted on the
+    CollectiveRCM platform, users agree to abide by the following rules:
+  </p>
+  <ul>
+    <li>
+      <strong>Identity:</strong> Exams must be completed by the assigned user
+      only. Impersonation is strictly prohibited.
+    </li>
+    <li>
+      <strong>External Assistance:</strong> No unauthorized materials, notes, or
+      digital tools may be used unless explicitly permitted.
+    </li>
+    <li>
+      <strong>System Monitoring:</strong> All exam interactions (timing, IP
+      address, attempts, scores) are logged and may be reviewed by system
+      admins.
+    </li>
+    <li>
+      <strong>Result Integrity:</strong> Any detected manipulation or breach of
+      policy may result in disqualification, score removal, or disciplinary
+      review.
+    </li>
+    <li>
+      <strong>Confidentiality:</strong> Exam questions and answers are
+      confidential and may not be shared, copied, or distributed in any form.
+    </li>
+  </ul>
+  <p>
+    Violation of these rules may result in warnings, restricted access, exam
+    invalidation, or reporting to HR for further action.
+  </p>
+  <div class="container mt-5 mb-5"></div>
+  <hr class="my-4" />
+  <h4>13. Copyright & Intellectual Property</h4>
+  <p>
+    All internal study materials, exam documents, training resources, and
+    associated intellectual content distributed through the CollectiveRCM
+    Intranet are the exclusive property of <strong>CollectiveRCM</strong>.
+  </p>
+
+  <p>
+    Unauthorized use or distribution of this content may result in disciplinary
+    action and/or legal consequences.
+  </p>
+</div>
+{% endblock %}

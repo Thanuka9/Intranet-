@@ -1,0 +1,1120 @@
+{% extends 'admin_base.html' %}
+{% block title %}Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <h1 class="mb-4">
+    <i class="bi bi-bar-chart-line"></i>
+    Analytics Dashboard <span class="fs-5 text-muted">| Insights &amp; Trends</span>
+  </h1>
+
+  <!-- FILTER BAR -->
+  <div class="sticky-top bg-white py-2" style="z-index: 1020; border-bottom:1px solid #e3e3e3;">
+    <form method="get" class="row gy-3 align-items-end" aria-label="Dashboard filters">
+      <div class="col-12 col-md-2">
+        <label for="start_date" class="form-label fs-6 mb-1">
+          <i class="bi bi-calendar-date"></i> Custom Start
+        </label>
+        <input type="date" id="start_date" name="start_date" value="{{ start_date }}" class="form-control form-control-sm" />
+      </div>
+      <div class="col-12 col-md-2">
+        <label for="end_date" class="form-label fs-6 mb-1">
+          <i class="bi bi-calendar-date"></i> Custom End
+        </label>
+        <input type="date" id="end_date" name="end_date" value="{{ end_date }}" class="form-control form-control-sm" />
+      </div>
+      <div class="col-12 col-md-2">
+        <label for="department" class="form-label fs-6 mb-1">
+          <i class="bi bi-building"></i> Department
+        </label>
+        <select id="department" name="department" class="form-select form-select-sm">
+          <option value="">All Departments</option>
+          {% for d in all_departments %}
+            <option value="{{ d.name }}" {% if d.name == sel_dept %}selected{% endif %}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-2">
+        <label for="designation" class="form-label fs-6 mb-1">
+          <i class="bi bi-person-badge"></i> Designation
+        </label>
+        <select id="designation" name="designation" class="form-select form-select-sm">
+          <option value="">All Designations</option>
+          {% for d in designations %}
+            <option value="{{ d.title }}" {% if d.title == sel_desig %}selected{% endif %}>{{ d.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-3">
+        <label class="form-label fs-6 mb-1">
+          <i class="bi bi-clock-history"></i> Quick Ranges
+        </label>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Select period">
+          <button type="submit" name="period" value="all" class="btn {% if period == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">All Time</button>
+          {% for p in periods if p != 'all' %}
+            <button type="submit" name="period" value="{{ p }}" class="btn {% if period == p %}btn-primary{% else %}btn-outline-primary{% endif %}">Last {{ p }}d</button>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="col-12 col-md-1">
+        <button type="submit" class="btn btn-success btn-sm w-100">
+          <i class="bi bi-funnel"></i> Apply
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- SUMMARY CARDS -->
+  <div class="row mt-4 gy-4">
+    <div class="col-12 col-md-2">
+      <div class="card bg-info text-white shadow-sm h-100">
+        <div class="card-body text-center py-4">
+          <h6 class="fs-6 fw-semibold mb-1"><i class="bi bi-people-fill"></i> Total Users</h6>
+          <h2 class="fw-bold">{{ total_users }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-2">
+      <div class="card bg-primary text-white shadow-sm h-100">
+        <div class="card-body text-center py-4">
+          <h6 class="fs-6 fw-semibold mb-1"><i class="bi bi-person-check-fill"></i> Active Users</h6>
+          <h2 class="fw-bold">{{ active_users }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-2">
+      <div class="card bg-success text-white shadow-sm h-100">
+        <div class="card-body text-center py-4">
+          <h6 class="fs-6 fw-semibold mb-1"><i class="bi bi-award-fill"></i> Avg Exam Score</h6>
+          <h2 class="fw-bold">{{ avg_exam_score }}%</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-2">
+      <div class="card bg-warning text-dark shadow-sm h-100">
+        <div class="card-body text-center py-4">
+          <h6 class="fs-6 fw-semibold mb-1"><i class="bi bi-journal-check"></i> Avg Course Progress</h6>
+          <h2 class="fw-bold">{{ avg_course_progress }}%</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-2">
+      <div class="card bg-secondary text-white shadow-sm h-100">
+        <div class="card-body text-center py-4">
+          <h6 class="fs-6 fw-semibold mb-1"><i class="bi bi-file-earmark-text"></i> Avg Special Exam</h6>
+          <h2 class="fw-bold">{{ special_avg_score }}%</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP 5 USERS TABLE -->
+  <div class="card mb-5 shadow-sm">
+    <div class="card-header bg-light fs-6 fw-semibold d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-trophy me-1"></i> Top 5 Users by Exam Score</span>
+      <a href="{{ url_for('admin_routes.analytics_user_list') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-list-ul me-1"></i> View All Users
+      </a>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">User</th>
+              <th scope="col">Email</th>
+              <th scope="col">Department</th>
+              <th scope="col">Avg Score</th>
+              <th scope="col">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if top_users %}
+              {% for u, avg_score in top_users %}
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="rounded-circle bg-secondary text-white text-center"
+                            style="width:32px; height:32px; line-height:32px; font-weight:bold;"
+                            title="{{ u.first_name }} {{ u.last_name }}">
+                        {{ u.first_name|first }}{{ u.last_name|first }}
+                      </span>
+                      <span>{{ u.first_name }} {{ u.last_name }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <i class="bi bi-envelope-at me-1 text-muted"></i>
+                    {{ u.employee_email }}
+                  </td>
+                  <td>
+                    <i class="bi bi-building me-1 text-muted"></i>
+                    {% if u.departments %}
+                      {{ u.departments | map(attribute='name') | join(', ') }}
+                    {% else %}
+                      &mdash;
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="badge bg-success">{{ avg_score|round(2) }}%</span>
+                  </td>
+                  <td>
+                    <a href="{{ url_for('admin_routes.analytics_user_detail', user_id=u.id) }}"
+                       class="btn btn-sm btn-outline-primary">
+                      <i class="bi bi-search me-1"></i> View
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">
+                  No user exam scores found for this period.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRIMARY CHART PANEL (flexible, scrollable if large) -->
+  <div class="row mb-5 gy-4">
+    <!-- Avg Exam Scores -->
+    <div class="col-12 col-xl-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header fs-6 fw-semibold bg-light">
+          <i class="bi bi-bar-chart-steps me-1"></i> Avg Exam Scores (Material ID)
+        </div>
+        <div class="card-body p-3" style="min-height:420px; max-height:720px;">
+          <canvas id="examChart" style="width:100%;"></canvas>
+          <div id="noExamData" class="text-center text-muted mt-4" style="display:none;">
+            No exam data to display.
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Course Progress (no cap, scrolls if many items) -->
+    <div class="col-12 col-xl-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header fs-6 fw-semibold bg-light">
+          <i class="bi bi-graph-up-arrow me-1"></i> Course Progress (Material ID)
+        </div>
+        <div class="card-body p-3" style="min-height:420px; max-height:720px; overflow-y:auto;">
+          <canvas id="courseChart" style="width:100%;"></canvas>
+          <div id="noCourseData" class="text-center text-muted mt-4" style="display:none;">
+            No course progress data.
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Tasks Assigned vs Completed by Dept (full width for more space) -->
+    <div class="col-12">
+      <div class="card shadow-sm h-100">
+        <div class="card-header fs-6 fw-semibold bg-light">
+          <i class="bi bi-list-task me-1"></i> Tasks Assigned vs Completed by Dept
+        </div>
+        <div class="card-body p-3" style="min-height:420px; max-height:720px;">
+          <canvas id="tasksBarChart" style="width:100%;"></canvas>
+          <div id="noTaskData" class="text-center text-muted mt-4" style="display:none;">
+            No task data.
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Time Spent Heatmap -->
+    <div class="col-12 col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header fs-6 fw-semibold bg-light">
+          <i class="bi bi-grid me-1"></i> Time Spent per Course by Dept
+        </div>
+        <div class="card-body p-3" style="min-height:320px; max-height:600px;">
+          <div id="heatmapPlot" style="width:100%; height:100%;"></div>
+          <div id="noHeatmapData" class="text-center text-muted mt-4" style="display:none;">
+            No time‐spent data.
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Top Missed Questions -->
+    <div class="col-12 col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header fs-6 fw-semibold bg-light">
+          <i class="bi bi-question-circle me-1"></i> Top Missed Questions (Q#–PaperID)
+        </div>
+        <div class="card-body p-3" style="min-height:320px; max-height:600px;">
+          <canvas id="missedBarChart"></canvas>
+          <div id="noMissedData" class="text-center text-muted mt-4" style="display:none;">
+            No missed‐questions data.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECONDARY CHARTS -->
+  <div class="row mb-5 gy-4">
+    <div class="col-12 col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-header fs-6 fw-semibold bg-light">
+          <i class="bi bi-pie-chart-fill me-1"></i> Regular Exams
+        </div>
+        <div class="card-body d-flex flex-column align-items-center justify-content-center p-3" style="min-height:280px;">
+          <canvas id="regPassFailChart" width="120" height="120"></canvas>
+          <div id="noRegData" class="text-center text-muted mt-3" style="display:none;">
+            No regular exam data.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-header fs-6 fw-semibold bg-light">
+          <i class="bi bi-pie-chart-fill me-1"></i> Special Exams
+        </div>
+        <div class="card-body d-flex flex-column align-items-center justify-content-center p-3" style="min-height:280px;">
+          <canvas id="specPassFailChart" width="120" height="120"></canvas>
+          <div id="noSpecData" class="text-center text-muted mt-3" style="display:none;">
+            No special exam data.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-header fs-6 fw-semibold bg-light">
+          <i class="bi bi-building me-1"></i> Users by Department
+        </div>
+        <div class="card-body p-3" style="min-height:280px;">
+          <canvas id="deptPieChart"></canvas>
+          <div id="noDeptData" class="text-center text-muted mt-4" style="display:none;">
+            No department data.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- THIRD ROW OF CHARTS -->
+  <div class="row mb-5 gy-4">
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header fs-6 fw-semibold bg-light">
+          <i class="bi bi-card-list me-1"></i> Users by Designation
+        </div>
+        <div class="card-body p-3" style="min-height:320px;">
+          <canvas id="desigBarChart"></canvas>
+          <div id="noDesigData" class="text-center text-muted mt-4" style="display:none;">
+            No designation data.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header fs-6 fw-semibold bg-light">
+          <i class="bi bi-trending-up me-1"></i>
+          Score Trend {% if period == 'all' %}(All Time){% else %}(Last {{ period }}d){% endif %}
+        </div>
+        <div class="card-body p-3 position-relative" style="min-height:320px;">
+          <canvas id="slopeChart" style="display:none; width:100%; height:100%;"></canvas>
+          <div id="noSlopeData" class="text-center text-muted"
+               style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);">
+            No trend data.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOURTH ROW: Level Progress Funnel -->
+  <div class="row mb-5 gy-4">
+    <div class="col-12">
+      <div class="card shadow-sm h-100">
+        <div class="card-header fs-6 fw-semibold bg-light">
+          <i class="bi bi-filter-circle me-1"></i> Level Progress Funnel
+        </div>
+        <div class="card-body p-3" style="min-height:320px;">
+          <canvas id="funnelChart"></canvas>
+          <div id="noFunnelData" class="text-center text-muted mt-4" style="display:none;">
+            No level progress data.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIFTH ROW: 3D Scatter + Info Panel -->
+  <div class="row mb-5">
+    <div class="col-12">
+      <div class="card shadow-sm h-100">
+        <div class="card-header fs-6 fw-semibold bg-light d-flex flex-wrap justify-content-between align-items-center">
+          <div>
+            <i class="bi bi-scatter-chart me-1"></i> 3D User Analytics: Explore Relationships
+          </div>
+          <div class="d-flex flex-wrap gap-3">
+            <div class="form-group">
+              <label for="scatter-x" class="form-label mb-0 small">X Axis</label>
+              <select id="scatter-x" class="form-select form-select-sm">
+                {% for opt in axis_options %}
+                  <option value="{{ opt.key }}" {% if opt.key == default_x %}selected{% endif %}>{{ opt.label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="scatter-y" class="form-label mb-0 small">Y Axis</label>
+              <select id="scatter-y" class="form-select form-select-sm">
+                {% for opt in axis_options %}
+                  <option value="{{ opt.key }}" {% if opt.key == default_y %}selected{% endif %}>{{ opt.label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="scatter-z" class="form-label mb-0 small">Z Axis</label>
+              <select id="scatter-z" class="form-select form-select-sm">
+                {% for opt in axis_options %}
+                  <option value="{{ opt.key }}" {% if opt.key == default_z %}selected{% endif %}>{{ opt.label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="scatter-color" class="form-label mb-0 small">Color By</label>
+              <select id="scatter-color" class="form-select form-select-sm">
+                <option value="department" selected>Department</option>
+                {% for opt in axis_options %}
+                  <option value="{{ opt.key }}">{{ opt.label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-4 row g-4" style="min-height:400px;">
+          <div class="col-lg-9 col-12">
+            <div id="scatter3d" style="
+                 width:100%;
+                 height:100%;
+                 border-radius:18px;
+                 border:1.5px solid #e3e3e3;
+                 background:linear-gradient(135deg, #f3f6fb 0%, #e4e9f7 100%);
+               "></div>
+            <div id="noScatterData" class="text-center text-muted mt-5" style="display:none;">
+              No 3D scatter data available.
+            </div>
+          </div>
+          <div class="col-lg-3 col-12">
+            <div class="p-3 rounded-3 border bg-light h-100 shadow-sm" style="min-height: 400px;">
+              <h5 class="fw-bold text-primary">
+                <i class="bi bi-info-circle-fill me-1"></i> 3D Scatter Guide
+              </h5>
+              <p class="small text-secondary mb-2">
+                <strong>What is this chart?</strong><br>
+                A 3D scatter plot that visualizes three metrics per user simultaneously. Each point represents one user.
+              </p>
+              <ul class="mb-2 small" style="line-height: 1.4;">
+                <li><b>Choose Axes:</b> Use “X Axis,” “Y Axis,” and “Z Axis” dropdowns to select any three metrics (e.g. Avg Exam Score, Total Time Spent, Completion Rate).</li>
+                <li><b>Color By:</b> Pick “Department” (categorical) or a numeric metric to color the markers. Numeric fields show a colorbar.</li>
+                <li><b>Hover:</b> Hover over a marker to see the user’s name and exact X, Y, Z values.</li>
+                <li><b>Zoom &amp; Pan:</b> Click‐drag or scroll your mouse to rotate or zoom. Double‐click to reset view.</li>
+                <li class="text-success"><b>Pro Tip:</b> Try plotting “Completion Rate” on Z and “Avg Special Exam Score” on X to spot outlier performers.</li>
+              </ul>
+              <p class="alert alert-info py-2 px-3 small mb-0" style="font-size: 0.9em;">
+                If you want to compare two metrics (e.g. regular vs. special exam), check the “Score Trend” slope chart above.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <script src="https://cdn.plot.ly/plotly-1.58.4.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      // SERVER DATA VARS
+      const metrics       = {{ metrics|tojson }} || {};
+      const user_labels   = Array.isArray(metrics.user_labels)? metrics.user_labels : [];
+      const departments   = Array.isArray(metrics.department)? metrics.department : [];
+      const examIDs       = {{ exam_ids|tojson }};
+      const examAvgScores = {{ exam_avg_scores|tojson }};
+      const courseIDs     = {{ course_ids|tojson }};
+      const courseAvgProg = {{ course_avg_progress|tojson }};
+      const passCount     = {{ passed_count }};
+      const failCount     = {{ failed_count }};
+      const specPassCount = {{ special_pass_count }};
+      const specFailCount = {{ special_fail_count }};
+      const deptLabels    = {{ dept_labels|tojson }};
+      const deptValues    = {{ dept_values|tojson }};
+      const desigLabels   = {{ desig_labels|tojson }};
+      const desigValues   = {{ desig_values|tojson }};
+      const missedQN      = {{ missed_labels|tojson }};
+      const missedValues  = {{ missed_values|tojson }};
+      const taskDepts     = {{ task_depts|tojson }};
+      const taskAssigned  = {{ task_assigned|tojson }};
+      const taskCompleted = {{ task_completed|tojson }};
+      const trendLabels   = {{ ts_labels|tojson }};
+      const trendScores   = {{ ts_avg_scores|tojson }};
+      const specTsLabels  = {{ spec_ts_labels|tojson }};
+      const specTsScores  = {{ spec_ts_avg_scores|tojson }};
+      const axisOptions   = {{ axis_options|tojson }};
+      const heatmapLabels = {{ heatmap_labels|tojson }};
+      const heatmapDepts  = {{ heatmap_depts|tojson }};
+      const heatmapData   = {{ heatmap_data|tojson }};
+      const funnelLevels  = {{ funnel_levels|tojson }};
+      const funnelTotal   = {{ funnel_total|tojson }};
+      const funnelCompleted = {{ funnel_completed|tojson }};
+
+      Chart.defaults.font.family = "'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+      Chart.defaults.font.size = 12;
+      Chart.defaults.plugins.legend.labels.boxWidth = 12;
+      Chart.defaults.plugins.legend.position = 'bottom';
+      Chart.defaults.plugins.tooltip.enabled = true;
+      Chart.defaults.animation = false;
+
+      function showDataLabel(context) {
+        const el = context.chart.getDatasetMeta(context.datasetIndex).data[context.dataIndex];
+        return !!el;
+      }
+
+      // --- Avg Exam Scores (horizontal bar, dynamic height) ---
+      (function(){
+        const canvas = document.getElementById('examChart');
+        const ctx = canvas.getContext('2d');
+        if (Array.isArray(examIDs) && examIDs.length > 0) {
+          canvas.height = Math.max(420, examIDs.length * 30);
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: examIDs,
+              datasets: [{
+                label: 'Avg Score (%)',
+                data: examAvgScores,
+                backgroundColor: '#0d6efd',
+                borderRadius: 6,
+                barThickness: 18
+              }]
+            },
+            options: {
+              indexAxis: 'y',
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
+                y: { ticks: { autoSkip: false } }
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x}%` } },
+                datalabels: {
+                  display: showDataLabel,
+                  color: '#fff',
+                  anchor: 'center',
+                  font: { size: 11, weight: 'bold' },
+                  formatter: val => val + '%'
+                }
+              }
+            },
+            plugins: [ChartDataLabels]
+          });
+        } else {
+          canvas.style.display = 'none';
+          document.getElementById('noExamData').style.display = 'block';
+        }
+      })();
+
+      // --- Course Progress (horizontal bar, dynamic height, no cap) ---
+      (function(){
+        const canvas = document.getElementById('courseChart');
+        const ctx = canvas.getContext('2d');
+        if (Array.isArray(courseIDs) && courseIDs.length > 0) {
+          canvas.height = Math.max(420, courseIDs.length * 30);
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: courseIDs,
+              datasets: [{
+                label: 'Avg Progress (%)',
+                data: courseAvgProg,
+                backgroundColor: '#ffc107',
+                borderRadius: 6,
+                barThickness: 18
+              }]
+            },
+            options: {
+              indexAxis: 'y',
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: { beginAtZero: true, max: 100, ticks: { callback: value => value + '%' } },
+                y: { ticks: { autoSkip: false } }
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x}%` } },
+                datalabels: {
+                  display: showDataLabel,
+                  color: '#000',
+                  anchor: 'center',
+                  font: { size: 11, weight: 'bold' },
+                  formatter: val => val + '%'
+                }
+              }
+            },
+            plugins: [ChartDataLabels]
+          });
+        } else {
+          canvas.style.display = 'none';
+          document.getElementById('noCourseData').style.display = 'block';
+        }
+      })();
+
+      // --- Tasks Assigned vs Completed by Dept (grouped bar, wide, readable) ---
+      (function(){
+        const canvas = document.getElementById('tasksBarChart');
+        const ctx = canvas.getContext('2d');
+        if (
+          Array.isArray(taskDepts) && taskDepts.length > 0 &&
+          Array.isArray(taskAssigned) && taskAssigned.length === taskDepts.length &&
+          Array.isArray(taskCompleted) && taskCompleted.length === taskDepts.length
+        ) {
+          canvas.height = Math.max(420, taskDepts.length * 28);
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: taskDepts,
+              datasets: [
+                {
+                  label: 'Assigned',
+                  data: taskAssigned,
+                  backgroundColor: '#0d6efd',
+                  borderRadius: 6,
+                  barThickness: 16
+                },
+                {
+                  label: 'Completed',
+                  data: taskCompleted,
+                  backgroundColor: '#198754',
+                  borderRadius: 6,
+                  barThickness: 16
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              layout: { padding: { bottom: 32 } },
+              scales: {
+                x: {
+                  ticks: {
+                    autoSkip: false,
+                    minRotation: 45,
+                    maxRotation: 65,
+                    font: { size: 13 }
+                  }
+                },
+                y: {
+                  beginAtZero: true,
+                  title: { display: true, text: 'Tasks' }
+                }
+              },
+              plugins: {
+                legend: { position: 'top', labels: { font: { size: 13 } } },
+                tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}` } },
+                datalabels: {
+                  display: showDataLabel,
+                  color: '#fff',
+                  font: { size: 11, weight: 'bold' },
+                  anchor: context => context.datasetIndex === 0 ? 'end' : 'start',
+                  align: context => context.datasetIndex === 0 ? 'end' : 'start',
+                  offset: 2,
+                  formatter: val => val
+                }
+              }
+            },
+            plugins: [ChartDataLabels]
+          });
+        } else {
+          canvas.style.display = 'none';
+          document.getElementById('noTaskData').style.display = 'block';
+        }
+      })();
+
+      // --- Time Spent Heatmap (Plotly) ---
+      if (Array.isArray(heatmapLabels) && heatmapLabels.length > 0 && Array.isArray(heatmapData) && heatmapData.length > 0) {
+        const trace = {
+          x: heatmapLabels,
+          y: heatmapDepts,
+          z: heatmapData,
+          type: 'heatmap',
+          colorscale: 'YlGnBu',
+          colorbar: { title: 'Avg Half‐Hours' }
+        };
+        const layout = {
+          margin: { l:90, r:30, b:100, t:20 },
+          xaxis: { tickangle: -45, automargin: true },
+          yaxis: { automargin: true },
+          font: { family: "'Segoe UI', Roboto, Arial, sans-serif", size: 13 },
+          plot_bgcolor: 'transparent',
+          paper_bgcolor: 'transparent'
+        };
+        Plotly.newPlot('heatmapPlot', [trace], layout, { displayModeBar: false, responsive: true });
+      } else {
+        document.getElementById('heatmapPlot').style.display = 'none';
+        document.getElementById('noHeatmapData').style.display = 'block';
+      }
+
+      // --- Top Missed Questions (horizontal/vertical bar, dynamic) ---
+      (function(){
+        const canvas = document.getElementById('missedBarChart');
+        const ctx = canvas.getContext('2d');
+        if (Array.isArray(missedQN) && missedQN.length > 0) {
+          canvas.height = Math.max(320, missedQN.length * 36);
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: missedQN,
+              datasets: [{
+                label: 'Miss Count',
+                data: missedValues,
+                backgroundColor: '#dc3545',
+                borderRadius: 6,
+                barThickness: 18
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } },
+                y: { beginAtZero: true, title: { display: true, text: 'Miss Count' } }
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} misses` } },
+                datalabels: {
+                  display: showDataLabel,
+                  color: '#fff',
+                  anchor: 'center',
+                  font: { size: 11, weight: 'bold' },
+                  formatter: val => val
+                }
+              }
+            },
+            plugins: [ChartDataLabels]
+          });
+        } else {
+          canvas.style.display = 'none';
+          document.getElementById('noMissedData').style.display = 'block';
+        }
+      })();
+
+      // --- Regular Exams Pass/Fail (doughnut) ---
+      (function(){
+        const ctx = document.getElementById('regPassFailChart').getContext('2d');
+        if ((passCount + failCount) > 0) {
+          new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: ['Passed','Failed'],
+              datasets: [{
+                data: [passCount, failCount],
+                backgroundColor: ['#198754','#dc3545'],
+                borderColor: '#fff',
+                borderWidth: 2,
+                hoverOffset: 6
+              }]
+            },
+            options: {
+              cutout: '70%',
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: true, position: 'bottom', labels: { font: { size: 13 } } },
+                tooltip: {
+                  callbacks: {
+                    label: function(ctx) {
+                      const total = passCount + failCount;
+                      const val = ctx.parsed;
+                      const pct = total > 0 ? Math.round((val/total)*100) : 0;
+                      return `${ctx.label}: ${val} (${pct}%)`;
+                    }
+                  }
+                },
+                datalabels: {
+                  display: showDataLabel,
+                  color: '#fff',
+                  anchor: 'center',
+                  font: { size: 11, weight: 'bold' },
+                  formatter: function(value, context) {
+                    const data = context.chart.data.datasets[0].data;
+                    const total = data.reduce((a,b)=>a+b,0);
+                    return total>0 ? Math.round((value/total)*100)+'%' : '';
+                  }
+                }
+              }
+            },
+            plugins: [ChartDataLabels]
+          });
+        } else {
+          document.getElementById('regPassFailChart').style.display = 'none';
+          document.getElementById('noRegData').style.display = 'block';
+        }
+      })();
+
+      // --- Special Exams Pass/Fail (doughnut) ---
+      (function(){
+        const ctx = document.getElementById('specPassFailChart').getContext('2d');
+        if ((specPassCount + specFailCount) > 0) {
+          new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: ['Passed','Failed'],
+              datasets: [{
+                data: [specPassCount, specFailCount],
+                backgroundColor: ['#20c997','#ffc107'],
+                borderColor: '#fff',
+                borderWidth: 2,
+                hoverOffset: 6
+              }]
+            },
+            options: {
+              cutout: '70%',
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: true, position: 'bottom', labels: { font: { size: 13 } } },
+                tooltip: {
+                  callbacks: {
+                    label: function(ctx) {
+                      const total = specPassCount + specFailCount;
+                      const val = ctx.parsed;
+                      const pct = total>0 ? Math.round((val/total)*100) : 0;
+                      return `${ctx.label}: ${val} (${pct}%)`;
+                    }
+                  }
+                },
+                datalabels: {
+                  display: showDataLabel,
+                  color: '#000',
+                  anchor: 'center',
+                  font: { size: 11, weight: 'bold' },
+                  formatter: function(value, context) {
+                    const data = context.chart.data.datasets[0].data;
+                    const total = data.reduce((a,b)=>a+b,0);
+                    return total>0 ? Math.round((value/total)*100)+'%' : '';
+                  }
+                }
+              }
+            },
+            plugins: [ChartDataLabels]
+          });
+        } else {
+          document.getElementById('specPassFailChart').style.display = 'none';
+          document.getElementById('noSpecData').style.display = 'block';
+        }
+      })();
+
+      // --- Users by Department (pie) ---
+      (function(){
+        const ctx = document.getElementById('deptPieChart').getContext('2d');
+        if (Array.isArray(deptLabels) && deptLabels.length > 0) {
+          new Chart(ctx, {
+            type: 'pie',
+            data: {
+              labels: deptLabels,
+              datasets: [{
+                data: deptValues,
+                backgroundColor: deptLabels.map((_,i) => {
+                  const palette = [
+                    '#0d6efd','#6610f2','#20c997','#fd7e14','#dc3545',
+                    '#6c757d','#198754','#0dcaf0','#ffc107','#adb5bd'
+                  ];
+                  return palette[i % palette.length];
+                }),
+                borderColor: '#fff',
+                borderWidth: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: true, position: 'right', labels: { boxWidth: 13, font: { size: 13 } } },
+                tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed}` } },
+                datalabels: {
+                  display: showDataLabel,
+                  color: '#fff',
+                  anchor: 'center',
+                  font: { size: 11, weight: 'bold' },
+                  formatter: function(value, context) {
+                    const data = context.chart.data.datasets[0].data;
+                    const total = data.reduce((a,b)=>a+b,0);
+                    return total>0 ? Math.round((value/total)*100)+'%' : '';
+                  }
+                }
+              }
+            },
+            plugins: [ChartDataLabels]
+          });
+        } else {
+          document.getElementById('deptPieChart').style.display = 'none';
+          document.getElementById('noDeptData').style.display = 'block';
+        }
+      })();
+
+      // --- Users by Designation (vertical bar, dynamic height) ---
+      (function(){
+        const canvas = document.getElementById('desigBarChart');
+        const ctx = canvas.getContext('2d');
+        if (Array.isArray(desigLabels) && desigLabels.length > 0) {
+          canvas.height = Math.max(320, desigLabels.length * 32);
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: desigLabels,
+              datasets: [{
+                label: 'User Count',
+                data: desigValues,
+                backgroundColor: '#17a2b8',
+                borderRadius: 6,
+                barThickness: 18
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } },
+                y: { beginAtZero: true, title: { display: true, text: 'Users' } }
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => `${ctx.parsed.y}` } },
+                datalabels: {
+                  display: showDataLabel,
+                  color: '#fff',
+                  anchor: 'center',
+                  font: { size: 11, weight: 'bold' },
+                  formatter: val => val
+                }
+              }
+            },
+            plugins: [ChartDataLabels]
+          });
+        } else {
+          canvas.style.display = 'none';
+          document.getElementById('noDesigData').style.display = 'block';
+        }
+      })();
+
+      // --- Score Trend (slope chart) ---
+      (function(){
+        const allDates = Array.from(new Set([...(trendLabels||[]), ...(specTsLabels||[])])).sort();
+        const regMap  = Object.fromEntries((trendLabels||[]).map((d,i) => [d, trendScores[i]]));
+        const specMap = Object.fromEntries((specTsLabels||[]).map((d,i) => [d, specTsScores[i]]));
+        const regData  = allDates.map(d => (regMap[d] !== undefined ? regMap[d] : null));
+        const specData = allDates.map(d => (specMap[d] !== undefined ? specMap[d] : null));
+        const canvasEl = document.getElementById('slopeChart');
+        const noDataEl = document.getElementById('noSlopeData');
+        const hasAnyPoint = regData.some(v => v !== null) || specData.some(v => v !== null);
+        if (hasAnyPoint && allDates.length > 0) {
+          canvasEl.style.display = 'block';
+          noDataEl.style.display = 'none';
+          new Chart(canvasEl.getContext('2d'), {
+            type: 'line',
+            data: {
+              labels: allDates,
+              datasets: [
+                {
+                  label: 'Avg Special Exam',
+                  data: specData,
+                  borderColor: '#20c997',
+                  backgroundColor: '#20c997',
+                  tension: 0,
+                  pointRadius: 6,
+                  pointHoverRadius: 8,
+                  spanGaps: false,
+                  borderWidth: 3
+                },
+                {
+                  label: 'Avg Regular Exam',
+                  data: regData,
+                  borderColor: '#6f42c1',
+                  backgroundColor: '#6f42c1',
+                  tension: 0,
+                  pointRadius: 6,
+                  pointHoverRadius: 8,
+                  spanGaps: false,
+                  borderWidth: 3
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'nearest', intersect: false },
+              scales: {
+                x: { title: { display: true, text: 'Date' }, ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } },
+                y: { beginAtZero: true, max: 100, title: { display: true, text: 'Average Score (%)' }, ticks: { callback: v => v + '%' } }
+              },
+              plugins: {
+                legend: { position: 'top', labels: { font: { size: 13 } } },
+                tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}%` } }
+              }
+            }
+          });
+        } else {
+          canvasEl.style.display = 'none';
+          noDataEl.style.display = 'block';
+        }
+      })();
+
+      // --- Level Progress Funnel (stacked bar) ---
+      (function(){
+        const ctx = document.getElementById('funnelChart').getContext('2d');
+        if (Array.isArray(funnelLevels) && funnelLevels.length > 0) {
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: funnelLevels,
+              datasets: [
+                { label: 'Assigned', data: funnelTotal, backgroundColor: '#0d6efd' },
+                { label: 'Completed', data: funnelCompleted, backgroundColor: '#198754' }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: { stacked: true, ticks: { autoSkip: false, maxRotation: 0, minRotation: 0 } },
+                y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Number of Users' } }
+              },
+              plugins: { tooltip: { mode: 'index', intersect: false } }
+            }
+          });
+        } else {
+          document.getElementById('funnelChart').style.display = 'none';
+          document.getElementById('noFunnelData').style.display = 'block';
+        }
+      })();
+
+      // --- 3D SCATTER (Plotly) ---
+      function getDeptColorMap(depts) {
+        const unique = Array.from(new Set(depts));
+        const palette = [
+          "#4e79a7","#f28e2b","#e15759","#76b7b2","#59a14f",
+          "#edc949","#af7aa1","#ff9da7","#9c755f","#bab0ab"
+        ];
+        let map = {};
+        unique.forEach((d,i) => map[d] = palette[i % palette.length]);
+        return map;
+      }
+      function getAxisLabel(key) {
+        if (key === 'department') return 'Department';
+        const found = axisOptions.find(o => o.key === key);
+        return found ? found.label : key;
+      }
+      function drawScatter3D(xkey, ykey, zkey, colorKey) {
+        const container = document.getElementById('scatter3d');
+        const noDataEl = document.getElementById('noScatterData');
+        if (!Array.isArray(user_labels) || user_labels.length === 0) {
+          container.style.display = 'none';
+          noDataEl.style.display = 'block';
+          return;
+        }
+        container.style.display = 'block';
+        noDataEl.style.display = 'none';
+        const markerBase = { size: 8, opacity: 0.88, line: { width: 1, color: '#333' } };
+        if (colorKey === 'department') {
+          const deptMap = getDeptColorMap(departments);
+          const traces = Object.entries(deptMap).map(([dept,colorHex]) => {
+            const idxs = departments.map((d,i) => (d===dept ? i : -1)).filter(i => i !== -1);
+            return {
+              x: idxs.map(i => (metrics[xkey]||[])[i]),
+              y: idxs.map(i => (metrics[ykey]||[])[i]),
+              z: idxs.map(i => (metrics[zkey]||[])[i]),
+              mode: 'markers',
+              type: 'scatter3d',
+              name: dept,
+              text: idxs.map(i => user_labels[i]),
+              marker: { ...markerBase, color: colorHex }
+            };
+          });
+          const layout = {
+            scene: {
+              xaxis:{ title: getAxisLabel(xkey), gridcolor:'rgba(200,200,200,0.3)', zerolinecolor:'rgba(200,200,200,0.3)', tickfont:{ size:13 } },
+              yaxis:{ title: getAxisLabel(ykey), gridcolor:'rgba(200,200,200,0.3)', zerolinecolor:'rgba(200,200,200,0.3)', tickfont:{ size:13 } },
+              zaxis:{ title: getAxisLabel(zkey), gridcolor:'rgba(200,200,200,0.3)', zerolinecolor:'rgba(200,200,200,0.3)', tickfont:{ size:13 } }
+            },
+            margin:{ l:0, r:0, b:0, t:0 },
+            hovermode:'closest',
+            legend:{ title:{ text:'Department' }, orientation:'v', x:1.02, y:0.9 },
+            paper_bgcolor:'transparent',
+            plot_bgcolor:'transparent',
+            font:{ family: "'Segoe UI', Roboto, Arial, sans-serif", size:13 }
+          };
+          Plotly.newPlot('scatter3d', traces, layout, { displayModeBar: false, responsive: true });
+          return;
+        }
+        // Color by numeric metric
+        const cVals = (metrics[colorKey]||[]);
+        const trace = {
+          x: (metrics[xkey]||[]),
+          y: (metrics[ykey]||[]),
+          z: (metrics[zkey]||[]),
+          mode:'markers',
+          type:'scatter3d',
+          text:user_labels,
+          marker:{
+            ...markerBase,
+            color: cVals,
+            colorscale: 'Viridis',
+            showscale: true,
+            colorbar:{ title: getAxisLabel(colorKey) },
+            cmin: Math.min(...cVals),
+            cmax: Math.max(...cVals)
+          }
+        };
+        const layout = {
+          scene: {
+            xaxis:{ title: getAxisLabel(xkey), gridcolor:'rgba(200,200,200,0.3)', zerolinecolor:'rgba(200,200,200,0.3)', tickfont:{ size:13 } },
+            yaxis:{ title: getAxisLabel(ykey), gridcolor:'rgba(200,200,200,0.3)', zerolinecolor:'rgba(200,200,200,0.3)', tickfont:{ size:13 } },
+            zaxis:{ title: getAxisLabel(zkey), gridcolor:'rgba(200,200,200,0.3)', zerolinecolor:'rgba(200,200,200,0.3)', tickfont:{ size:13 } }
+          },
+          margin:{ l:0, r:0, b:0, t:0 },
+          hovermode:'closest',
+          font:{ family: "'Segoe UI', Roboto, Arial, sans-serif", size:13 }
+        };
+        Plotly.newPlot('scatter3d', [trace], layout, { displayModeBar: false, responsive: true });
+      }
+      // Initial render or fallback
+      if (!Array.isArray(user_labels) || user_labels.length === 0) {
+        document.getElementById('scatter3d').style.display = 'none';
+        document.getElementById('noScatterData').style.display = 'block';
+      } else {
+        drawScatter3D(
+          document.getElementById('scatter-x').value,
+          document.getElementById('scatter-y').value,
+          document.getElementById('scatter-z').value,
+          document.getElementById('scatter-color').value
+        );
+      }
+      // Redraw when any dropdown changes
+      ['scatter-x','scatter-y','scatter-z','scatter-color'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => {
+          drawScatter3D(
+            document.getElementById('scatter-x').value,
+            document.getElementById('scatter-y').value,
+            document.getElementById('scatter-z').value,
+            document.getElementById('scatter-color').value
+          );
+        });
+      });
+    });
+  </script>
+{% endblock %}

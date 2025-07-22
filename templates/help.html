@@ -1,0 +1,95 @@
+{% extends "base.html" %} {% block content %}
+<div class="container mt-5 mb-5">
+  <h2 class="mb-4">Help Center</h2>
+  <p>
+    Welcome to the CollectiveRCM Help Center. This section is designed to assist
+    all users in navigating the platform, resolving issues, and understanding
+    system features.
+  </p>
+
+  <hr class="my-4" />
+  <h4>Common Issues & Solutions</h4>
+  <table class="table table-hover mt-3">
+    <thead class="table-dark">
+      <tr>
+        <th>Issue</th>
+        <th>Suggested Resolution</th>
+        <th>Contact</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Cannot log in</td>
+        <td>
+          Ensure credentials are correct. Try resetting your password or
+          clearing your browser cache.
+        </td>
+        <td>
+          <a href="mailto:intranet@collectivercm.com"
+            >intranet@collectivercm.com</a
+          >
+        </td>
+      </tr>
+      <tr>
+        <td>Tasks not visible</td>
+        <td>
+          Check your role or team assignment. Some tasks are
+          department-specific.
+        </td>
+        <td>Your department lead</td>
+      </tr>
+      <tr>
+        <td>Study materials not loading</td>
+        <td>
+          Ensure your browser supports PDF rendering. Check for access
+          permissions under your role.
+        </td>
+        <td>Education Coordinator</td>
+      </tr>
+      <tr>
+        <td>Exam results missing</td>
+        <td>
+          Results may be pending admin review or are available under the
+          “Dashboard” section.
+        </td>
+        <td>
+          <a href="mailto:intranet@collectivercm.com"
+            >intranet@collectivercm.com</a
+          >
+        </td>
+      </tr>
+      <tr>
+        <td>Incorrect profile data</td>
+        <td>
+          Edit via your profile page. If fields are locked or incorrect, contact
+          the system administrators.
+        </td>
+        <td><a href="mailto:intranet@collectivercm.com">System Admins</a></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr class="my-4" />
+  <h4>System Navigation Tips</h4>
+  <ul>
+    <li>
+      Use the top navigation bar to access Profile, Tasks, Study Materials, and
+      Management areas.
+    </li>
+    <li>
+      The dashboard shows active courses, deadlines, and announcements tailored
+      to your role.
+    </li>
+    <li>
+      Use dark mode for long sessions using the moon/sun icon on the bottom
+      right corner.
+    </li>
+    <li>Use Ctrl + B to quickly toggle between light and dark mode.</li>
+  </ul>
+
+  <p class="mt-4">
+    If your issue persists, please escalate it via the
+    <strong>Support</strong> page or reach out to your supervisor.
+  </p>
+</div>
+{% endblock %}

@@ -1,0 +1,169 @@
+{# templates/edit_exam.html #}
+{% extends 'admin_base.html' %}
+
+{% block title %}Edit Exam #{{ exam.id }}{% endblock %}
+
+{% block content %}
+  <a href="{{ url_for('admin_routes.view_exams') }}"
+     class="btn btn-sm btn-secondary mb-3">
+    <i class="fas fa-arrow-left"></i> Back to Exams
+  </a>
+
+  <h1 class="mb-4">Edit Exam #{{ exam.id }}</h1>
+
+  {# ───────────── 1) Exam metadata ───────────── #}
+  <form action="{{ url_for('admin_routes.edit_exam', exam_id=exam.id) }}"
+        method="POST" class="mb-5">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label for="title" class="form-label">Title</label>
+        <input id="title" name="title" class="form-control"
+               value="{{ exam.title }}" required>
+      </div>
+
+      <div class="col-md-3">
+        <label for="duration" class="form-label">Duration (min)</label>
+        <input type="number" id="duration" name="duration"
+               class="form-control" value="{{ exam.duration }}" min="1" required>
+      </div>
+
+      <div class="col-md-3">
+        <label for="level" class="form-label">Level</label>
+        <select id="level" name="level" class="form-select" required>
+          <option value="">— Select —</option>
+          {% for lvl in levels %}
+            <option value="{{ lvl.id }}"
+                    {% if exam.level and exam.level.id == lvl.id %}selected{% endif %}>
+              Level {{ lvl.level_number }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label for="area" class="form-label">Area</label>
+        <select id="area" name="area" class="form-select" required>
+          <option value="">— Select —</option>
+          {% for a in areas %}
+            <option value="{{ a.id }}"
+                    {% if exam.area and exam.area.id == a.id %}selected{% endif %}>
+              {{ a.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label for="course_id" class="form-label">Course</label>
+        <select id="course_id" name="course_id" class="form-select" required>
+          <option value="">— Select —</option>
+          {% for c in courses %}
+            <option value="{{ c.id }}"
+                    {% if exam.course and exam.course.id == c.id %}selected{% endif %}>
+              {{ c.title }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label for="category_id" class="form-label">Category</label>
+        <select id="category_id" name="category_id" class="form-select" required>
+          <option value="">— Select —</option>
+          {% for cat in categories %}
+            <option value="{{ cat.id }}"
+                    {% if exam.category and exam.category.id == cat.id %}selected{% endif %}>
+              {{ cat.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-12 text-end">
+        <button class="btn btn-success">Save Exam Changes</button>
+      </div>
+    </div>
+  </form>
+
+  <hr>
+
+  {# …everything above is unchanged … #}
+
+  {# ───────────── 2) Question list ───────────── #}
+  <h2 class="mt-5">Questions ({{ questions|length }})</h2>
+  
+  {% if questions %}
+    {% for q in questions %}
+      {# break choices into a 4‑item list, pad with blanks if fewer #}
+      {% set opts = ((q.choices or '').split(',')) + ['','','',''] %}
+  
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5 class="card-title">Q{{ loop.index }}</h5>
+  
+          <form action="{{ url_for('admin_routes.update_question',
+                                   question_id=q.id) }}"
+                method="POST" class="mb-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  
+            <div class="mb-2">
+              <label class="form-label">Question text</label>
+              <textarea name="question_text"
+                        class="form-control"
+                        rows="2"
+                        required>{{ q.question_text }}</textarea>
+            </div>
+  
+            <div class="row g-2">
+              {% for idx in range(4) %}
+                <div class="col-md-3">
+                  <label class="form-label">Option {{ 'ABCD'[idx] }}</label>
+                  <input name="option_{{ idx }}"
+                         class="form-control"
+                         value="{{ opts[idx] }}"
+                         required>
+                </div>
+              {% endfor %}
+            </div>
+  
+            <div class="row g-2 mt-2">
+              <div class="col-md-4">
+                <label class="form-label">Correct answer</label>
+                <select name="correct_ans" class="form-select" required>
+                  <option value="">— Select —</option>
+                  {% for opt in ['A','B','C','D'] %}
+                    <option value="{{ opt }}"
+                            {% if q.correct_ans == opt %}selected{% endif %}>
+                      {{ opt }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+  
+              <div class="col-md-8 text-end align-self-end">
+                <button class="btn btn-primary btn-sm">
+                  Save Question
+                </button>
+              </div>
+            </div>
+          </form>
+  
+          <form action="{{ url_for('admin_routes.delete_question',
+                                   question_id=q.id) }}"
+                method="POST"
+                onsubmit="return confirm('Delete this question?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-danger btn-sm">
+              <i class="fas fa-trash-alt"></i> Delete Question
+            </button>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p>No questions have been added yet.</p>
+  {% endif %}
+  {% endblock %}
+  

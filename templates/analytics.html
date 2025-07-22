@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Analytics Dashboard - Collective</title>
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        background: linear-gradient(120deg, #e7eaf6 0%, #fff 100%);
+        font-family: "Segoe UI", Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        margin: 0;
+      }
+      .main-wrapper {
+        flex: 1;
+      }
+      /* —— Top Bar —— */
+      .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 16px 6px 11px;
+        background: rgba(255, 255, 255, 0.97);
+        border-bottom: 1px solid #e3e3e3;
+        min-height: 44px;
+        box-shadow: 0 1px 5px 0 rgba(120, 120, 120, 0.04);
+        font-size: 1.08rem;
+        z-index: 10;
+      }
+      .top-bar img {
+        height: 29px;
+        margin-right: 7px;
+        filter: drop-shadow(0 1px 1px #e3e3e3);
+      }
+      .brand {
+        font-size: 1.18rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        margin-left: 1px;
+      }
+      .brand .black {
+        color: #222;
+      }
+      .brand .red {
+        color: #ba1e24;
+      }
+
+      /* —— Container —— */
+      .container {
+        max-width: 900px;
+        margin: 23px auto 0 auto;
+        background: rgba(255, 255, 255, 0.98);
+        border-radius: 12px;
+        padding: 36px 32px 28px 32px;
+        box-shadow: 0 6px 32px rgba(58, 58, 80, 0.1),
+          0 1.5px 4px rgba(120, 120, 120, 0.06);
+        position: relative;
+        margin-top: 12px;
+      }
+      .container h2 {
+        font-weight: 700;
+        margin-bottom: 11px;
+        color: #22285a;
+        word-break: break-word;
+      }
+      .container h5 {
+        color: #2540b5;
+        margin-bottom: 12px;
+        font-weight: 600;
+        font-size: 1.13rem;
+        letter-spacing: 0.5px;
+      }
+      .container p {
+        color: #555b77;
+        font-size: 1.07rem;
+      }
+
+      /* —— Summary Cards —— */
+      .summary-card {
+        border: none;
+        border-radius: 10px;
+        padding: 17px 0 12px 0;
+        text-align: center;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.07);
+        background: linear-gradient(90deg, #f6fafd 80%, #e7eaf6 100%);
+        transition: box-shadow 0.17s;
+        min-height: 166px;
+      }
+      .summary-card i {
+        font-size: 2.1rem;
+        margin-bottom: 10px;
+        color: #3e64ff;
+        opacity: 0.92;
+      }
+      .summary-card h5 {
+        margin-top: 7px;
+        font-size: 1.15rem;
+        letter-spacing: 0.2px;
+        color: #2540b5;
+        font-weight: 600;
+      }
+      .summary-card .display-6 {
+        font-size: 2.25rem;
+        font-weight: 700;
+        color: #3a395e;
+        margin-top: 2px;
+      }
+
+      /* —— Chart Containers —— */
+      .chart-container {
+        position: relative;
+        min-height: 320px;
+        margin-bottom: 36px;
+        background: #f8fbfe;
+        border-radius: 12px;
+        box-shadow: 0 1px 4px 0 rgba(40, 80, 120, 0.04);
+        padding: 16px 14px 1px 14px;
+      }
+      .chart-title {
+        font-size: 1.07rem;
+        color: #2540b5;
+        font-weight: 600;
+        margin-bottom: 9px;
+        letter-spacing: 0.5px;
+        text-align: center;
+      }
+
+      .progress-bar-outer {
+        width: 100%;
+        max-width: 420px;
+        background: #eaf0fa;
+        border-radius: 9px;
+        height: 34px;
+        margin: 16px auto 10px auto;
+        overflow: hidden;
+        box-shadow: 0 1.5px 8px 0 rgba(40, 80, 120, 0.06);
+      }
+      .progress-bar-inner {
+        height: 34px;
+        border-radius: 9px 0 0 9px;
+        background: linear-gradient(90deg, #3e64ff 65%, #5edfff 100%);
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        color: #fff;
+        font-weight: 600;
+        font-size: 1.15rem;
+        transition: width 0.5s cubic-bezier(0.4, 1.3, 0.29, 0.99);
+        padding-right: 18px;
+        box-shadow: 0 2px 10px 0 rgba(40, 80, 120, 0.07);
+        letter-spacing: 1.6px;
+      }
+      .progress-labels {
+        width: 100%;
+        max-width: 420px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.98rem;
+        color: #6a7ab8;
+        margin: 0 auto 2px auto;
+        font-weight: 500;
+      }
+      .big-percentage {
+        font-size: 2.1rem;
+        font-weight: 700;
+        color: #3e64ff;
+        margin: 0 0 0 0;
+        line-height: 1.1;
+        text-align: center;
+      }
+      /* —— Footer —— */
+      footer {
+        background: #343a40;
+        color: #fff;
+        text-align: center;
+        padding: 11px 0 8px 0;
+        font-size: 1rem;
+        margin-top: auto;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        box-shadow: 0 -1px 5px 0 rgba(100, 100, 120, 0.04);
+      }
+      @media (max-width: 600px) {
+        .container {
+          padding: 19px 7vw 12px 7vw;
+          max-width: 99vw;
+        }
+        .top-bar {
+          flex-direction: column;
+          align-items: flex-start;
+          min-height: 40px;
+          padding: 3px 2vw 3px 2vw;
+        }
+        .brand {
+          font-size: 1.05rem;
+        }
+        .container h2 {
+          font-size: 1.19rem;
+        }
+        .summary-card .display-6 {
+          font-size: 1.45rem;
+        }
+        .progress-bar-outer {
+          max-width: 99vw;
+        }
+        .progress-labels {
+          max-width: 99vw;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <a
+        href="{{ back_url or url_for('task_routes.view_tasks') }}"
+        class="btn btn-secondary py-1 px-3"
+      >
+        <i class="fas fa-arrow-left"></i>
+        <span class="d-none d-md-inline ms-1">Back</span>
+      </a>
+      <div class="d-flex align-items-center">
+        <img src="/static/images/logo.png" alt="Logo" />
+        <div class="brand">
+          <span class="black">Collect</span><span class="red">ive</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-wrapper">
+      <div class="container">
+        <h2 class="text-center text-dark mb-1">
+          <i class="fas fa-chart-pie me-2 text-primary"></i>Analytics Dashboard
+        </h2>
+        <p class="text-muted text-center mb-4">
+          Track your team’s progress and task status at a glance.
+        </p>
+
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+          <div class="col-md-4 mb-3">
+            <div class="card summary-card h-100">
+              <i class="fas fa-tasks"></i>
+              <h5>Total Tasks</h5>
+              <div class="display-6">{{ total_tasks or 0 }}</div>
+            </div>
+          </div>
+          <div class="col-md-4 mb-3">
+            <div class="card summary-card h-100">
+              <i class="fas fa-check-circle"></i>
+              <h5>Completed Tasks</h5>
+              <div class="display-6">{{ completed_tasks or 0 }}</div>
+            </div>
+          </div>
+          <div class="col-md-4 mb-3">
+            <div class="card summary-card h-100">
+              <i class="fas fa-exclamation-triangle"></i>
+              <h5>Overdue Tasks</h5>
+              <div class="display-6">{{ overdue_tasks or 0 }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Completion Rate or Progress -->
+        <div
+          class="chart-container mb-4 d-flex align-items-center justify-content-center flex-column"
+          style="min-height: 220px"
+        >
+          <div class="chart-title">
+            <i class="fas fa-battery-half me-1"></i>Completion Rate
+          </div>
+          {% if total_tasks == 0 %}
+          <div class="alert alert-info text-center mt-3 mb-2 w-100">
+            No tasks to compute completion rate.
+          </div>
+          {% elif completed_tasks == total_tasks %}
+          <div class="alert alert-success text-center mt-3 mb-2 w-100">
+            All tasks completed! <i class="fas fa-thumbs-up ms-2"></i>
+          </div>
+          {% elif completed_tasks == 0 %}
+          <div class="alert alert-warning text-center mt-3 mb-2 w-100">
+            No tasks completed yet.
+          </div>
+          {% else %}
+          <div class="big-percentage" id="completion-percentage">
+            {{ (completed_tasks/total_tasks*100) | round(0) }}%
+          </div>
+          <div class="progress-labels mb-1">
+            <span>Incomplete</span>
+            <span>Completed</span>
+          </div>
+          <div class="progress-bar-outer">
+            <div
+              class="progress-bar-inner"
+              id="completion-bar"
+              style="width: {{ (completed_tasks/total_tasks*100) | round(1) }}%"
+            >
+              {{ completed_tasks }} of {{ total_tasks }} ({{
+              (completed_tasks/total_tasks*100) | round(0) }}%)
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Tasks by Status -->
+        <div class="chart-container">
+          <div class="chart-title">
+            <i class="fas fa-layer-group me-1"></i>Tasks by Status
+          </div>
+          {% if status_data|length == 0 %}
+          <div class="alert alert-info text-center mt-3 mb-2 w-100">
+            No status data available.
+          </div>
+          {% elif status_data|length == 1 %}
+          <div class="alert alert-secondary text-center mt-3 mb-2 w-100">
+            All {{ status_data[0].count }} tasks are:
+            <strong>{{ status_data[0].status }}</strong>
+          </div>
+          {% else %}
+          <canvas id="statusBarChart" style="max-height: 240px"></canvas>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <p class="mb-0">Collective Intranet© 2024</p>
+    </footer>
+
+    <!-- Bootstrap & Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        // Chart rendering only if more than one status group exists
+        const statusData = {{ status_data | tojson | safe }};
+        if (statusData.length > 1) {
+          // Sort by count descending and assign colors
+          statusData.sort((a, b) => b.count - a.count);
+          const labels = statusData.map(d => d.status.length > 25 ? d.status.substring(0, 25) + '…' : d.status);
+          const counts = statusData.map(d => d.count);
+          const colors = [
+            "#3e64ff", "#5edfff", "#f25f5c", "#ffc107", "#6c757d", "#28a745", "#b7c8f7", "#ffa69e"
+          ];
+          const barColors = counts.map((v, i) => colors[i % colors.length]);
+
+          const ctx = document.getElementById("statusBarChart").getContext("2d");
+          new Chart(ctx, {
+            type: "bar",
+            data: {
+              labels: labels,
+              datasets: [{
+                label: "Number of Tasks",
+                data: counts,
+                backgroundColor: barColors,
+                borderColor: "#2540b5",
+                borderWidth: 1,
+                borderRadius: 7,
+                maxBarThickness: 34
+              }]
+            },
+            options: {
+              indexAxis: "y",
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: { beginAtZero: true, ticks: { precision: 0, font: { size: 13 } } },
+                y: {
+                  ticks: {
+                    font: { size: 14 },
+                    color: "#3a395e"
+                  }
+                }
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    title: function(ctx) { return ctx[0].label; },
+                    label: function(ctx) { return "Tasks: " + ctx.formattedValue; }
+                  }
+                },
+                datalabels: false
+              }
+            }
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

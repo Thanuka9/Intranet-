@@ -1,0 +1,66 @@
+{% extends 'admin_base.html' %} {% block title %}Roles{% endblock %} {% block
+content %}
+<h1 class="text-center mb-4">Manage Roles</h1>
+
+<table class="table table-bordered table-hover">
+  <thead class="table-light">
+    <tr>
+      <th>User</th>
+      <th>Current Roles</th>
+      <th>Assign Role</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.first_name }} {{ u.last_name }}</td>
+      <td>
+        {% if u.roles %} {% for r in u.roles %}
+        <span class="badge bg-secondary me-1">{{ r.name }}</span>
+        <form
+          action="{{ url_for('admin_routes.assign_role') }}"
+          method="POST"
+          class="d-inline"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <input type="hidden" name="user_id" value="{{ u.id }}" />
+          <input type="hidden" name="role_id" value="{{ r.id }}" />
+          <input type="hidden" name="action" value="remove" />
+          <button
+            class="btn btn-sm btn-outline-danger ms-1"
+            title="Remove {{ r.name }}"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </form>
+        {% endfor %} {% else %}
+        <span class="text-muted">No roles assigned</span>
+        {% endif %}
+      </td>
+      <td>
+        <form
+          action="{{ url_for('admin_routes.assign_role') }}"
+          method="POST"
+          class="d-flex"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <input type="hidden" name="user_id" value="{{ u.id }}" />
+          <select
+            name="role_id"
+            class="form-select form-select-sm me-2"
+            required
+          >
+            <option value="">Select role</option>
+            {% for role in roles %} {% if role not in u.roles %}
+            <option value="{{ role.id }}">{{ role.name }}</option>
+            {% endif %} {% endfor %}
+          </select>
+          <input type="hidden" name="action" value="add" />
+          <button class="btn btn-sm btn-outline-success">Add</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

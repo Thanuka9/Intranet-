@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Exam: {{ exam.title or 'Unknown Exam' }}</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      body {
+        font-family: "Segoe UI", sans-serif;
+        background-color: #f8f9fa;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      .top-bar {
+        background-color: #ffffff;
+        border-bottom: 1px solid #ddd;
+        padding: 10px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .top-bar img {
+        height: 40px;
+        margin-right: 10px;
+      }
+      .brand {
+        font-size: 1.5rem;
+        font-weight: 600;
+      }
+      .brand .black {
+        color: #000;
+      }
+      .brand .red {
+        color: red;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 30px auto;
+        background: #ffffff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        flex: 1;
+      }
+
+      .header-card {
+        border-bottom: 2px solid #dee2e6;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+      }
+      .header-card h1 {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        text-align: center;
+        color: #343a40;
+      }
+      .header-card p {
+        margin: 0;
+        text-align: center;
+        color: #6c757d;
+      }
+      .timer {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #dc3545;
+        text-align: center;
+        margin-top: 10px;
+      }
+
+      .question-container {
+        display: none;
+        padding: 20px;
+        border: 1px solid #ddd;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        background: #f9f9f9;
+      }
+      .question-container.active {
+        display: block;
+      }
+
+      .navigation-controls {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .submit-btn {
+        display: none;
+        margin: 0 auto;
+        padding: 10px 20px;
+      }
+
+      footer {
+        background-color: #343a40;
+        color: #ffffff;
+        text-align: center;
+        padding: 15px 0;
+        margin-top: auto;
+      }
+
+      #instructionOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #fff;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="top-bar">
+      <div class="d-flex align-items-center">
+        <img src="/static/images/logo.png" alt="Logo" />
+        <div class="brand">
+          <span class="black">Collect</span><span class="red">ive</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="header-card">
+        <h1>
+          <i class="fas fa-clipboard-list"></i> Exam: {{ exam.title or 'Unknown
+          Exam' }}
+        </h1>
+        <p><strong>Duration:</strong> {{ exam.duration }} minutes</p>
+        <div class="timer" id="timer">Time Remaining: --:--</div>
+      </div>
+
+      <form
+        id="examForm"
+        action="{{ url_for('exams_routes.submit_exam', exam_id=exam.id) }}"
+        method="POST"
+      >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" id="timeSpentInput" name="time_spent" value="0" />
+        <input type="hidden" name="start_time" value="{{ start_time }}" />
+        <input
+          type="hidden"
+          name="served_questions"
+          value="{{ questions|map(attribute='id')|join(',') }}"
+        />
+
+        <div id="questionWrapper">
+          {% for question in questions %}
+          <div class="question-container">
+            <h3>
+              <i class="fas fa-question-circle"></i> Q{{ loop.index }}: {{
+              question.text }}
+            </h3>
+            <ul class="list-unstyled">
+              {% for choice in question.choices %}
+              <li>
+                <label>
+                  <input
+                    type="radio"
+                    name="answers[{{ question.id }}]"
+                    value="{{ choice|trim }}"
+                  />
+                  {{ choice|trim }}
+                </label>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="navigation-controls">
+          <button type="button" id="prevBtn" class="btn btn-secondary" disabled>
+            Previous
+          </button>
+          <button type="button" id="nextBtn" class="btn btn-primary">
+            Next
+          </button>
+          <button
+            type="submit"
+            id="submitBtn"
+            class="btn btn-success submit-btn"
+          >
+            <i class="fas fa-paper-plane"></i> Submit Exam
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <footer>
+      <p>Collective Intranet © 2024</p>
+    </footer>
+
+    <!-- INSTRUCTION OVERLAY -->
+    <div id="instructionOverlay">
+      <div style="max-width: 600px; text-align: left">
+        <h2>Please Read These Rules Before Starting</h2>
+        <ul>
+          <li>No changing pages once the exam starts.</li>
+          <li>
+            Copy/paste, right-click, screenshots and PrintScreen are disabled.
+          </li>
+          <li>Switching tabs twice will auto-submit and disqualify you.</li>
+          <li>
+            Reloading or closing this tab will auto-submit your current answers.
+          </li>
+        </ul>
+        <div style="margin-top: 1.5rem">
+          <input type="checkbox" id="agreeCheckbox" />
+          <label for="agreeCheckbox"
+            >I have read and agree to these rules.</label
+          >
+        </div>
+        <button
+          id="agreeBtn"
+          disabled
+          style="margin-top: 1rem"
+          class="btn btn-primary"
+        >
+          Agree & Start Exam
+        </button>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const overlay = document.getElementById("instructionOverlay"),
+              agreeCb = document.getElementById("agreeCheckbox"),
+              agreeBtn = document.getElementById("agreeBtn");
+
+        function startExam() {
+          const wrapper   = document.getElementById("questionWrapper"),
+                timerEl   = document.getElementById("timer"),
+                prevBtn   = document.getElementById("prevBtn"),
+                nextBtn   = document.getElementById("nextBtn"),
+                submitBtn = document.getElementById("submitBtn"),
+                form      = document.getElementById("examForm"),
+                timeInp   = document.getElementById("timeSpentInput");
+
+          let submitted       = false,
+              tabSwitches     = 0,
+              navWarningShown = false,
+              current         = 0,
+              remaining       = {{ exam.duration }} * 60;
+
+          function tick() {
+            const m = String(Math.floor(remaining / 60)).padStart(2, '0'),
+                  s = String(remaining % 60).padStart(2, '0');
+            timerEl.textContent = `Time Remaining: ${m}:${s}`;
+            if (remaining-- <= 0 && !submitted) {
+              submitted = true;
+              form.submit();
+            }
+          }
+
+          setInterval(tick, 1000);
+          tick();
+
+          const questions = wrapper.querySelectorAll(".question-container");
+          function show(i) {
+            questions.forEach((q, idx) => q.classList.toggle("active", idx === i));
+            prevBtn.disabled = (i === 0);
+            nextBtn.style.display = (i === questions.length - 1) ? 'none' : 'inline-block';
+            submitBtn.style.display = (i === questions.length - 1) ? 'inline-block' : 'none';
+          }
+
+          function answered(i) {
+            return Array.from(
+              questions[i].querySelectorAll("input[type='radio']")
+            ).some(r => r.checked);
+          }
+
+          nextBtn.onclick = () => {
+            if (!answered(current)) return alert("Please select an answer.");
+            if (current < questions.length - 1) show(++current);
+          };
+
+          prevBtn.onclick = () => {
+            if (current > 0) show(--current);
+          };
+
+          form.addEventListener("submit", (e) => {
+            for (let i = 0; i < questions.length; i++) {
+              if (!answered(i)) {
+                e.preventDefault();
+                show(i);
+                return alert(`Answer Question ${i + 1}.`);
+              }
+            }
+            timeInp.value = {{ exam.duration }} * 60 - remaining;
+            submitted = true;
+          });
+
+          // Anti-cheat
+          document.addEventListener("contextmenu", e => { e.preventDefault(); alert("Right-click disabled."); });
+          ["copy", "cut", "paste"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); alert(`${ev} disabled.`); }));
+
+          document.addEventListener("keydown", e => {
+            const k = e.key.toLowerCase();
+            if (
+              ["f12", "f5", "printscreen"].includes(k) ||
+              ((e.ctrlKey || e.metaKey) && ["r", "u", "i", "c", "v", "x", "s", "p"].includes(k))
+            ) {
+              e.preventDefault();
+              alert("Key disabled during exam.");
+              if (["f5", "r"].includes(k)) {
+                const fd = new FormData(form);
+                fd.append("time_spent", {{ exam.duration }} * 60 - remaining);
+                navigator.sendBeacon(form.action, fd);
+                submitted = true;
+              }
+            }
+          });
+
+          document.addEventListener("visibilitychange", () => {
+            if (document.hidden && !submitted) {
+              tabSwitches++;
+              if (tabSwitches > 1) {
+                submitted = true;
+                form.submit();
+              } else {
+                alert("🚨 Warning: Switching tabs again will auto-submit your exam.");
+              }
+            }
+          });
+
+          // Enhanced page leave protection
+          window.addEventListener("beforeunload", (e) => {
+            if (!submitted) {
+              if (!navWarningShown) {
+                navWarningShown = true;
+                e.preventDefault();
+                e.returnValue = "Don't leave the exam page. You will be disqualified on the next attempt.";
+                alert("🚨 Don't leave the page. Next attempt will auto-submit.");
+              } else {
+                const fd = new FormData(form);
+                fd.append("time_spent", {{ exam.duration }} * 60 - remaining);
+                navigator.sendBeacon(form.action, fd);
+                submitted = true;
+              }
+            }
+          });
+
+          // Block back navigation
+          history.pushState(null, "", location.href);
+          window.addEventListener("popstate", () => {
+            if (!submitted) {
+              const fd = new FormData(form);
+              fd.append("time_spent", {{ exam.duration }} * 60 - remaining);
+              navigator.sendBeacon(form.action, fd);
+              submitted = true;
+            }
+            history.pushState(null, "", location.href);
+          });
+
+          show(0);
+        }
+
+        if (sessionStorage.getItem("examAgreed") === "yes") {
+          overlay.style.display = "none";
+          startExam();
+        } else {
+          overlay.style.display = "flex";
+          agreeBtn.disabled = true;
+          agreeCb.addEventListener("change", () => {
+            agreeBtn.disabled = !agreeCb.checked;
+          });
+          agreeBtn.addEventListener("click", () => {
+            sessionStorage.setItem("examAgreed", "yes");
+            overlay.style.display = "none";
+            startExam();
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
