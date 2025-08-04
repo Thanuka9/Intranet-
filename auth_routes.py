@@ -439,29 +439,37 @@ def reset_password(token):
     if request.method == 'POST':
         pw1 = request.form['new_password']
         pw2 = request.form['confirm_password']
+
         if not pw1 or not pw2:
             flash("Password fields cannot be empty.", "error")
-        elif pw1 != pw2:
+            return render_template('reset_password.html', token=token)
+
+        if pw1 != pw2:
             flash("Passwords do not match.", "error")
-        elif len(pw1) < 8:
+            return render_template('reset_password.html', token=token)
+
+        if len(pw1) < 8:
             flash("Password must be at least 8 characters.", "error")
-        else:
-            user.set_password(pw1)
+            return render_template('reset_password.html', token=token)
 
-            # 3) clean up
-            db.session.delete(pr)
-            user.password_reset_token = None
-            user.password_reset_expiration = None
-            try:
-                db.session.commit()
-                flash("Password has been reset! You can now log in.", "success")
-                return redirect(url_for('auth_routes.login'))
-            except SQLAlchemyError as e:
-                db.session.rollback()
-                logging.error(f"Database error during password reset: {e}")
-                flash("Could not reset password. Please try again.", "error")
+        # all good → set new password and clean up
+        user.set_password(pw1)
+        db.session.delete(pr)
+        user.password_reset_token = None
+        user.password_reset_expiration = None
 
-    return render_template('reset_password.html')
+        try:
+            db.session.commit()
+            flash("Password has been reset! You can now log in.", "success")
+            return redirect(url_for('auth_routes.login'))
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            logging.error(f"Database error during password reset: {e}")
+            flash("Could not reset password. Please try again.", "error")
+            return render_template('reset_password.html', token=token)
+
+    # on GET (or after any POST flash), render with token
+    return render_template('reset_password.html', token=token)
 
 # ─── Alias routes for hyphens ─────────────────────────────────────────
 

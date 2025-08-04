@@ -3,7 +3,7 @@ import random
 from datetime import datetime, timedelta
 from extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import Column, Integer, String, LargeBinary, Date, DateTime, Boolean, ForeignKey, Text, Table, JSON, Index
+from sqlalchemy import Column, text, Text, Integer, String, LargeBinary, Date, DateTime, Boolean, ForeignKey, Text, Table, JSON, Index
 from sqlalchemy.orm import relationship
 from flask_login import UserMixin
 from sqlalchemy import Float
@@ -404,11 +404,25 @@ class User(db.Model, UserMixin):
     # ---------------------------------
     # Email Verification and 2FA
     # ---------------------------------
-    is_verified = Column(Boolean, default=False)
-    verification_token    = Column(Text, nullable=True)
-    two_fa_code = Column(String(6), nullable=True)
-    two_fa_expiration = Column(DateTime, nullable=True)
-
+    is_verified = Column(
+        Boolean,
+        nullable=False,
+        server_default=text('false'),
+        default=False,
+        index=True
+    )
+    verification_token = Column(
+        Text,
+        nullable=True
+    )
+    two_fa_code = Column(
+        String(6),
+        nullable=True
+    )
+    two_fa_expiration = Column(
+        DateTime,
+        nullable=True
+    )
     # ---------------------------------
     # Password Reset Fields
     # ---------------------------------
