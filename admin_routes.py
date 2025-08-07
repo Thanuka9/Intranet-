@@ -2438,17 +2438,20 @@ def view_incorrect_answers():
     for row in rows:
         row_dict = dict(row._mapping) if hasattr(row, '_mapping') else dict(row)
         if row_dict['special_paper'] and row_dict['question_id_val'] is not None:
-            paper = row_dict['special_paper'].lower()
-            question_map = SPECIAL_EXAM_QUESTIONS.get(paper, {})
-            if not row_dict['question_text']:
-                fallback = question_map.get(row_dict['question_id_val'])
-                if fallback:
-                    row_dict['question_text'] = fallback
-                else:
-                    row_dict['question_text'] = "[Special Exam Q not found]"
-                    logging.warning(
-                        f"Missing SPECIAL_EXAM_QUESTIONS entry for paper '{paper}' question_id {row_dict['question_id_val']}"
-                    )
+            paper_key   = row_dict['special_paper'].lower()
+            question_id = row_dict['question_id_val']
+            question_map = SPECIAL_EXAM_QUESTIONS.get(paper_key, {})
+
+            # always override with hard-coded special-exam text
+            text = question_map.get(question_id)
+            if text:
+                row_dict['question_text'] = text
+            else:
+                row_dict['question_text'] = "[Special Exam Q not found]"
+                logging.warning(
+                    f"Missing SPECIAL_EXAM_QUESTIONS entry for paper "
+                    f"'{paper_key}' question_id {question_id}"
+                )
         patched_records.append(row_dict)
 
     # Group patched_records by exam_title
